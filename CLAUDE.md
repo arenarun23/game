@@ -9,3 +9,4 @@ AIEDU 허브(`arenarun23/aiedu`)의 하위 서비스. 구조와 게임 추가 �
 - 원본 앱(상용 APK)의 이미지·소리·이름·코드를 가져오지 않는다. 규칙·구조만 참고.
 - 확인: 로컬 서버로 열어 여러 화면 크기에서 보고, 각 게임을 끝까지 플레이한다. 허브의 `node scripts/fit-check.mjs <URL>` 도 쓸 수 있다.
 - Deploy Hook 주소·Secret 값은 파일·커밋·로그에 쓰지 않는다.
+- **AIEDU 복귀 아이콘**(`a.aiedu-home`, 웃는 별 44px): 모든 서비스가 같은 모양·같은 자리(페이지 왼쪽 위 8px, `<body>` 첫 요소, 링크 `../`)에 둔다. 지우거나 옮기지 않는다. 레이아웃을 바꿀 때 왼쪽 위 52×52px 를 비워 둔다 — 이 앱의 자리 확보: `#bar{padding-left:calc(.7rem + 46px)}`(상단 바). 원본 코드: 허브 저장소 `templates/aiedu-home.html`.

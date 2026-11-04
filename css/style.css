@@ -139,11 +139,9 @@ body[data-view=home] #btnHome{visibility:hidden}
 .bins{position:relative;z-index:1}
 .grid .it{width:var(--s);height:var(--s);font-size:calc(var(--s)*.58)}
 .bin .st{font-size:1.5rem}
-
-/* AIEDU 허브로 가는 아이콘(모든 서비스 공통 모양) */
-.aiedu-home{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border-radius:50%;background:linear-gradient(160deg,#ffe58f,#ffb08e);border:2px solid #fff;box-shadow:0 2px 0 rgba(74,52,38,.22);text-decoration:none;-webkit-tap-highlight-color:transparent}
+/* AIEDU 허브로 가는 아이콘 — 모든 서비스 공통 모양·위치: 페이지 왼쪽 위(body 첫 요소). 앱마다 이 자리를 비워 둔다 */
+.aiedu-home{position:absolute;left:max(8px,env(safe-area-inset-left,0px));top:max(8px,env(safe-area-inset-top,0px));z-index:1000;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:linear-gradient(160deg,#ffe58f,#ffb08e);border:2px solid #fff;box-shadow:0 2px 0 rgba(74,52,38,.22);text-decoration:none;-webkit-tap-highlight-color:transparent}
 .aiedu-home svg{width:30px;height:30px;display:block}
 .aiedu-home:active{transform:translateY(2px);box-shadow:none}
 .aiedu-home:focus-visible{outline:3px solid #f08a00;outline-offset:2px}
-.aiedu-home{width:2.8rem;height:2.8rem;min-width:44px;min-height:44px}
-@media (max-height:460px){.aiedu-home{width:2.4rem;height:2.4rem}}
+#bar{padding-left:calc(.7rem + 46px)}
