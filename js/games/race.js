@@ -7,7 +7,7 @@
   }
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return d; };
-  const ITEMS = { boost: { e: '🍄', n: '부스트' }, shield: { e: '🛡️', n: '방패' }, banana: { e: '🍌', n: '바나나' }, missile: { e: '🎯', n: '미사일' } };
+  const ITEMS = { boost: { e: '🍄', n: '부스트', d: '잠깐 아주 빨라져요' }, shield: { e: '🛡️', n: '방패', d: '3초 동안 공격을 막아요' }, banana: { e: '🍌', n: '바나나', d: '뒤에 떨어뜨려요. 밟은 차는 빙글!' }, missile: { e: '🎯', n: '미사일', d: '앞차를 쫓아가서 맞혀요' } };
   const BASE_V = 380, BASE_ACC = 300, BASE_TURN = 2.4;
 
   // 이모지·차는 한 번만 그려 두고 이미지로 찍는다(회전해도 비용이 일정). 글자를 매 프레임 회전해 그리면 글자 캐시가 계속 빗나가서 끊긴다.
@@ -18,6 +18,27 @@
 
   const saved = G.store.get('race:sel', {});
   const sel = { ch: clamp(saved.ch | 0, 0, 3), car: clamp(saved.car | 0, 0, 3), tr: clamp(saved.tr | 0, 0, 7) };
+
+  // 사용법 화면 (고르기 화면과 경기 중 모두에서 연다)
+  function helpOverlay(root, ch, car, onClose) {
+    const row = (ic, t, d) => G.h('div', { class: 'hrow' }, G.h('span', { class: 'hic' }, ic), G.h('span', { class: 'htx' }, G.h('b', {}, t), ' ', d));
+    const close = () => { box.remove(); if (onClose) onClose(); };
+    const box = G.h('div', { class: 'rhelp' }, G.h('div', { class: 'hbox' },
+      G.h('h3', {}, '🏁 레이싱 사용법'),
+      G.h('h4', {}, '🎮 달리는 방법'), row('🚗', '자동으로 달려요', '방향만 정하면 돼요!'),
+      row('🎚️', '밀어서', '왼쪽 아래 둥근 막대를 좌우로 밀어요. 많이 밀수록 크게 꺾여요'),
+      row('📱', '기울여서', '폰을 핸들처럼 기울여요. 출발 직전에 든 자세가 기준이에요'),
+      row('◀▶', '버튼 · 키보드', '◀ ▶ 버튼, 또는 키보드 ← → (A D)'),
+      row('🧭', '도우미', '길을 알아서 따라가 줘요. 위쪽 🧭 버튼으로 켜고 꺼요'),
+      G.h('h4', {}, '🎁 아이템 사용법'), row('❓', '노란 상자에 닿으면', '아이템을 하나 받아요'),
+      row('👆', '맨 오른쪽 아이템 버튼을 눌러요', '키보드는 Space'),
+      row(ITEMS.boost.e, ITEMS.boost.n, ITEMS.boost.d), row(ITEMS.shield.e, ITEMS.shield.n, ITEMS.shield.d), row(ITEMS.banana.e, ITEMS.banana.n, ITEMS.banana.d), row(ITEMS.missile.e, ITEMS.missile.n, ITEMS.missile.d),
+      G.h('h4', {}, '⚡ 내 스킬 (쿨타임이 끝나면 또 써요)'),
+      row(ch.skill.e, `${ch.e} ${ch.skill.n}`, `${ch.skill.d} — 왼쪽 버튼 (Z)`), row(car.skill.e, `${car.e} ${car.skill.n}`, `${car.skill.d} — 가운데 버튼 (X)`),
+      G.h('h4', {}, '🛣️ 길 위의 표지'), row('⏩', '파란 화살표', '밟으면 쌩 빨라져요'), row('🟤', '진흙 · 물 · 용암', '느려져요'), row('🧊', '얼음판', '미끄러워요'),
+      G.h('button', { class: 'btn', onclick: close }, '알겠어요!')));
+    root.append(box); return box;
+  }
 
   G.register({
     id: 'race', name: '레이싱', desc: '캐릭터·차·경기장 고르기', icon: '🏁', cat: 'race', color: 'peach', variants: 1,
@@ -34,7 +55,8 @@
           G.h('button', { class: 'card pk c-' + it.color, 'aria-pressed': String(i === cur), onclick: () => { G.sfx.tap(); onPick(i); } },
             G.h('span', { class: 'ic' }, it.ic), G.h('span', { class: 'nm' }, it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
         const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), G.h('div', { class: 'fitbox' }, grid)];
-        if (onBack) kids.push(G.h('div', { class: 'palette' }, G.h('button', { class: 'btn alt', onclick: onBack }, '◀ 이전')));
+        kids.push(G.h('div', { class: 'palette' }, onBack ? G.h('button', { class: 'btn alt', onclick: onBack }, '◀ 이전') : null,
+          G.h('button', { class: 'btn alt', onclick: () => helpOverlay(root, D.CHARS[sel.ch], D.CARS[sel.car]) }, '❓ 사용법')));
         root.replaceChildren(...kids);
       }
       const br = (t) => G.h('span', { class: 'ln' }, t);
@@ -67,13 +89,16 @@
         // 화면(HUD)
         const cv = G.h('canvas', { class: 'rcv' }), mini = G.h('canvas', { class: 'rmini', width: 120, height: 120 });
         const badge = G.h('div', { class: 'rbadge' }), toastEl = G.h('div', { class: 'rtoast' }), countEl = G.h('div', { class: 'rcount' });
-        const bL = G.h('button', { class: 'rbtn', 'aria-label': '왼쪽' }, '◀'), bR = G.h('button', { class: 'rbtn', 'aria-label': '오른쪽' }, '▶');
+        const bL = G.h('button', { class: 'rbtn dir', 'aria-label': '왼쪽' }, '◀'), bR = G.h('button', { class: 'rbtn dir', 'aria-label': '오른쪽' }, '▶');
         const mkBtn = (label, fn) => { const cd = G.h('span', { class: 'cd' }), b = G.h('button', { class: 'rbtn act' }, G.h('span', { class: 'em' }, ''), G.h('small', {}, label), cd); b.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); }); b._cd = cd; b._em = b.firstChild; return b; };
         const bItem = mkBtn('아이템', () => useItem(me)), bS1 = mkBtn('', () => useSkill(me, 0)), bS2 = mkBtn('', () => useSkill(me, 1));
         const hold = (el, k) => { const on = (e) => { e.preventDefault(); keys[k] = true; el.classList.add('on'); }, off = () => { keys[k] = false; el.classList.remove('on'); }; el.addEventListener('pointerdown', on); ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => el.addEventListener(t, off)); };
         hold(bL, 'left'); hold(bR, 'right');
-        const wrap = G.h('div', { class: 'rwrap' }, cv, G.h('div', { class: 'rtop' }, badge, mini), toastEl, countEl,
-          G.h('div', { class: 'rctl l' }, bL, bR), G.h('div', { class: 'rctl r' }, bS1, bS2, bItem));
+        const knob = G.h('span', { class: 'knob' }), pad = G.h('div', { class: 'rpad', 'aria-label': '핸들 막대' }, G.h('span', { class: 'arr l' }, '◀'), G.h('span', { class: 'tick' }), G.h('span', { class: 'arr r' }, '▶'), knob);
+        const chipA = G.h('button', { class: 'rchip' }), chipC = G.h('button', { class: 'rchip' }), chipH = G.h('button', { class: 'rchip' }, '❓ 사용법');
+        const bubL = G.h('div', { class: 'bub' }), bubR = G.h('div', { class: 'bub r' }, '⚡ 스킬 · 🎁 아이템은 여기!');
+        const wrap = G.h('div', { class: 'rwrap counting' }, cv, G.h('div', { class: 'rtop' }, G.h('div', { class: 'rleft' }, badge, G.h('div', { class: 'rchips' }, chipA, chipC, chipH)), mini), toastEl, countEl,
+          G.h('div', { class: 'rcoach' }, bubL, bubR), G.h('div', { class: 'rctl l' }, bL, bR, pad), G.h('div', { class: 'rctl r' }, bS1, bS2, bItem));
         root.replaceChildren(wrap);
         const ctx = cv.getContext('2d'), mctx = mini.getContext('2d');
         let W = 0, H = 0, dpr = 1, q = 1;
@@ -98,6 +123,58 @@
         const dbg = G.raceDebug = { ms: [], rec: false, q: 1, walls: [0, 0], respawns: 0, racers, T, objs, auto: false, speed: 1, get state() { return state; }, laps };
         dbg.go = () => { state = 'go'; cnt = -1; countEl.textContent = ''; };
         const toast = (m, d = 1.3) => { toastEl._v = m; toastEl.textContent = m; toastT = d; };
+        // ───────── 조작 방식: 밀어서 / 기울여서 / 버튼, 그리고 운전 도우미 ─────────
+        const coarse = matchMedia('(pointer: coarse)').matches, MODES = ['slide', 'tilt', 'buttons'], LABEL = { slide: '🎚️ 밀어서', tilt: '📱 기울여서', buttons: '◀▶ 버튼' };
+        const needPerm = typeof window.DeviceOrientationEvent !== 'undefined' && typeof window.DeviceOrientationEvent.requestPermission === 'function';
+        let ctlMode = G.store.get('race:ctl', coarse ? 'slide' : 'buttons'), assistOn = G.store.get('race:assist', coarse);
+        if (ctlMode === 'tilt' && needPerm) ctlMode = 'slide';
+        let padV = 0, padOn = false, tiltV = 0, tiltZero = null, tiltGot = false, tiltTimer = 0, inputV = 0, paused = false;
+        const refreshChips = () => {
+          wrap.dataset.ctl = ctlMode; chipA.textContent = '🧭 도우미 ' + (assistOn ? '켜짐' : '꺼짐'); chipA.setAttribute('aria-pressed', String(assistOn)); chipC.textContent = LABEL[ctlMode];
+          bubL.textContent = ctlMode === 'slide' ? '👆 이 막대를 좌우로 밀어요' : ctlMode === 'tilt' ? '📱 폰을 기울여요 (지금 자세가 기준)' : '◀ ▶ 로 방향을 정해요';
+        };
+        // 폰의 기울기 → 핸들 각도. 화면 방향(세로/가로)과 상관없이 "오른쪽으로 기울이면 오른쪽"이 되도록 중력 방향으로 계산한다.
+        const onOri = (e) => {
+          if (e.beta == null || e.gamma == null) return; tiltGot = true;
+          const b = e.beta * Math.PI / 180, g = e.gamma * Math.PI / 180, ux = -Math.sin(g) * Math.cos(b), uy = Math.sin(b), uz = Math.cos(g) * Math.cos(b);
+          const a0 = screen.orientation && screen.orientation.angle != null ? screen.orientation.angle : (window.orientation || 0), a = ((a0 % 360) + 360) % 360;
+          let tr, up; if (a === 90) { tr = uy; up = ux; } else if (a === 180) { tr = ux; up = -uy; } else if (a === 270) { tr = -uy; up = -ux; } else { tr = -ux; up = uy; }
+          const ang = Math.atan2(tr, Math.hypot(up, uz)) * 180 / Math.PI;
+          if (tiltZero === null) tiltZero = ang;
+          const d = ang - tiltZero, v = Math.abs(d) < 2 ? 0 : clamp((d - Math.sign(d) * 2) / 15, -1, 1); tiltV += (v - tiltV) * 0.4;
+        };
+        const recal = () => { tiltZero = null; };
+        function startTilt() {
+          tiltZero = null; tiltGot = false; addEventListener('deviceorientation', onOri); addEventListener('orientationchange', recal); clearTimeout(tiltTimer);
+          tiltTimer = setTimeout(() => { if (!tiltGot && ctlMode === 'tilt') { toast('📱 기울기 센서가 없어요. 밀어서 조종으로 바꿔요', 3); setCtl('slide'); } }, 1800);
+        }
+        function stopTilt() { removeEventListener('deviceorientation', onOri); removeEventListener('orientationchange', recal); clearTimeout(tiltTimer); tiltV = 0; }
+        function setCtl(m) { stopTilt(); ctlMode = m; G.store.set('race:ctl', m); padV = 0; padOn = false; if (m === 'tilt') startTilt(); refreshChips(); }
+        chipC.addEventListener('click', () => {
+          G.sfx.tap(); const next = MODES[(MODES.indexOf(ctlMode) + 1) % MODES.length];
+          if (next === 'tilt' && needPerm) { window.DeviceOrientationEvent.requestPermission().then((r) => { if (r === 'granted') setCtl('tilt'); else { toast('기울기를 쓸 수 없어요 (허락 필요)', 2.5); setCtl('buttons'); } }).catch(() => setCtl('buttons')); return; }
+          setCtl(next); toast(LABEL[next] + ' 조종', 1.3);
+        });
+        chipA.addEventListener('click', () => { G.sfx.tap(); assistOn = !assistOn; G.store.set('race:assist', assistOn); refreshChips(); toast(assistOn ? '🧭 도우미 켜짐 — 길을 알아서 따라가요' : '🧭 도우미 꺼짐', 1.8); });
+        const openHelp = () => { if (paused) return; paused = true; padV = 0; keys.left = keys.right = false; helpOverlay(root, me.ch, me.car, () => { paused = false; }); };
+        chipH.addEventListener('click', () => { G.sfx.tap(); openHelp(); });
+        // 밀어서: 막대 위 손가락 위치 = 핸들 세기
+        const padCalc = (e) => { const r = pad.getBoundingClientRect(), u = ((e.clientX - r.left) / r.width - 0.5) * 2, v = clamp(u / 0.8, -1, 1); return Math.abs(v) < 0.07 ? 0 : v; };
+        pad.addEventListener('pointerdown', (e) => { if (ctlMode !== 'slide') return; e.preventDefault(); pad.setPointerCapture(e.pointerId); padOn = true; padV = padCalc(e); });
+        pad.addEventListener('pointermove', (e) => { if (padOn) padV = padCalc(e); });
+        ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((t) => pad.addEventListener(t, () => { padOn = false; padV = 0; }));
+        // 내 조종 = 키보드/버튼/막대/기울기 + (도우미가 켜져 있으면) 길 안내를 섞는다
+        function playerControl(r) {
+          let u = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+          if (ctlMode === 'slide') u += padV; else if (ctlMode === 'tilt') u += tiltV;
+          u = clamp(u, -1, 1); inputV = u; r.throttle = 1; let st = u;
+          if (assistOn && r.fin == null) { const k = hard ? 0.4 : 0.65, g = guide(r, 0); st = clamp(u + g.steer * k * (1 - Math.min(1, Math.abs(u))), -1, 1); r.throttle = clamp(1 - g.curve * 0.3 * k, 0.72, 1); }
+          r.steerIn = st;
+        }
+        dbg.setCtl = setCtl; dbg.inp = () => ({ ctlMode, assistOn, padV, tiltV, inputV, paused }); dbg.setAssist = (v) => { assistOn = v; refreshChips(); };
+        refreshChips(); if (ctlMode === 'tilt') startTilt();
+        if (!G.store.get('race:help', false)) { G.store.set('race:help', true); setTimeout(openHelp, 150); }
+
         const rank = (r) => { const sc = (a) => (a.fin != null ? 1e9 - a.fin : a.prog); let k = 1; for (const o of racers) if (o !== r && sc(o) > sc(r)) k++; return k; };
         const ordered = () => racers.slice().sort((a, b) => (b.fin != null ? 1e9 - b.fin : b.prog) - (a.fin != null ? 1e9 - a.fin : a.prog));
 
@@ -139,11 +216,17 @@
 
         dbg.useSkill = useSkill; dbg.useItem = useItem; dbg.hit = hit; dbg.objs = objs;
         // 컴퓨터 선수 조종
+        // 길을 따라가는 방향 안내(컴퓨터 선수와 내 도우미가 함께 쓴다)
+        const gd = { steer: 0, curve: 0 };
+        function guide(r, lane) {
+          const look = 5 + Math.floor(r.v / 55), c = P[(r.idx + look) % M], tx = c.x + c.nx * lane * hw * 0.6, ty = c.y + c.ny * lane * hw * 0.6;
+          gd.steer = clamp(angDiff(Math.atan2(ty - r.y, tx - r.x), r.h) * 2.6, -1, 1);
+          const a = P[r.idx], b = P[(r.idx + 16) % M]; gd.curve = Math.abs(Math.atan2(a.tx * b.ty - a.ty * b.tx, a.tx * b.tx + a.ty * b.ty));
+          return gd;
+        }
         function aiThink(r, dt) {
-          const look = 5 + Math.floor(r.v / 55), c = P[(r.idx + look) % M], tx = c.x + c.nx * r.lane * hw * 0.6, ty = c.y + c.ny * r.lane * hw * 0.6;
-          r.steerIn = clamp(angDiff(Math.atan2(ty - r.y, tx - r.x), r.h) * 2.6, -1, 1);
-          const a = P[r.idx], b = P[(r.idx + 16) % M], curve = Math.abs(Math.atan2(a.tx * b.ty - a.ty * b.tx, a.tx * b.tx + a.ty * b.ty));
-          r.throttle = clamp(1 - curve * 0.55, 0.62, 1);
+          const g = guide(r, r.lane), curve = g.curve;
+          r.steerIn = g.steer; r.throttle = clamp(1 - curve * 0.55, 0.62, 1);
           const gap = r.prog - me.prog; let rb = 1; if (!r.isPlayer) { if (gap < -50) rb = 1.06; else if (gap > 60) rb = 0.94; } r.rb = rb;
           r.aiT -= dt; if (r.aiT > 0) return; r.aiT = 0.45 + rnd() * 0.3;
           const near = (maxD, ahead) => racers.some((o) => { if (o === r) return false; const dx = o.x - r.x, dy = o.y - r.y, d = Math.hypot(dx, dy), fw = (dx * Math.cos(r.h) + dy * Math.sin(r.h)) > 0; return d < maxD && (ahead === undefined || ahead === fw); });
@@ -167,7 +250,7 @@
         }
         function step(r, dt) {
           if (r.isPlayer && dbg.steer != null) { r.steerIn = dbg.steer; r.throttle = 1; }
-          else if (r.isPlayer && !dbg.auto) r.steerIn = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), r.throttle = 1;
+          else if (r.isPlayer && !dbg.auto) playerControl(r);
           else aiThink(r, dt);
           if (r.fin != null) { r.steerIn = clamp(r.steerIn, -1, 1); r.throttle = 0.6; }
           r.boost = Math.max(0, r.boost - dt); r.shield = Math.max(0, r.shield - dt); r.stun = Math.max(0, r.stun - dt); r.frozen = Math.max(0, r.frozen - dt);
@@ -191,7 +274,7 @@
           const L = r.off_lat; r.off = Math.abs(L) > hw + 6;
           if (Math.abs(L) > WALL) { dbg.walls[r.isPlayer ? 0 : 1]++;  const c = P[r.idx], sg = Math.sign(L), push = L - sg * WALL; r.x -= c.nx * push; r.y -= c.ny * push; const vn = r.vx * c.nx + r.vy * c.ny; if (vn * sg > 0) { r.vx -= c.nx * vn * 1.3; r.vy -= c.ny * vn * 1.3; } r.v *= 0.85; }
           // 박스 줍기
-          for (let i = 0; i < T.boxes.length; i++) { if (boxT[i] > 0) continue; const b = T.boxes[i]; if ((b.x - r.x) ** 2 + (b.y - r.y) ** 2 < 900) { boxT[i] = 4; if (!r.item && r.fin == null) { r.item = randItem(r); if (r.isPlayer) { G.sfx.ok(); toast(ITEMS[r.item].e + ' 아이템!', 1); } } } }
+          for (let i = 0; i < T.boxes.length; i++) { if (boxT[i] > 0) continue; const b = T.boxes[i]; if ((b.x - r.x) ** 2 + (b.y - r.y) ** 2 < 900) { boxT[i] = 4; if (!r.item && r.fin == null) { r.item = randItem(r); if (r.isPlayer) { G.sfx.ok(); const n = G.store.get('race:tips', 0); if (n < 3) { G.store.set('race:tips', n + 1); toast(`${ITEMS[r.item].e} ${ITEMS[r.item].n}! ${ITEMS[r.item].d} — 맨 오른쪽 아이템 버튼을 눌러요`, 3); } else toast(`${ITEMS[r.item].e} ${ITEMS[r.item].n}!`, 1.2); } } } }
           // 멈춰서 꼼짝 못하면 길 위로 되돌리기
           if (state === 'go' && r.v < 25 && r.stun <= 0 && r.frozen <= 0) r.stuck += dt; else r.stuck = 0;
           if (r.stuck > 2.2) { dbg.respawns++;  const c = P[r.idx]; r.x = c.x; r.y = c.y; r.h = Math.atan2(c.ty, c.tx); r.vx = r.vy = r.v = 0; r.stuck = 0; r.prevIdx = r.idx; }
@@ -318,7 +401,7 @@
           toastT -= dt; if (toastT <= 0) setTxt(toastEl, '');
           const k = rank(me), lap = clamp(me.lap, 1, laps);
           setTxt(badge, `🏁 ${k}등 / 4  ·  🔁 ${lap}/${laps}`);
-          setTxt(bItem._em, me.item ? ITEMS[me.item].e : '·'); bItem.classList.toggle('ready', !!me.item);
+          setTxt(bItem._em, me.item ? ITEMS[me.item].e : '·'); setTxt(bItem.querySelector('small'), me.item ? '눌러요!' : '아이템'); bItem.classList.toggle('ready', !!me.item);
           [[bS1, me.ch.skill, 0], [bS2, me.car.skill, 1]].forEach(([b, sk, i]) => { if (b._sk !== sk) { b._sk = sk; b._em.textContent = sk.e; b.querySelector('small').textContent = sk.n; } const h = (me.cd[i] > 0 ? Math.round(me.cd[i] / sk.cd * 100) : 0) + '%'; if (b._h !== h) { b._h = h; b._cd.style.height = h; } });
         }
 
@@ -337,7 +420,7 @@
           for (const r of racers) { r.px = r.x; r.py = r.y; r.ph = r.h; }
           for (const o of objs) { o.px = o.x; o.py = o.y; }
           t += dt; pcamH = camH;
-          if (state === 'count') { cnt -= dt; const n = Math.ceil(cnt); setTxt(countEl, n > 0 ? String(n) : '출발!'); if (cnt <= -0.6) { state = 'go'; setTxt(countEl, ''); } }
+          if (state === 'count') { cnt -= dt; const n = Math.ceil(cnt); setTxt(countEl, n > 0 ? String(n) : '출발!'); if (cnt <= -0.6) { state = 'go'; setTxt(countEl, ''); wrap.classList.remove('counting'); tiltZero = null; } }
           else if (!over) {
             for (const r of racers) step(r, dt); stepObjs(dt); collide();
             if (finishing > 0) { finishing -= dt; if (finishing <= 0) end(); }
@@ -348,10 +431,11 @@
         function frame(ts) {
           raf = requestAnimationFrame(frame);
           const raw = Math.min(0.1, (ts - last) / 1000 || 0.016); last = ts;
-          acc += raw * (dbg.speed || 1);
+          acc += paused ? 0 : raw * (dbg.speed || 1);
           for (let n = 0; acc >= STEP && n < 8; n++) { simStep(STEP); acc -= STEP; }
           if (acc >= STEP) acc = 0;
           alpha = acc / STEP;
+          if (knob._v !== inputV) { knob._v = inputV; knob.style.left = (50 + inputV * 40) + '%'; }
           const d0 = performance.now(); draw(); if (dbg.sync) ctx.getImageData(0, 0, 1, 1); if (dbg.rec) dbg.ms.push([performance.now() - d0, Math.abs(me.steerIn)]);
           hudT -= raw; if (hudT <= 0) { hudT = 0.05; hud(0.05); drawMini(); }
           // 느린 기기: 해상도를 낮춰 부드럽게, 여유가 생기면 되돌린다
@@ -363,7 +447,7 @@
           }
         }
         raf = requestAnimationFrame(frame);
-        stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
+        stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); stopTilt(); document.querySelectorAll('.rhelp').forEach((e) => e.remove()); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
       }
 
       showChars();
