@@ -25,6 +25,15 @@
 
   G.shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
   G.pick = (a) => a[(Math.random() * a.length) | 0];
+  // 같은 것이 연달아 나오지 않게, 종류를 한 바퀴 다 돌고 나서 다시 섞는다 (key별)
+  const bags = {};
+  G.bag = (key, n) => { if (!bags[key] || !bags[key].length) { const last = bags[key + ':last']; let b = G.shuffle([...Array(n).keys()]); if (b.length > 1 && b[b.length - 1] === last) b.unshift(b.pop()); bags[key] = b; } const v = bags[key].pop(); bags[key + ':last'] = v; return v; };
+  // 칸 수에 맞는 격자 모양 (가로/세로 화면에 따라)
+  G.dims = (n) => {
+    const target = innerWidth > innerHeight ? 1.35 : 0.75; let best = null;
+    for (let c = 2; c <= 8; c++) { const r = Math.ceil(n / c), sc = (c * r - n) * 3 + Math.abs(c / r - target); if (!best || sc < best.sc) best = { c, r, sc }; }
+    return best;
+  };
 
   // 저장 (시크릿 모드 등에서 막혀도 동작)
   G.store = {
@@ -67,7 +76,7 @@
   G.addStars = (n) => { G.starCount += n; G.store.set('stars', G.starCount); G.showStars(); };
 
   // 화면 전환
-  let stop = null, current = null;
+  let stop = null, current = null, curMode = 'easy';
   const stage = () => G.$('#stage');
   function cleanup() { if (stop) { try { stop(); } catch (e) {} stop = null; } if ('speechSynthesis' in window) try { speechSynthesis.cancel(); } catch (e) {} }
 
@@ -78,16 +87,24 @@
     renderHome(G.store.get('cat', 'all'));
   };
 
-  G.start = (g) => {
+  // 게임 시작: 쉬운/어려운 단계를 아이가 고르고, 🔄 로 새 문제를 낼 수 있다
+  G.start = (g, mode) => {
     cleanup(); current = g;
+    curMode = mode || G.store.get('mode:' + g.id, 'easy');
+    G.store.set('mode:' + g.id, curMode);
     document.body.dataset.view = 'game';
     G.$('#title').textContent = g.name;
-    const root = G.h('div', { class: 'game' });
-    stage().replaceChildren(root);
-    stop = g.start(root) || null;
+    const seg = G.h('div', { class: 'modebar' },
+      [['easy', '🌱 쉬워요'], ['hard', '🔥 어려워요']].map(([m, t]) =>
+        G.h('button', { class: 'segb', 'aria-pressed': String(m === curMode), onclick: () => { if (m !== curMode) { G.sfx.tap(); G.start(g, m); } } }, t)),
+      G.h('button', { class: 'segb refresh', 'aria-label': '새 문제', onclick: () => { G.sfx.tap(); G.start(g, curMode); } }, '🔄 새로'));
+    const area = G.h('div', { class: 'game' });
+    stage().replaceChildren(G.h('div', { class: 'gwrap' }, seg, area));
+    stop = g.start(area, curMode) || null;
   };
 
   // 결과 창: { stars:1~3, text }
+  G.mode = () => curMode;
   G.win = ({ stars = 1, text = '' } = {}) => {
     G.addStars(stars);
     G.sfx.win(); G.speak('참 잘했어요!');
@@ -97,7 +114,8 @@
       G.h('div', { class: 'bigstars' }, '⭐'.repeat(stars) + '☆'.repeat(3 - stars)),
       text ? G.h('div', { class: 'hint' }, text) : null,
       G.h('div', { class: 'row' },
-        G.h('button', { class: 'btn', onclick: () => g && G.start(g) }, '다시 하기'),
+        G.h('button', { class: 'btn', onclick: () => g && G.start(g, curMode) }, '다시 하기'),
+        curMode === 'easy' ? G.h('button', { class: 'btn alt', onclick: () => g && G.start(g, 'hard') }, '🔥 어려운 것') : null,
         G.h('button', { class: 'btn alt', onclick: G.home }, '메뉴')));
     stage().append(over);
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
