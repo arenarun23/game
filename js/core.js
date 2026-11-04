@@ -112,19 +112,20 @@
   };
 
   // 결과 창: { stars:1~3, text }
-  G.win = ({ stars = 1, text = '' } = {}) => {
+  G.win = ({ stars = 1, text = '', ask = null } = {}) => {
     const bonus = G.hard ? 1 : 0;
     G.addStars(stars + bonus);
     G.sfx.win(); G.speak('참 잘했어요!');
-    const g = current;
+    const g = current, close = (fn) => () => { over.remove(); if (fn) fn(); };
     const over = G.h('div', { class: 'over' },
       G.h('h2', {}, '참 잘했어요! 🎉'),
       G.h('div', { class: 'bigstars' }, '⭐'.repeat(stars) + '☆'.repeat(3 - stars)),
       text ? G.h('div', { class: 'hint must' }, text) : null,
       bonus ? G.h('div', { class: 'hint must' }, '🔥 어려움 보너스 ⭐ +1') : null,
-      G.h('div', { class: 'row' },
-        G.h('button', { class: 'btn', onclick: () => g && G.start(g) }, '다음 문제'),
-        G.h('button', { class: 'btn alt', onclick: G.home }, '메뉴')));
+      ask ? G.h('div', { class: 'hint must ask' }, ask.q) : null,
+      G.h('div', { class: 'row' }, ask
+        ? [G.h('button', { class: 'btn', onclick: close(ask.yes.fn) }, ask.yes.label), G.h('button', { class: 'btn alt', onclick: close(ask.no.fn) }, ask.no.label)]
+        : [G.h('button', { class: 'btn', onclick: () => g && G.start(g) }, '다음 문제'), G.h('button', { class: 'btn alt', onclick: G.home }, '메뉴')]));
     stage().append(over);
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
       const em = ['🎈', '⭐', '🎉', '🌈', '🍭', '🎀'];

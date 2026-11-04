@@ -16,6 +16,7 @@
   const emo = (e) => sprite(e, 96, 96, (g, w) => { g.font = Math.round(w * 0.79) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, w / 2, w * 0.53); });
   const stamp = (c, e, fontPx) => { const sz = 96 * fontPx / 76; c.drawImage(emo(e), -sz / 2, -sz / 2, sz, sz); };
 
+  let pendingTrack = null; // 질문에서 '네'를 눌러 모드를 바꿨을 때, 고르기를 건너뛰고 바로 시작할 경기장
   const saved = G.store.get('race:sel', {});
   const sel = { ch: clamp(saved.ch | 0, 0, 3), car: clamp(saved.car | 0, 0, 3), tr: clamp(saved.tr | 0, 0, 7) };
 
@@ -76,7 +77,8 @@
       }
       const TRACKS = hard ? D.TRACKS_HARD : D.TRACKS_EASY, seedOf = (i) => (hard ? 100 : 0) + i + 1;
       function showTracks() {
-        pick(3, (hard ? '🔥 어려운 ' : '') + '경기장을 골라요', TRACKS.map((t, i) => ({ ic: thumb(t, seedOf(i)), nm: t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky'][i], ds: [br('▶ ' + t.shape), br(t.gim)] })), sel.tr,
+        const doneSet = new Set(G.store.get('race:done:' + (hard ? 'hard' : 'easy'), []));
+        pick(3, (hard ? '🔥 어려운 ' : '') + `경기장을 골라요 (완주 ${doneSet.size}/${TRACKS.length})`, TRACKS.map((t, i) => ({ ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky'][i], ds: [br('▶ ' + t.shape), br(t.gim)] })), sel.tr,
           (i) => { sel.tr = i; G.store.set('race:sel', sel); startRace(); }, showCars);
       }
 
@@ -412,7 +414,23 @@
         toast('준비!', 1);
         function end() {
           if (over) return; over = true;
-          const k = rank(me); G.win({ stars: k === 1 ? 3 : k === 2 ? 2 : 1, text: (k === 1 ? '🏆 1등!' : k + '등으로 들어왔어요') + ` · ${TD.n} (${TD.shape})` });
+          const k = rank(me), mk = hard ? 'hard' : 'easy', key = 'race:done:' + mk, n = TRACKS.length;
+          const done = new Set(G.store.get(key, [])); done.add(sel.tr); G.store.set(key, [...done]);
+          const left = TRACKS.map((_, i) => i).filter((i) => !done.has(i));
+          const raceG = G.games.find((x) => x.id === 'race');
+          const switchTo = (toHard, tr) => () => { pendingTrack = tr; G.hard = toHard; G.store.set('hard', toHard); G.start(raceG); };
+          let ask;
+          if (left.length) {
+            const nx = left.find((i) => i > sel.tr); const nxt = nx === undefined ? left[0] : nx, t = TRACKS[nxt];
+            ask = { q: `다음 경기를 할까요?\n▶ ${t.e} ${t.n} (${t.shape})`, yes: { label: '✅ 네, 계속!', fn: () => { sel.tr = nxt; G.store.set('race:sel', sel); if (stopFn) stopFn(); startRace(); } }, no: { label: '❌ 아니요, 그만', fn: () => G.home() } };
+          } else if (!hard) {
+            G.store.set(key, []);
+            ask = { q: `🎉 이지 경기장 ${n}개를 모두 달렸어요!\n🔥 어려운 모드에 도전할까요?`, yes: { label: '🔥 네, 도전!', fn: switchTo(true, 0) }, no: { label: '❌ 아니요', fn: () => G.home() } };
+          } else {
+            G.store.set(key, []);
+            ask = { q: `🏆 하드 경기장 ${n}개까지 모두 완주했어요!\n이지부터 다시 달려 볼까요?`, yes: { label: '✅ 네, 다시!', fn: switchTo(false, 0) }, no: { label: '❌ 아니요', fn: () => G.home() } };
+          }
+          G.win({ stars: k === 1 ? 3 : k === 2 ? 2 : 1, text: (k === 1 ? '🏆 1등!' : k + '등으로 들어왔어요') + ` · ${TD.n} (${TD.shape}) · 완주 ${left.length ? done.size : n}/${n}`, ask });
         }
         const STEP = 1 / 60;
         let acc = 0, ema = STEP, nF = 0, lastDown = -99;
@@ -450,7 +468,7 @@
         stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); stopTilt(); document.querySelectorAll('.rhelp').forEach((e) => e.remove()); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
       }
 
-      showChars();
+      if (pendingTrack !== null) { sel.tr = pendingTrack; pendingTrack = null; G.store.set('race:sel', sel); startRace(); } else showChars();
       return () => { if (stopFn) stopFn(); };
     },
   });
