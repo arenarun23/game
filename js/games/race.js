@@ -49,14 +49,14 @@
       const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
       // ───────── 고르기 화면 3단계 ─────────
-      function pick(step, title, items, cur, onPick, onBack) {
+      function pick(step, title, items, cur, onPick, onBack, extra) {
         if (stopFn) { stopFn(); stopFn = null; }
         const land = innerWidth > innerHeight * 1.05 && innerWidth > 640, n = items.length;
         const c = land ? (n <= 4 ? n : n <= 8 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 ? 3 : 2), r = Math.ceil(n / c);
         const grid = G.h('div', { class: 'pickgrid', style: `--c:${c};--r:${r}` }, items.map((it, i) =>
           G.h('button', { class: 'card pk c-' + it.color, 'aria-pressed': String(i === cur), onclick: () => { G.sfx.tap(); onPick(i); } },
             G.h('span', { class: 'ic' }, it.ic), G.h('span', { class: 'nm' }, it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
-        const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), G.h('div', { class: 'fitbox' }, grid)];
+        const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), extra || null, G.h('div', { class: 'fitbox' }, grid)];
         kids.push(G.h('div', { class: 'palette' }, onBack ? G.h('button', { class: 'btn alt', onclick: onBack }, '◀ 이전') : null,
           G.h('button', { class: 'btn alt', onclick: () => helpOverlay(root, D.CHARS[sel.ch], D.CARS[sel.car]) }, '❓ 사용법')));
         root.replaceChildren(...kids);
@@ -77,10 +77,15 @@
         return s;
       }
       const TRACKS = hard ? D.TRACKS_HARD : D.TRACKS_EASY, seedOf = (i) => (hard ? 100 : 0) + i + 1;
+      const isGroup = (i, g) => !!TRACKS[i].v3d === !!g, groupIdx = (g) => TRACKS.map((_, i) => i).filter((i) => isGroup(i, g));
+      let tab = TRACKS[sel.tr] && TRACKS[sel.tr].v3d ? 1 : 0; // 0 = 2D, 1 = 3D
       function showTracks() {
-        const doneSet = new Set(G.store.get('race:done:' + (hard ? 'hard' : 'easy'), []));
-        pick(3, (hard ? '🔥 어려운 ' : '') + `경기장을 골라요 (완주 ${doneSet.size}/${TRACKS.length})`, TRACKS.map((t, i) => ({ ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + (t.v3d ? '🧊3D ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky'][i % 8], ds: [br('▶ ' + t.shape), br(t.gim)] })), sel.tr,
-          (i) => { sel.tr = i; G.store.set('race:sel', sel); startRace(); }, showCars);
+        const doneSet = new Set(G.store.get('race:done:' + (hard ? 'hard' : 'easy'), [])), idxs = groupIdx(tab);
+        const cnt = (g) => groupIdx(g).filter((i) => doneSet.has(i)).length;
+        const tabs = G.h('div', { class: 'tabs' }, [[0, '🗺️ 2D'], [1, '🧊 3D']].map(([g, label]) =>
+          G.h('button', { class: 'tab', 'aria-pressed': String(g === tab), onclick: () => { G.sfx.tap(); tab = g; showTracks(); } }, `${label} (${cnt(g)}/${groupIdx(g).length})`)));
+        pick(3, (hard ? '🔥 어려운 ' : '') + '경기장을 골라요', idxs.map((i) => { const t = TRACKS[i]; return { ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky'][idxs.indexOf(i) % 8], ds: [br('▶ ' + t.shape), br(t.gim)] }; }), idxs.indexOf(sel.tr),
+          (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); startRace(); }, showCars, tabs);
       }
 
       // ───────── 경기 ─────────
@@ -426,23 +431,23 @@
         toast('준비!', 1);
         function end() {
           if (over) return; over = true;
-          const k = rank(me), mk = hard ? 'hard' : 'easy', key = 'race:done:' + mk, n = TRACKS.length;
+          const k = rank(me), mk = hard ? 'hard' : 'easy', key = 'race:done:' + mk, g = TD.v3d ? 1 : 0, mine = groupIdx(g), n = mine.length, gname = g ? '3D' : '2D';
           const done = new Set(G.store.get(key, [])); done.add(sel.tr); G.store.set(key, [...done]);
-          const left = TRACKS.map((_, i) => i).filter((i) => !done.has(i));
+          const left = mine.filter((i) => !done.has(i)), doneCnt = n - left.length;
           const raceG = G.games.find((x) => x.id === 'race');
           const switchTo = (toHard, tr) => () => { pendingTrack = tr; G.hard = toHard; G.store.set('hard', toHard); G.start(raceG); };
           let ask;
           if (left.length) {
             const nx = left.find((i) => i > sel.tr); const nxt = nx === undefined ? left[0] : nx, t = TRACKS[nxt];
             ask = { q: `다음 경기를 할까요?\n▶ ${t.e} ${t.n} (${t.shape})`, yes: { label: '✅ 네, 계속!', fn: () => { sel.tr = nxt; G.store.set('race:sel', sel); if (stopFn) stopFn(); startRace(); } }, no: { label: '❌ 아니요, 그만', fn: () => G.home() } };
-          } else if (!hard) {
-            G.store.set(key, []);
-            ask = { q: `🎉 이지 경기장 ${n}개를 모두 달렸어요!\n🔥 어려운 모드에 도전할까요?`, yes: { label: '🔥 네, 도전!', fn: switchTo(true, 0) }, no: { label: '❌ 아니요', fn: () => G.home() } };
+          } else if (!hard) { // 이 탭(2D 또는 3D)의 8개를 모두 달림 → 같은 탭의 하드에 도전?
+            G.store.set(key, [...done].filter((i) => !mine.includes(i)));
+            ask = { q: `🎉 이지 ${gname} 경기장 ${n}개를 모두 달렸어요!\n🔥 어려운 ${gname} 경기장에 도전할까요?`, yes: { label: '🔥 네, 도전!', fn: switchTo(true, mine[0]) }, no: { label: '❌ 아니요', fn: () => G.home() } };
           } else {
-            G.store.set(key, []);
-            ask = { q: `🏆 하드 경기장 ${n}개까지 모두 완주했어요!\n이지부터 다시 달려 볼까요?`, yes: { label: '✅ 네, 다시!', fn: switchTo(false, 0) }, no: { label: '❌ 아니요', fn: () => G.home() } };
+            G.store.set(key, [...done].filter((i) => !mine.includes(i)));
+            ask = { q: `🏆 하드 ${gname} 경기장 ${n}개까지 모두 완주했어요!\n이지 ${gname} 경기장부터 다시 달려 볼까요?`, yes: { label: '✅ 네, 다시!', fn: switchTo(false, mine[0]) }, no: { label: '❌ 아니요', fn: () => G.home() } };
           }
-          G.win({ stars: k === 1 ? 3 : k === 2 ? 2 : 1, text: (k === 1 ? '🏆 1등!' : k + '등으로 들어왔어요') + ` · ${TD.n} (${TD.shape}) · 완주 ${left.length ? done.size : n}/${n}`, ask });
+          G.win({ stars: k === 1 ? 3 : k === 2 ? 2 : 1, text: (k === 1 ? '🏆 1등!' : k + '등으로 들어왔어요') + ` · ${TD.n} (${TD.shape}) · ${gname} 완주 ${doneCnt}/${n}`, ask });
         }
         const STEP = 1 / 60;
         let acc = 0, ema = STEP, nF = 0, lastDown = -99;
