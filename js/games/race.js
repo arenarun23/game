@@ -10,6 +10,12 @@
   const ITEMS = { boost: { e: '🍄', n: '부스트' }, shield: { e: '🛡️', n: '방패' }, banana: { e: '🍌', n: '바나나' }, missile: { e: '🎯', n: '미사일' } };
   const BASE_V = 380, BASE_ACC = 300, BASE_TURN = 2.4;
 
+  // 이모지·차는 한 번만 그려 두고 이미지로 찍는다(회전해도 비용이 일정). 글자를 매 프레임 회전해 그리면 글자 캐시가 계속 빗나가서 끊긴다.
+  const spr = new Map();
+  function sprite(key, w, h, fn) { let c = spr.get(key); if (!c) { c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); spr.set(key, c); } return c; }
+  const emo = (e) => sprite(e, 96, 96, (g, w) => { g.font = Math.round(w * 0.79) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, w / 2, w * 0.53); });
+  const stamp = (c, e, fontPx) => { const sz = 96 * fontPx / 76; c.drawImage(emo(e), -sz / 2, -sz / 2, sz, sz); };
+
   const saved = G.store.get('race:sel', {});
   const sel = { ch: clamp(saved.ch | 0, 0, 3), car: clamp(saved.car | 0, 0, 3), tr: clamp(saved.tr | 0, 0, 7) };
 
@@ -69,8 +75,8 @@
           G.h('div', { class: 'rctl l' }, bL, bR), G.h('div', { class: 'rctl r' }, bS1, bS2, bItem));
         root.replaceChildren(wrap);
         const ctx = cv.getContext('2d'), mctx = mini.getContext('2d');
-        let W = 0, H = 0, dpr = 1;
-        const fit = () => { const r = wrap.getBoundingClientRect(); dpr = Math.min(2, devicePixelRatio || 1); W = Math.max(50, Math.round(r.width * dpr)); H = Math.max(50, Math.round(r.height * dpr)); cv.width = W; cv.height = H; };
+        let W = 0, H = 0, dpr = 1, q = 1;
+        const fit = () => { const r = wrap.getBoundingClientRect(); dpr = Math.min(2, devicePixelRatio || 1) * q; W = Math.max(50, Math.round(r.width * dpr)); H = Math.max(50, Math.round(r.height * dpr)); cv.width = W; cv.height = H; };
         fit(); const ro = new ResizeObserver(fit); ro.observe(wrap);
 
         // 선수
@@ -81,16 +87,16 @@
         function mk(ci, cr, isPlayer, slot) {
           const ch = D.CHARS[ci], car = D.CARS[cr], idx = (M - 3 - Math.floor(slot / 2) * 4 + M) % M, c = P[idx], lat = (slot % 2 ? 0.45 : -0.45) * hw;
           return { ch, car, isPlayer, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
-            offF: 0.45 + (car.st.off || 0) + (ch.mod.off || 0), iceImm: !!ch.mod.ice, x: c.x + c.nx * lat, y: c.y + c.ny * lat, h: Math.atan2(c.ty, c.tx), vx: 0, vy: 0, v: 0, idx, lap: 0, prog: idx, prevIdx: idx,
+            offF: 0.45 + (car.st.off || 0) + (ch.mod.off || 0), iceImm: !!ch.mod.ice, x: c.x + c.nx * lat, y: c.y + c.ny * lat, h: Math.atan2(c.ty, c.tx), px: c.x + c.nx * lat, py: c.y + c.ny * lat, ph: Math.atan2(c.ty, c.tx), dx: 0, dy: 0, dh: 0, vx: 0, vy: 0, v: 0, idx, lap: 0, prog: idx, prevIdx: idx,
             steerIn: 0, throttle: 1, boost: 0, boostMul: 1.4, shield: 0, stun: 0, frozen: 0, spin: 0, item: null, cd: [3, 4], lane: (rnd() - 0.5) * 0.7, aiVar: 0.97 + rnd() * 0.06, aiT: rnd(), fin: null, off: false, stuck: 0, tire: 0 };
         }
 
         // 상태
         const objs = [], fx = [], boxT = new Array(T.boxes.length).fill(0), AI = { mul: hard ? 1.0 : 0.86 };
         let state = 'count', cnt = 3.2, t = 0, finishing = 0, camH = me.h, last = 0, raf = 0, toastT = 0, over = false, hudT = 0;
-        const dbg = G.raceDebug = { racers, T, objs, auto: false, speed: 1, get state() { return state; }, laps };
+        const dbg = G.raceDebug = { ms: [], rec: false, q: 1, racers, T, objs, auto: false, speed: 1, get state() { return state; }, laps };
         dbg.go = () => { state = 'go'; cnt = -1; countEl.textContent = ''; };
-        const toast = (m, d = 1.3) => { toastEl.textContent = m; toastT = d; };
+        const toast = (m, d = 1.3) => { toastEl._v = m; toastEl.textContent = m; toastT = d; };
         const rank = (r) => { const sc = (a) => (a.fin != null ? 1e9 - a.fin : a.prog); let k = 1; for (const o of racers) if (o !== r && sc(o) > sc(r)) k++; return k; };
         const ordered = () => racers.slice().sort((a, b) => (b.fin != null ? 1e9 - b.fin : b.prog) - (a.fin != null ? 1e9 - a.fin : a.prog));
 
@@ -159,7 +165,8 @@
           r.prog = r.lap * M + bi + clamp((dx * c.tx + dy * c.ty) / T.ds, -0.5, 0.5);
         }
         function step(r, dt) {
-          if (r.isPlayer && !dbg.auto) r.steerIn = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), r.throttle = 1;
+          if (r.isPlayer && dbg.steer != null) { r.steerIn = dbg.steer; r.throttle = 1; }
+          else if (r.isPlayer && !dbg.auto) r.steerIn = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), r.throttle = 1;
           else aiThink(r, dt);
           if (r.fin != null) { r.steerIn = clamp(r.steerIn, -1, 1); r.throttle = 0.6; }
           r.boost = Math.max(0, r.boost - dt); r.shield = Math.max(0, r.shield - dt); r.stun = Math.max(0, r.stun - dt); r.frozen = Math.max(0, r.frozen - dt);
@@ -232,24 +239,40 @@
           else if (car.id === 'slide') { c.fillStyle = 'rgba(0,0,0,.28)'; c.fillRect(-24, -12, 14, 24); }
           else { c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(-22, -2, 10, 4); }
         }
+        const kartSpr = (car) => sprite('kart:' + car.id, 120, 80, (g) => { g.scale(2, 2); g.translate(30, 20); carShape(g, car); });
+        const runs = [], ord = racers.slice();
+        let alpha = 0, pcamH = camH, lowQ = false;
         function draw() {
+          const zoom = Math.max(H / 680, 0.5 * dpr);
+          for (const r of racers) { r.dx = r.px + (r.x - r.px) * alpha; r.dy = r.py + (r.y - r.py) * alpha; r.dh = r.ph + angDiff(r.h, r.ph) * alpha; }
+          const px = me.dx, py = me.dy, rot = Math.PI / 2 + pcamH + angDiff(camH, pcamH) * alpha;
           ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
-          const zoom = Math.max(H / 680, 0.5 * dpr), px = me.x, py = me.y, rot = Math.PI / 2 + camH;
           ctx.translate(W / 2, H * 0.72); ctx.scale(zoom, zoom); ctx.rotate(-rot); ctx.translate(-px, -py);
-          ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-          const path = () => { ctx.beginPath(); ctx.moveTo(P[0].x, P[0].y); for (let i = 1; i < M; i++) ctx.lineTo(P[i].x, P[i].y); ctx.closePath(); };
-          path(); ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = hw * 3 + 14; ctx.stroke();
-          ctx.strokeStyle = th.shoulder; ctx.lineWidth = hw * 3; ctx.stroke();
-          ctx.strokeStyle = th.curb[0]; ctx.lineWidth = hw * 2 + 18; ctx.stroke();
-          ctx.setLineDash([34, 34]); ctx.strokeStyle = th.curb[1]; ctx.lineCap = 'butt'; ctx.stroke(); ctx.setLineDash([]); ctx.lineCap = 'round';
-          ctx.strokeStyle = th.road; ctx.lineWidth = hw * 2; ctx.stroke();
-          ctx.setLineDash([26, 34]); ctx.strokeStyle = th.line; ctx.lineWidth = 5; ctx.globalAlpha = 0.8; ctx.lineCap = 'butt'; ctx.stroke(); ctx.globalAlpha = 1; ctx.setLineDash([]); ctx.lineCap = 'round';
+          const rad = Math.hypot(W / 2, H * 0.72) / zoom + hw * 1.8, rad2 = rad * rad;
+          // 도로: 화면에 보이는 구간만 긋는다
+          runs.length = 0; let cur = null;
+          for (let k = 0; k < M; k++) { const c = P[k]; if ((c.x - px) * (c.x - px) + (c.y - py) * (c.y - py) < rad2) { if (!cur) { cur = { s: k, n: 0 }; runs.push(cur); } cur.n++; } else cur = null; }
+          if (runs.length > 1 && runs[0].s === 0 && runs[runs.length - 1].s + runs[runs.length - 1].n === M) { const f = runs.shift(), l = runs[runs.length - 1]; l.n += f.n; }
+          ctx.lineJoin = 'round';
+          for (const r of runs) {
+            const pth = new Path2D(), s0 = r.s * T.ds;
+            for (let i = 0; i < r.n; i++) { const c = P[(r.s + i) % M]; if (i) pth.lineTo(c.x, c.y); else pth.moveTo(c.x, c.y); }
+            ctx.setLineDash([]); ctx.lineCap = 'round';
+            ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = hw * 3 + 14; ctx.stroke(pth);
+            ctx.strokeStyle = th.shoulder; ctx.lineWidth = hw * 3; ctx.stroke(pth);
+            ctx.strokeStyle = th.curb[0]; ctx.lineWidth = hw * 2 + 18; ctx.stroke(pth);
+            ctx.setLineDash([34, 34]); ctx.lineDashOffset = s0 % 68; ctx.lineCap = 'butt'; ctx.strokeStyle = th.curb[1]; ctx.stroke(pth);
+            ctx.setLineDash([]); ctx.lineCap = 'round'; ctx.strokeStyle = th.road; ctx.lineWidth = hw * 2; ctx.stroke(pth);
+            ctx.setLineDash([26, 34]); ctx.lineDashOffset = s0 % 60; ctx.lineCap = 'butt'; ctx.strokeStyle = th.line; ctx.lineWidth = 5; ctx.globalAlpha = 0.8; ctx.stroke(pth); ctx.globalAlpha = 1;
+          }
+          ctx.setLineDash([]); ctx.lineCap = 'round';
           // 출발선
-          const s = P[0]; ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(Math.atan2(s.ty, s.tx));
-          for (let i = 0; i < 10; i++) for (let j = 0; j < 2; j++) { ctx.fillStyle = (i + j) % 2 ? '#fff' : '#111'; ctx.fillRect(-14 + j * 14, -hw + i * (hw * 2 / 10), 14, hw * 2 / 10); } ctx.restore();
+          const s = P[0];
+          if ((s.x - px) ** 2 + (s.y - py) ** 2 < rad2) { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(Math.atan2(s.ty, s.tx));
+            for (let i = 0; i < 10; i++) for (let j = 0; j < 2; j++) { ctx.fillStyle = (i + j) % 2 ? '#fff' : '#111'; ctx.fillRect(-14 + j * 14, -hw + i * (hw * 2 / 10), 14, hw * 2 / 10); } ctx.restore(); }
           // 지대
           for (const z of T.haz) {
-            if ((z.x - px) ** 2 + (z.y - py) ** 2 > 1300 * 1300) continue;
+            if ((z.x - px) ** 2 + (z.y - py) ** 2 > rad2) continue;
             ctx.save(); ctx.translate(z.x, z.y);
             if (z.type === 'boost') { ctx.rotate(z.a); ctx.fillStyle = 'rgba(0,200,255,.9)'; ctx.fillRect(-34, -30, 68, 60); ctx.strokeStyle = '#fff'; ctx.lineWidth = 7; ctx.lineCap = 'round';
               for (const o of [-16, 6]) { ctx.beginPath(); ctx.moveTo(o, -18); ctx.lineTo(o + 14, 0); ctx.lineTo(o, 18); ctx.stroke(); } }
@@ -258,26 +281,27 @@
             ctx.restore();
           }
           // 아이템 상자
-          for (let i = 0; i < T.boxes.length; i++) { const b = T.boxes[i]; if (boxT[i] > 0 || (b.x - px) ** 2 + (b.y - py) ** 2 > 1000 * 1000) continue;
-            ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(t * 1.6 + i); ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#c98a00'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(-14, -14, 28, 28, 6); ctx.fill(); ctx.stroke();
-            ctx.rotate(-(t * 1.6 + i)); ctx.rotate(rot); ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', 0, 1); ctx.restore(); }
-          // 장식
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          for (const d of T.decos) { if ((d.x - px) ** 2 + (d.y - py) ** 2 > 950 * 950) continue; ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(rot); ctx.font = d.s + 'px sans-serif'; ctx.fillText(d.e, 0, 0); ctx.restore(); }
+          const qs = sprite('?', 48, 48, (g) => { g.fillStyle = '#fff'; g.font = 'bold 40px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 24, 26); });
+          for (let i = 0; i < T.boxes.length; i++) { const b = T.boxes[i]; if (boxT[i] > 0 || (b.x - px) ** 2 + (b.y - py) ** 2 > rad2) continue;
+            ctx.save(); ctx.translate(b.x, b.y); ctx.save(); ctx.rotate(t * 1.6 + i); ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#c98a00'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(-14, -14, 28, 28, 6); ctx.fill(); ctx.stroke(); ctx.restore();
+            ctx.rotate(rot); ctx.drawImage(qs, -12, -12, 24, 24); ctx.restore(); }
+          // 장식 (느린 기기에서는 절반만)
+          for (let i = 0; i < T.decos.length; i++) { if (lowQ && (i & 1)) continue; const d = T.decos[i]; if ((d.x - px) ** 2 + (d.y - py) ** 2 > rad2) continue; ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(rot); stamp(ctx, d.e, d.s); ctx.restore(); }
           // 던진 것
-          for (const o of objs) { ctx.save(); ctx.translate(o.x, o.y);
+          for (const o of objs) { const ox = (o.px === undefined ? o.x : o.px + (o.x - o.px) * alpha), oy = (o.py === undefined ? o.y : o.py + (o.y - o.py) * alpha); ctx.save(); ctx.translate(ox, oy);
             if (o.k === 'oil') { ctx.fillStyle = 'rgba(20,20,30,.85)'; ctx.beginPath(); ctx.ellipse(0, 0, o.r, o.r * 0.75, 0.3, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(120,140,255,.35)'; ctx.beginPath(); ctx.ellipse(-8, -6, o.r * 0.4, o.r * 0.2, 0.3, 0, TAU); ctx.fill(); }
-            else { ctx.rotate(rot); ctx.font = '34px sans-serif'; ctx.fillText(o.k === 'banana' ? '🍌' : o.k === 'trap' ? '🪤' : o.k === 'ice' ? '🧊' : '🎯', 0, 0); }
+            else { ctx.rotate(rot); stamp(ctx, o.k === 'banana' ? '🍌' : o.k === 'trap' ? '🪤' : o.k === 'ice' ? '🧊' : '🎯', 34); }
             ctx.restore(); }
-          // 차
-          for (const r of racers.slice().sort((a, b) => a.y - b.y)) {
-            ctx.save(); ctx.translate(r.x, r.y);
-            if (r.boost > 0) { ctx.save(); ctx.rotate(r.h); ctx.fillStyle = '#ff9f1c'; ctx.beginPath(); ctx.moveTo(-24, -9); ctx.lineTo(-24 - 18 - rnd() * 10, 0); ctx.lineTo(-24, 9); ctx.fill(); ctx.restore(); }
-            ctx.save(); ctx.rotate(r.h + r.spin); carShape(ctx, r.car); ctx.restore();
-            ctx.save(); ctx.rotate(rot); ctx.font = '26px sans-serif'; ctx.fillText(r.ch.e, 0, 0);
-            if (r.isPlayer) { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.font = 'bold 20px sans-serif'; ctx.strokeText('▼', 0, -34); ctx.fillText('▼', 0, -34); }
+          // 차 (아래쪽에 있는 차를 위에 그린다)
+          for (let i = 1; i < ord.length; i++) { const v = ord[i]; let j = i - 1; while (j >= 0 && ord[j].dy > v.dy) { ord[j + 1] = ord[j]; j--; } ord[j + 1] = v; }
+          for (const r of ord) {
+            ctx.save(); ctx.translate(r.dx, r.dy);
+            if (r.boost > 0) { ctx.save(); ctx.rotate(r.dh); ctx.fillStyle = '#ff9f1c'; ctx.beginPath(); ctx.moveTo(-24, -9); ctx.lineTo(-24 - 18 - rnd() * 10, 0); ctx.lineTo(-24, 9); ctx.fill(); ctx.restore(); }
+            ctx.save(); ctx.rotate(r.dh + r.spin); ctx.drawImage(kartSpr(r.car), -30, -20, 60, 40); ctx.restore();
+            ctx.save(); ctx.rotate(rot); stamp(ctx, r.ch.e, 26);
+            if (r.isPlayer) { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-8, -40); ctx.lineTo(8, -40); ctx.lineTo(0, -28); ctx.closePath(); ctx.stroke(); ctx.fill(); }
             if (r.shield > 0) { ctx.strokeStyle = 'rgba(80,220,255,.9)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 30 + Math.sin(t * 10) * 2, 0, TAU); ctx.stroke(); }
-            if (r.frozen > 0) { ctx.font = '44px sans-serif'; ctx.globalAlpha = 0.85; ctx.fillText('🧊', 0, 0); ctx.globalAlpha = 1; }
+            if (r.frozen > 0) { ctx.globalAlpha = 0.85; stamp(ctx, '🧊', 44); ctx.globalAlpha = 1; }
             ctx.restore(); ctx.restore();
           }
           for (const f of fx) if (f.k === 'ring') { ctx.strokeStyle = `rgba(255,255,255,${1 - f.t / f.life})`; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(f.x, f.y, 20 + (f.t / f.life) * 220, 0, TAU); ctx.stroke(); }
@@ -288,12 +312,13 @@
           for (let i = 0; i < M; i += 4) { const p = P[i]; i ? mctx.lineTo(mx(p.x), my(p.y)) : mctx.moveTo(mx(p.x), my(p.y)); } mctx.closePath(); mctx.stroke();
           for (const r of racers) { mctx.fillStyle = r.car.color; mctx.beginPath(); mctx.arc(mx(r.x), my(r.y), r.isPlayer ? 6 : 4, 0, TAU); mctx.fill(); if (r.isPlayer) { mctx.strokeStyle = '#fff'; mctx.lineWidth = 2; mctx.stroke(); mctx.lineWidth = 5; } }
         }
+        const setTxt = (el, v) => { if (el._v !== v) { el._v = v; el.textContent = v; } };
         function hud(dt) {
-          toastT -= dt; if (toastT <= 0) toastEl.textContent = '';
+          toastT -= dt; if (toastT <= 0) setTxt(toastEl, '');
           const k = rank(me), lap = clamp(me.lap, 1, laps);
-          const txt = `🏁 ${k}등 / 4  ·  🔁 ${lap}/${laps}`; if (badge.textContent !== txt) badge.textContent = txt;
-          bItem._em.textContent = me.item ? ITEMS[me.item].e : '·'; bItem.classList.toggle('ready', !!me.item);
-          [[bS1, me.ch.skill, 0], [bS2, me.car.skill, 1]].forEach(([b, sk, i]) => { if (b._sk !== sk) { b._sk = sk; b._em.textContent = sk.e; b.querySelector('small').textContent = sk.n; } b._cd.style.height = (me.cd[i] > 0 ? Math.round(me.cd[i] / sk.cd * 100) : 0) + '%'; });
+          setTxt(badge, `🏁 ${k}등 / 4  ·  🔁 ${lap}/${laps}`);
+          setTxt(bItem._em, me.item ? ITEMS[me.item].e : '·'); bItem.classList.toggle('ready', !!me.item);
+          [[bS1, me.ch.skill, 0], [bS2, me.car.skill, 1]].forEach(([b, sk, i]) => { if (b._sk !== sk) { b._sk = sk; b._em.textContent = sk.e; b.querySelector('small').textContent = sk.n; } const h = (me.cd[i] > 0 ? Math.round(me.cd[i] / sk.cd * 100) : 0) + '%'; if (b._h !== h) { b._h = h; b._cd.style.height = h; } });
         }
 
         // 반복
@@ -305,20 +330,36 @@
           if (over) return; over = true;
           const k = rank(me); G.win({ stars: k === 1 ? 3 : k === 2 ? 2 : 1, text: (k === 1 ? '🏆 1등!' : k + '등으로 들어왔어요') + ` · ${TD.n}` });
         }
+        const STEP = 1 / 60;
+        let acc = 0, ema = STEP, nF = 0, lastDown = -99;
+        function simStep(dt) {
+          for (const r of racers) { r.px = r.x; r.py = r.y; r.ph = r.h; }
+          for (const o of objs) { o.px = o.x; o.py = o.y; }
+          t += dt; pcamH = camH;
+          if (state === 'count') { cnt -= dt; const n = Math.ceil(cnt); setTxt(countEl, n > 0 ? String(n) : '출발!'); if (cnt <= -0.6) { state = 'go'; setTxt(countEl, ''); } }
+          else if (!over) {
+            for (const r of racers) step(r, dt); stepObjs(dt); collide();
+            if (finishing > 0) { finishing -= dt; if (finishing <= 0) end(); }
+            if (t > 300) end();
+          }
+          camH += angDiff(me.h, camH) * Math.min(1, dt * 6);
+        }
         function frame(ts) {
           raf = requestAnimationFrame(frame);
-          const dtR = Math.min(0.05, (ts - last) / 1000 || 0.016); last = ts;
-          for (let s = 0; s < (dbg.speed || 1); s++) {
-            const dt = Math.min(dtR, 1 / 30); t += dt;
-            if (state === 'count') { cnt -= dt; const n = Math.ceil(cnt); countEl.textContent = n > 0 ? String(n) : '출발!'; if (cnt <= -0.6) { state = 'go'; countEl.textContent = ''; } else if (n <= 0 && toastEl.textContent !== '') toast(''); }
-            else if (!over) {
-              for (const r of racers) step(r, dt); stepObjs(dt); collide();
-              if (finishing > 0) { finishing -= dt; if (finishing <= 0) end(); }
-              if (t > 300) end();
-            }
-            camH += angDiff(me.h, camH) * Math.min(1, dt * 6);
+          const raw = Math.min(0.1, (ts - last) / 1000 || 0.016); last = ts;
+          acc += raw * (dbg.speed || 1);
+          for (let n = 0; acc >= STEP && n < 8; n++) { simStep(STEP); acc -= STEP; }
+          if (acc >= STEP) acc = 0;
+          alpha = acc / STEP;
+          const d0 = performance.now(); draw(); if (dbg.sync) ctx.getImageData(0, 0, 1, 1); if (dbg.rec) dbg.ms.push([performance.now() - d0, Math.abs(me.steerIn)]);
+          hudT -= raw; if (hudT <= 0) { hudT = 0.05; hud(0.05); drawMini(); }
+          // 느린 기기: 해상도를 낮춰 부드럽게, 여유가 생기면 되돌린다
+          ema = ema * 0.92 + raw * 0.08; nF++;
+          if (nF > 80 && nF % 40 === 0 && !dbg.noAdapt && (dbg.speed || 1) === 1) {
+            const now = performance.now() / 1000;
+            if (ema > 0.026 && q > 0.5) { q = Math.max(0.5, q * 0.8); lastDown = now; fit(); } else if (ema < 0.0185 && q < 1 && now - lastDown > 8) { q = Math.min(1, q * 1.12); fit(); }
+            lowQ = q < 0.75; dbg.q = q;
           }
-          draw(); hudT -= dtR; if (hudT <= 0) { hudT = 0.05; hud(0.05); drawMini(); }
         }
         raf = requestAnimationFrame(frame);
         stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
