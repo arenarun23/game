@@ -72,8 +72,8 @@
     }
 
     // ── 길 표본 투영 (가까운 곳은 촘촘히, 먼 곳은 성기게) ──
-    const ks = [], lowQ = E.lowQ, reach = lowQ ? 110 : 150; let kk = idx - 8;
-    for (;;) { ks.push(kk); const rel = kk - (idx - 8); if (rel > reach) break; kk += rel < 30 ? 1 : rel < 80 ? 2 : 4; }
+    const ks = [], lowQ = E.lowQ, reach = lowQ ? 100 : 128; let kk = idx - 8;
+    for (;;) { ks.push(kk); const rel = kk - (idx - 8); if (rel > reach) break; kk += rel < 24 ? 1 : rel < 60 ? 2 : 4; }
     const n = ks.length, X = new Float32Array(n * NP), Y = new Float32Array(n * NP), ok = new Uint8Array(n), dep = new Float32Array(n);
     for (let e = 0; e < n; e++) {
       const m = ((ks[e] % M) + M) % M, c = P[m], h = hgt[m], skirt = S + Math.max(0, h - gz) * 0.9 + 50;
@@ -95,24 +95,25 @@
     items.sort((a, b) => b.d - a.d);
 
     // ── 그리기 (먼 것 → 가까운 것) ──
-    const quad = (a, b, c, d, color, edge) => { ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(X[a], Y[a]); ctx.lineTo(X[b], Y[b]); ctx.lineTo(X[c], Y[c]); ctx.lineTo(X[d], Y[d]); ctx.closePath(); ctx.fill(); if (edge) { ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke(); } };
-    const pc = (color) => tbl(color, fogc), sky = th.sky[1];
-    const cols = st.cols; if (!cols.road) { cols.road = th.road; cols.road2 = mixHex(th.road, '#ffffff', 0.07); cols.sh = th.shoulder; cols.sh2 = mixHex(th.shoulder, '#000000', 0.07); cols.skirt = mixHex(th.bg, '#000000', 0.28); }
+    const quad = (a, b, c, d, color, edge) => { ctx.fillStyle = color; const o = edge ? 1.2 : 0; ctx.beginPath(); ctx.moveTo(X[a], Y[a] + o); ctx.lineTo(X[b], Y[b] + o); ctx.lineTo(X[c], Y[c]); ctx.lineTo(X[d], Y[d]); ctx.closePath(); ctx.fill(); };
+    const pc = (color) => tbl(color, fogc), cols = st.cols;
+    if (!cols.road) { cols.road = tbl(th.road, fogc); cols.road2 = tbl(mixHex(th.road, '#ffffff', 0.07), fogc); cols.sh = tbl(th.shoulder, fogc); cols.sh2 = tbl(mixHex(th.shoulder, '#000000', 0.07), fogc); cols.skirt = tbl(mixHex(th.bg, '#000000', 0.28), fogc); cols.c0 = tbl(th.curb[0], fogc); cols.c1 = tbl(th.curb[1], fogc); cols.line = tbl(th.line, fogc); }
     ctx.lineJoin = 'round';
     for (const it of items) {
       if (it.kind === 0) {
         const e = it.e, a = e * NP, b = (e + 1) * NP, L = lvlOf(dep[e + 1]), stripe = Math.floor(ks[e] * ds / 40) & 1, st2 = Math.floor(ks[e] * ds / 70) & 1;
-        quad(a + 0, a + 1, b + 1, b + 0, pc(cols.skirt)[L]); quad(a + 8, a + 9, b + 9, b + 8, pc(cols.skirt)[L]);
-        quad(a + 1, a + 8, b + 8, b + 1, pc(stripe ? cols.sh : cols.sh2)[L], true);
-        quad(a + 2, a + 3, b + 3, b + 2, pc(th.curb[stripe])[L], true); quad(a + 6, a + 7, b + 7, b + 6, pc(th.curb[stripe])[L], true);
-        quad(a + 3, a + 6, b + 6, b + 3, pc(stripe ? cols.road : cols.road2)[L], true);
-        if (st2) quad(a + 4, a + 5, b + 5, b + 4, pc(th.line)[L]);
-        quad(a + 1, a + 10, b + 10, b + 1, pc(th.curb[stripe])[L]); quad(a + 8, a + 11, b + 11, b + 8, pc(th.curb[stripe])[L]);
+        const cc = stripe ? cols.c1 : cols.c0;
+        if (hgt[((ks[e] % M) + M) % M] - gz > 22) { quad(a + 0, a + 1, b + 1, b + 0, cols.skirt[L], true); quad(a + 8, a + 9, b + 9, b + 8, cols.skirt[L], true); } // 평평한 곳은 비탈 생략
+        quad(a + 1, a + 8, b + 8, b + 1, (stripe ? cols.sh : cols.sh2)[L], true);
+        quad(a + 2, a + 3, b + 3, b + 2, cc[L], true); quad(a + 6, a + 7, b + 7, b + 6, cc[L], true);
+        quad(a + 3, a + 6, b + 6, b + 3, (stripe ? cols.road : cols.road2)[L], true);
+        if (st2) quad(a + 4, a + 5, b + 5, b + 4, cols.line[L], true);
+        quad(a + 1, a + 10, b + 10, b + 1, cc[L], true); quad(a + 8, a + 11, b + 11, b + 8, cc[L], true);
         continue;
       }
       const L = lvlOf(it.d), s = F / Math.max(it.d, 1);
       if (it.kind === 1) { // 장식(나무·건물…): 땅에 선 그림
-        const o = it.o, sz = o.s * 1.25 * s; ctx.globalAlpha = 1 - L / LEVELS * 0.7; ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz); ctx.globalAlpha = 1;
+        const o = it.o, sz = o.s * 1.25 * s; if (L > 5) ctx.globalAlpha = 0.5; ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz); if (L > 5) ctx.globalAlpha = 1;
       } else if (it.kind === 2) { // 아이템 상자(빙글빙글)
         const w = 30 * s * (0.35 + 0.65 * Math.abs(Math.cos(E.t * 2.4 + it.i))), h = 30 * s; ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#c98a00'; ctx.lineWidth = Math.max(1, 2 * s);
         ctx.beginPath(); ctx.roundRect(it.sx - w / 2, it.sy - h / 2, w, h, 5 * s); ctx.fill(); ctx.stroke();

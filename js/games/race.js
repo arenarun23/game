@@ -105,7 +105,7 @@
         root.replaceChildren(wrap);
         const ctx = cv.getContext('2d'), mctx = mini.getContext('2d');
         let W = 0, H = 0, dpr = 1, q = 1;
-        const fit = () => { const r = wrap.getBoundingClientRect(); dpr = Math.min(2, devicePixelRatio || 1) * q; W = Math.max(50, Math.round(r.width * dpr)); H = Math.max(50, Math.round(r.height * dpr)); cv.width = W; cv.height = H; };
+        const fit = () => { const r = wrap.getBoundingClientRect(); dpr = Math.min(2, devicePixelRatio || 1) * q * (T.v3d ? 0.8 : 1); W = Math.max(50, Math.round(r.width * dpr)); H = Math.max(50, Math.round(r.height * dpr)); cv.width = W; cv.height = H; };
         fit(); const ro = new ResizeObserver(fit); ro.observe(wrap);
 
         // 선수

@@ -73,7 +73,7 @@
     T3('lava', '용암 롤러코스터', '🌋', '3D · 급경사', '가파른 오르막과 점프대', [[-1300, -900], [1300, -900], [1300, -300], [-750, -300], [-750, 300], [1300, 300], [1300, 900], [-1300, 900]], 130, 0.02, { boost: 5, slow: 7, ice: 0, jump: 4 }, 110, [[2, 100, 0], [4, 38, 1]]),
     T3('city', '밤의 고가 8자', '🌃', '3D · 8자 다리', '위아래로 얽힌 고가도로', lemn(1500, 950, 30, 120), 130, 0.14, { boost: 8, slow: 2, ice: 0, jump: 2 }, 80, [[1, 80, -Math.PI / 2], [3, 20, 0.4]]),
     T3('space', '우주 매듭 다리', '🪐', '3D · 매듭 다리', '세 번 만나는 곳이 모두 다리!', trefoil(430, 36), 130, 0.1, { boost: 6, slow: 0, ice: 5, jump: 3 }, 115, [[3, 77, 0.32], [3, 32, 0.6]]),
-    T3('beach', '파도 절벽', '🏖️', '3D · 파도 언덕', '출렁이는 파도 위 점프', [[-1600, 0], [-1300, -480], [-900, -180], [-500, -580], [-100, -180], [300, -580], [700, -180], [1100, -480], [1600, 0], [1100, 480], [700, 180], [300, 580], [-100, 180], [-500, 580], [-900, 180], [-1300, 480]], 130, 0.03, { boost: 4, slow: 6, ice: 0, jump: 4 }, 95, [[3, 70, 0], [7, 12, 1.1]]),
+    T3('beach', '파도 절벽', '🏖️', '3D · 파도 언덕', '출렁이는 파도 위 점프', [[-1700, 0], [-1350, -380], [-950, -130], [-550, -440], [-150, -130], [250, -440], [650, -130], [1100, -380], [1700, 0], [1100, 380], [650, 130], [250, 440], [-150, 130], [-550, 440], [-950, 130], [-1350, 380]], 130, 0.03, { boost: 4, slow: 6, ice: 0, jump: 4 }, 95, [[3, 70, 0], [7, 12, 1.1]]),
   );
 
   function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -143,7 +143,15 @@
     const RAD = { boost: 36, slow: 46, ice: 56, jump: 44 }, haz = [];
     for (const type of ['boost', 'slow', 'ice', 'jump']) {
       const n = def.haz[type] || 0;
-      for (let i = 0; i < n; i++) { const t = ((i + 0.2 + rnd() * 0.6) / n) * 0.9 + 0.05, p = at(Math.floor(t * M), (rnd() * 1.2 - 0.6) * hw); haz.push({ type, x: p.x, y: p.y, r: RAD[type], a: p.a, idx: Math.floor(t * M) % M }); }
+      for (let i = 0; i < n; i++) {
+        const t = ((i + 0.2 + rnd() * 0.6) / n) * 0.9 + 0.05; let j = Math.floor(t * M), lat = (rnd() * 1.2 - 0.6) * hw;
+        if (type === 'jump') { // 점프대는 공중에서 조종이 약하니 가장 곧은 구간(앞뒤 커브가 가장 작은 곳)에 놓는다
+          const turn = (m) => { const A = pts[((m - 20) % M + M) % M], B = pts[(m + 20) % M]; return Math.abs(Math.atan2(A.tx * B.ty - A.ty * B.tx, A.tx * B.tx + A.ty * B.ty)); };
+          let best = j, bv = 1e9; const span = Math.floor(M * 0.45 / n); for (let d = -span; d <= span; d += 2) { const m = (j + d + M) % M, v = turn(m); if (v < bv) { bv = v; best = m; } }
+          j = best; lat = (rnd() * 0.5 - 0.25) * hw;
+        }
+        const p = at(j, lat); haz.push({ type, x: p.x, y: p.y, r: RAD[type], a: p.a, idx: j % M });
+      }
     }
     // 길가 장식
     const decos = [], sub = pts.filter((_, i) => i % 3 === 0);
