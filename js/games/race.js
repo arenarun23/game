@@ -168,6 +168,23 @@
         chipA.addEventListener('click', () => { G.sfx.tap(); assistOn = !assistOn; G.store.set('race:assist', assistOn); refreshChips(); toast(assistOn ? '🧭 도우미 켜짐 — 길을 알아서 따라가요' : '🧭 도우미 꺼짐', 1.8); });
         const openHelp = () => { if (paused) return; paused = true; padV = 0; keys.left = keys.right = false; G.music.hold('help'); helpOverlay(root, me.ch, me.car, () => { paused = false; G.music.release('help'); }); };
         chipH.addEventListener('click', () => { G.sfx.tap(); openHelp(); });
+        // ⏸ 정지: 상단 막대(소리 버튼 옆)에 둔다. 누르면 경기가 멈추고 계속하기 / 다시 하기 / 그만두기를 고른다
+        const bPause = G.h('button', { class: 'round rpause', 'aria-label': '정지' }, '⏸'), topRight = document.querySelector('#bar .right');
+        let pauseBox = null;
+        const closePause = () => { if (!pauseBox) return; pauseBox.remove(); pauseBox = null; paused = false; G.music.release('pause'); };
+        function openPause() {
+          if (paused || over) return; paused = true; padV = 0; keys.left = keys.right = false; G.music.hold('pause'); G.sfx.tap();
+          pauseBox = G.h('div', { class: 'over' }, G.h('h2', {}, '⏸ 잠깐 멈췄어요'), G.h('div', { class: 'hint must' }, '어떻게 할까요?'),
+            G.h('div', { class: 'row col' },
+              G.h('button', { class: 'btn', onclick: () => { G.sfx.tap(); closePause(); } }, '▶ 계속하기'),
+              G.h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); closePause(); if (stopFn) stopFn(); startRace(); } }, '🔁 처음부터 다시'),
+              G.h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); G.home(); } }, '⏹ 그만두기')));
+          root.append(pauseBox);
+        }
+        bPause.addEventListener('click', () => (pauseBox ? closePause() : openPause()));
+        if (topRight) topRight.insertBefore(bPause, topRight.firstChild);
+        const onVis = () => { if (document.hidden && state === 'go') openPause(); }; // 다른 앱·탭으로 가면 자동으로 멈춤
+        document.addEventListener('visibilitychange', onVis);
         const musicChip = () => { chipM.textContent = G.music.isOn() ? '🎵 음악' : '🔇 음악'; chipM.setAttribute('aria-pressed', String(G.music.isOn())); };
         chipM.addEventListener('click', () => { G.sfx.tap(); G.music.setOn(!G.music.isOn()); musicChip(); toast(G.music.isOn() ? '🎵 음악 켜짐' : '🔇 음악 꺼짐', 1.2); });
         musicChip();
@@ -181,7 +198,7 @@
           let u = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
           if (ctlMode === 'slide') u += padV; else if (ctlMode === 'tilt') u += tiltV;
           u = clamp(u, -1, 1); inputV = u; r.throttle = 1; let st = u;
-          if (assistOn && r.fin == null) { const k = hard ? 0.4 : 0.65, g = guide(r, 0); st = clamp(u + g.steer * k * (1 - Math.min(1, Math.abs(u))), -1, 1); r.throttle = clamp(1 - g.curve * 0.3 * k, 0.72, 1); }
+          if (assistOn && r.fin == null) { const edge = clamp((Math.abs(r.off_lat || 0) - hw * 0.55) / (hw * 0.9), 0, 1), k = (hard ? 0.4 : 0.65) + (1 - (hard ? 0.4 : 0.65)) * edge, g = guide(r, 0); st = clamp(u + g.steer * k * (1 - Math.min(1, Math.abs(u)) * (1 - edge)), -1, 1); r.throttle = clamp(1 - g.curve * 0.45 * k, 0.62, 1); } // 가장자리로 갈수록 도우미가 세짐
           r.steerIn = st;
         }
         dbg.setCtl = setCtl; dbg.inp = () => ({ ctlMode, assistOn, padV, tiltV, inputV, paused }); dbg.setAssist = (v) => { assistOn = v; refreshChips(); };
@@ -291,7 +308,12 @@
           r.spin = r.stun > 0 ? r.spin + dt * 13 : 0;
           locate(r);
           const L = r.off_lat; r.off = Math.abs(L) > hw + 6;
-          if (Math.abs(L) > WALL) { dbg.walls[r.isPlayer ? 0 : 1]++;  const c = P[r.idx], sg = Math.sign(L), push = L - sg * WALL; r.x -= c.nx * push; r.y -= c.ny * push; const vn = r.vx * c.nx + r.vy * c.ny; if (vn * sg > 0) { r.vx -= c.nx * vn * 1.3; r.vy -= c.ny * vn * 1.3; } r.v *= 0.85; }
+          if (Math.abs(L) > WALL) { // 벽: 튕기지 않고 미끄러진다(벽 쪽 속도만 없애고, 길 방향으로 부드럽게 돌려 줌)
+            dbg.walls[r.isPlayer ? 0 : 1]++; if (dbg.log) dbg.log.push({ me: r.isPlayer ? 1 : 0, idx: r.idx, v: Math.round(r.v), boost: r.boost > 0 ? 1 : 0, air: r.air > 0 ? 1 : 0 });
+            const c = P[r.idx], sg = Math.sign(L), push = L - sg * WALL; r.x -= c.nx * push; r.y -= c.ny * push;
+            const vn = r.vx * c.nx + r.vy * c.ny; if (vn * sg > 0) { r.vx -= c.nx * vn; r.vy -= c.ny * vn; }
+            r.v *= 0.975; r.h += angDiff(Math.atan2(c.ty, c.tx), r.h) * Math.min(1, 6 * dt);
+          }
           // 박스 줍기
           for (let i = 0; i < T.boxes.length; i++) { if (boxT[i] > 0) continue; const b = T.boxes[i]; if ((b.x - r.x) ** 2 + (b.y - r.y) ** 2 < 900) { boxT[i] = 4; if (!r.item && r.fin == null) { r.item = randItem(r); if (r.isPlayer) { G.sfx.ok(); const n = G.store.get('race:tips', 0); if (n < 3) { G.store.set('race:tips', n + 1); toast(`${ITEMS[r.item].e} ${ITEMS[r.item].n}! ${ITEMS[r.item].d} — 맨 오른쪽 아이템 버튼을 눌러요`, 3); } else toast(`${ITEMS[r.item].e} ${ITEMS[r.item].n}!`, 1.2); } } } }
           // 멈춰서 꼼짝 못하면 길 위로 되돌리기
@@ -427,7 +449,7 @@
         }
 
         // 반복
-        const kd = (e) => { const k = e.key; if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = true; else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = true; else if (k === ' ') useItem(me); else if (k === 'z' || k === 'Z') useSkill(me, 0); else if (k === 'x' || k === 'X') useSkill(me, 1); else return; e.preventDefault(); };
+        const kd = (e) => { const k = e.key; if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = true; else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = true; else if (k === ' ') useItem(me); else if (k === 'p' || k === 'P' || k === 'Escape') { if (pauseBox) closePause(); else openPause(); } else if (k === 'z' || k === 'Z') useSkill(me, 0); else if (k === 'x' || k === 'X') useSkill(me, 1); else return; e.preventDefault(); };
         const ku = (e) => { const k = e.key; if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = false; else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false; };
         addEventListener('keydown', kd); addEventListener('keyup', ku);
         toast('준비!', 1);
@@ -489,7 +511,7 @@
           }
         }
         raf = requestAnimationFrame(frame);
-        stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); stopTilt(); G.music.stop(); G.music.release('help'); document.querySelectorAll('.rhelp').forEach((e) => e.remove()); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
+        stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); stopTilt(); G.music.stop(); G.music.release('help'); G.music.release('pause'); bPause.remove(); document.removeEventListener('visibilitychange', onVis); document.querySelectorAll('.rhelp').forEach((e) => e.remove()); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
       }
 
       if (pendingTrack !== null) { sel.tr = pendingTrack; pendingTrack = null; G.store.set('race:sel', sel); startRace(); } else showChars();

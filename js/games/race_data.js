@@ -156,7 +156,7 @@
       const n = def.haz[type] || 0;
       for (let i = 0; i < n; i++) {
         const t = ((i + 0.2 + rnd() * 0.6) / n) * 0.9 + 0.05; let j = Math.floor(t * M), lat = (rnd() * 1.2 - 0.6) * hw;
-        if (type === 'jump') { // 점프대는 공중에서 조종이 약하니 가장 곧은 구간(앞뒤 커브가 가장 작은 곳)에 놓는다
+        if (type === 'jump' || (type === 'boost' && def.v3d)) { // 점프대·(3D의) 부스트 패드는 커브 직전에서 밖으로 밀려나지 않게 가장 곧은 구간(앞뒤 커브가 가장 작은 곳)에 놓는다
           const turn = (m) => { const A = pts[((m - 30) % M + M) % M], B = pts[(m + 30) % M]; return Math.abs(Math.atan2(A.tx * B.ty - A.ty * B.tx, A.tx * B.tx + A.ty * B.ty)); };
           let best = j, bv = 1e9; const span = Math.floor(M * 0.6 / n); for (let d = -span; d <= span; d += 2) { const m = (j + d + M) % M, v = turn(m); if (v < bv) { bv = v; best = m; } }
           j = best; lat = (rnd() * 0.5 - 0.25) * hw;
