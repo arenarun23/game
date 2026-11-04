@@ -6,6 +6,7 @@
     { id: 'draw', name: '그리기', icon: '🎨' },
     { id: 'match', name: '찾기·맞추기', icon: '🔍' },
     { id: 'play', name: '놀이', icon: '🎮' },
+    { id: 'race', name: '달리기', icon: '🏁' },
   ] });
 
   G.register = (g) => G.games.push(g);
