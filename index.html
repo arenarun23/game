@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fff7e6">
+<title>놀이터 게임 모음</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-view="home">
+<div id="app">
+  <header id="bar">
+    <button id="btnHome" class="round" aria-label="처음 화면으로">🏠</button>
+    <h1 id="title">놀이터</h1>
+    <div class="right">
+      <span id="stars" class="stars" aria-label="모은 별">⭐ 0</span>
+      <button id="btnSound" class="round" aria-label="소리 켜기/끄기">🔊</button>
+    </div>
+  </header>
+  <main id="stage"></main>
+</div>
+<script src="js/core.js"></script>
+<script src="js/games/coloring.js"></script>
+<script src="js/games/dots.js"></script>
+<script src="js/games/memory.js"></script>
+<script src="js/games/oddone.js"></script>
+<script src="js/games/mole.js"></script>
+<script src="js/games/sort.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
