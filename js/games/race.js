@@ -342,7 +342,7 @@
         function draw() {
           const zoom = Math.max(H / 680, 0.5 * dpr);
           for (const r of racers) { r.dx = r.px + (r.x - r.px) * alpha; r.dy = r.py + (r.y - r.py) * alpha; r.dh = r.ph + angDiff(r.h, r.ph) * alpha; }
-          if (T.v3d) { Object.assign(env, { ctx, W, H, yaw: pcamH + angDiff(camH, pcamH) * alpha, t, alpha, lowQ }); window.Race3D.draw(env); return; }
+          if (T.v3d) { Object.assign(env, { ctx, W, H, yaw: pcamH + angDiff(camH, pcamH) * alpha, t, alpha, lowQ, state }); window.Race3D.draw(env); return; }
           const px = me.dx, py = me.dy, rot = Math.PI / 2 + pcamH + angDiff(camH, pcamH) * alpha;
           ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
           ctx.translate(W / 2, H * 0.72); ctx.scale(zoom, zoom); ctx.rotate(-rot); ctx.translate(-px, -py);
