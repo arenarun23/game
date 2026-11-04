@@ -8,7 +8,7 @@
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return d; };
   const ITEMS = { boost: { e: '🍄', n: '부스트', d: '잠깐 아주 빨라져요' }, shield: { e: '🛡️', n: '방패', d: '3초 동안 공격을 막아요' }, banana: { e: '🍌', n: '바나나', d: '뒤에 떨어뜨려요. 밟은 차는 빙글!' }, missile: { e: '🎯', n: '미사일', d: '앞차를 쫓아가서 맞혀요' } };
-  const BASE_V = 380, BASE_ACC = 300, BASE_TURN = 2.4;
+  const BASE_V = 380, BASE_ACC = 300, BASE_TURN = 2.4, JUMP = 0.75; // 점프 공중 시간(초)
 
   // 이모지·차는 한 번만 그려 두고 이미지로 찍는다(회전해도 비용이 일정). 글자를 매 프레임 회전해 그리면 글자 캐시가 계속 빗나가서 끊긴다.
   const spr = new Map();
@@ -269,15 +269,15 @@
           if (r.fin != null) { r.steerIn = clamp(r.steerIn, -1, 1); r.throttle = 0.6; }
           r.boost = Math.max(0, r.boost - dt); r.shield = Math.max(0, r.shield - dt); r.stun = Math.max(0, r.stun - dt); r.frozen = Math.max(0, r.frozen - dt);
           for (let s = 0; s < 2; s++) r.cd[s] = Math.max(0, r.cd[s] - dt);
-          r.air = Math.max(0, r.air - dt); { const a = r.air > 0 ? 1 - r.air / 0.85 : 0; r.zair = r.air > 0 ? 80 * 4 * a * (1 - a) : 0; }
-          const steer = (r.stun > 0 || r.frozen > 0 ? 0 : r.steerIn) * (r.air > 0 ? 0.25 : 1);
+          r.air = Math.max(0, r.air - dt); { const a = r.air > 0 ? 1 - r.air / JUMP : 0; r.zair = r.air > 0 ? 80 * 4 * a * (1 - a) : 0; }
+          const steer = (r.stun > 0 || r.frozen > 0 ? 0 : r.steerIn) * (r.air > 0 ? 0.5 : 1);
           let surf = r.off ? r.offF : 1, grip = 7, turnK = 1;
           for (const z of T.haz) {
             const dx = r.x - z.x, dy = r.y - z.y; if (dx * dx + dy * dy > z.r * z.r) continue;
             if (z.type === 'boost') { if (r.boost < 0.9) { r.boost = 1.0; r.boostMul = 1.4; if (r.isPlayer) G.sfx.pop(); } }
             else if (z.type === 'slow') surf *= 0.5;
             else if (z.type === 'ice' && !r.iceImm) { grip = 1.1; turnK = 0.7; }
-            else if (z.type === 'jump' && r.air <= 0 && r.v > 90) { r.air = 0.85; r.v *= 1.06; dbg.jumps = (dbg.jumps || 0) + 1; if (r.isPlayer) G.sfx.pop(); }
+            else if (z.type === 'jump' && r.air <= 0 && r.v > 90) { r.air = JUMP; dbg.jumps = (dbg.jumps || 0) + 1; if (r.isPlayer) G.sfx.pop(); }
           }
           let maxV = r.maxV * (r.boost > 0 ? r.boostMul : 1) * (r.isPlayer ? 1 : AI.mul * r.aiVar * (r.rb || 1)) * r.throttle * surf;
           if (T.v3d) maxV *= clamp(1 - T.slope[r.idx] * 1.0, 0.86, 1.1); // 오르막은 느리게, 내리막은 빠르게
