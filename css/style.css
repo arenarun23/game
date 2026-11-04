@@ -215,3 +215,8 @@ body[data-view=home] #btnHome{visibility:hidden}
 .over{overflow-y:auto;padding:1rem .8rem}
 .over .ask{white-space:pre-line;font-size:1.3rem;max-width:92%;line-height:1.4}
 .over .row{flex-wrap:wrap;justify-content:center}
+
+/* 레이싱: 안내 글자는 칩 아래, 칩은 터치하기 좋은 크기 */
+.rtoast{top:36%}
+.rchip{min-height:max(2.3rem,40px)}
+@media (max-height:460px){.rchip{min-height:40px}.rtoast{top:30%}}

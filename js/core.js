@@ -41,6 +41,7 @@
     if (ac && ac.state === 'suspended') ac.resume();
     return ac;
   }
+  G.audioCtx = ctx;
   function tone(f, t0, d, type, v) {
     const c = G.soundOn && ctx(); if (!c) return;
     const o = c.createOscillator(), g = c.createGain(), s = c.currentTime + t0;
@@ -60,7 +61,7 @@
     if (!G.soundOn || !('speechSynthesis' in window)) return;
     try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'ko-KR'; u.rate = 0.95; speechSynthesis.speak(u); } catch (e) {}
   };
-  G.setSound = (on) => { G.soundOn = on; G.store.set('sound', on); G.$('#btnSound').textContent = on ? '🔊' : '🔇'; if (!on && 'speechSynthesis' in window) try { speechSynthesis.cancel(); } catch (e) {} };
+  G.setSound = (on) => { G.soundOn = on; G.store.set('sound', on); if (G.music) G.music.onSound(on); G.$('#btnSound').textContent = on ? '🔊' : '🔇'; if (!on && 'speechSynthesis' in window) try { speechSynthesis.cancel(); } catch (e) {} };
 
   // 난이도(쉬움/어려움)와 문제 종류(20가지)를 섞어서 뽑는다
   G.hard = !!G.store.get('hard', false);
