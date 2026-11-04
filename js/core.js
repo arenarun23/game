@@ -106,7 +106,7 @@
     const mode = (hard, label) => G.h('button', { class: 'mode', 'aria-pressed': String(G.hard === hard),
       onclick: () => { if (G.hard === hard) return; G.hard = hard; G.store.set('hard', hard); G.sfx.tap(); G.start(g); } }, label);
     const sub = G.h('div', { class: 'subbar' }, mode(false, '🙂 쉬워요'), mode(true, '🔥 어려워요'),
-      G.h('button', { class: 'mode refresh', 'aria-label': '새 문제', onclick: () => { G.sfx.tap(); G.start(g); } }, '🔄 새로 하기'));
+      G.h('button', { class: 'mode refresh', 'aria-label': '새 문제', onclick: () => { G.sfx.tap(); G.start(g); } }, '🔄', G.h('span', { class: 'lbl' }, ' 새로 하기')));
     stage().replaceChildren(sub, root);
     const n = g.variants || 1, v = forceV != null ? forceV : G.nextVariant(g.id, n);
     stop = g.start(root, { hard: G.hard, v, n }) || null;

@@ -45,6 +45,7 @@
   G.register({
     id: 'race', name: '레이싱', desc: '캐릭터·차·경기장 고르기', icon: '🏁', cat: 'race', color: 'peach', variants: 1,
     start(root, { hard }) {
+      document.documentElement.dataset.game = 'race'; // 레이싱 동안 글자를 크게
       let stopFn = null;
       const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
@@ -53,21 +54,22 @@
         if (stopFn) { stopFn(); stopFn = null; }
         const land = innerWidth > innerHeight * 1.05 && innerWidth > 640, n = items.length;
         const c = land ? (n <= 4 ? n : n <= 8 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 ? 3 : 2), r = Math.ceil(n / c);
-        const grid = G.h('div', { class: 'pickgrid', style: `--c:${c};--r:${r}` }, items.map((it, i) =>
-          G.h('button', { class: 'card pk c-' + it.color, 'aria-pressed': String(i === cur), onclick: () => { G.sfx.tap(); onPick(i); } },
-            G.h('span', { class: 'ic' }, it.ic), G.h('span', { class: 'nm' }, it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
+        const rowMode = !land && step <= 2; // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
+        const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : ''), style: rowMode ? `--c:1;--r:${n}` : `--c:${c};--r:${r}` }, items.map((it, i) =>
+          G.h('button', { class: 'card pk c-' + it.color + (typeof it.ic === 'string' ? '' : ' trk'), 'aria-pressed': String(i === cur), onclick: () => { G.sfx.tap(); onPick(i); } },
+            G.h('span', { class: 'ic' }, it.ic), G.h('span', Object.assign({ class: 'nm' }, typeof it.ic === 'string' ? { 'data-e': it.ic } : {}), it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
         const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), extra || null, G.h('div', { class: 'fitbox' }, grid)];
         kids.push(G.h('div', { class: 'palette' }, onBack ? G.h('button', { class: 'btn alt', onclick: onBack }, '◀ 이전') : null,
           G.h('button', { class: 'btn alt', onclick: () => helpOverlay(root, D.CHARS[sel.ch], D.CARS[sel.car]) }, '❓ 사용법')));
-        root.replaceChildren(...kids);
+        root.replaceChildren(...kids.filter(Boolean));
       }
-      const br = (t) => G.h('span', { class: 'ln' }, t);
+      const br = (t, cls) => G.h('span', { class: 'ln' + (cls ? ' ' + cls : '') }, t);
       function showChars() {
-        pick(1, '캐릭터를 골라요', D.CHARS.map((c) => ({ ic: c.e, nm: c.n, color: c.color, ds: [br('⭐ ' + c.trait), br(`${c.skill.e} 스킬: ${c.skill.n}`), br(c.skill.d)] })), sel.ch,
+        pick(1, '캐릭터를 골라요', D.CHARS.map((c) => ({ ic: c.e, nm: c.n, color: c.color, ds: [br('⭐ ' + c.trait), br(`${c.skill.e} 스킬: ${c.skill.n}`), br(c.skill.d, 'sd')] })), sel.ch,
           (i) => { sel.ch = i; showCars(); }, null);
       }
       function showCars() {
-        pick(2, '차를 골라요', D.CARS.map((c) => ({ ic: c.e, nm: c.n, color: c.ui, ds: [br('⭐ ' + c.trait), br(`속도 ${stars(c.bars[0])}`), br(`가속 ${stars(c.bars[1])}`), br(`핸들 ${stars(c.bars[2])}`), br(`${c.skill.e} 스킬: ${c.skill.n} — ${c.skill.d}`)] })), sel.car,
+        pick(2, '차를 골라요', D.CARS.map((c) => ({ ic: c.e, nm: c.n, color: c.ui, ds: [br('⭐ ' + c.trait), br(`${c.skill.e} 스킬: ${c.skill.n}`), br(`속도 ★${c.bars[0]}  가속 ★${c.bars[1]}`, 'st'), br(`핸들 ★${c.bars[2]}  튼튼 ★${c.bars[3]}`, 'st'), br(c.skill.d, 'sd')] })), sel.car,
           (i) => { sel.car = i; showTracks(); }, showChars);
       }
       function thumb(def, seed) {
@@ -421,7 +423,7 @@
           const k = rank(me), lap = clamp(me.lap, 1, laps);
           setTxt(badge, `🏁 ${k}등 / 4  ·  🔁 ${lap}/${laps}`);
           setTxt(bItem._em, me.item ? ITEMS[me.item].e : '·'); setTxt(bItem.querySelector('small'), me.item ? '눌러요!' : '아이템'); bItem.classList.toggle('ready', !!me.item);
-          [[bS1, me.ch.skill, 0], [bS2, me.car.skill, 1]].forEach(([b, sk, i]) => { if (b._sk !== sk) { b._sk = sk; b._em.textContent = sk.e; b.querySelector('small').textContent = sk.n; } const h = (me.cd[i] > 0 ? Math.round(me.cd[i] / sk.cd * 100) : 0) + '%'; if (b._h !== h) { b._h = h; b._cd.style.height = h; } });
+          [[bS1, me.ch.skill, 0], [bS2, me.car.skill, 1]].forEach(([b, sk, i]) => { if (b._sk !== sk) { b._sk = sk; b._em.textContent = sk.e; b.querySelector('small').textContent = sk.tag || sk.n; } const h = (me.cd[i] > 0 ? Math.round(me.cd[i] / sk.cd * 100) : 0) + '%'; if (b._h !== h) { b._h = h; b._cd.style.height = h; } });
         }
 
         // 반복
@@ -491,7 +493,7 @@
       }
 
       if (pendingTrack !== null) { sel.tr = pendingTrack; pendingTrack = null; G.store.set('race:sel', sel); startRace(); } else showChars();
-      return () => { if (stopFn) stopFn(); };
+      return () => { delete document.documentElement.dataset.game; if (stopFn) stopFn(); };
     },
   });
 })();
