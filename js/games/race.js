@@ -15,6 +15,7 @@
   function sprite(key, w, h, fn) { let c = spr.get(key); if (!c) { c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); spr.set(key, c); } return c; }
   const emo = (e) => sprite(e, 96, 96, (g, w) => { g.font = Math.round(w * 0.79) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, w / 2, w * 0.53); });
   const stamp = (c, e, fontPx) => { const sz = 96 * fontPx / 76; c.drawImage(emo(e), -sz / 2, -sz / 2, sz, sz); };
+  G.raceUtil = { sprite, emo, stamp };
 
   let pendingTrack = null; // 질문에서 '네'를 눌러 모드를 바꿨을 때, 고르기를 건너뛰고 바로 시작할 경기장
   const saved = G.store.get('race:sel', {});
@@ -51,7 +52,7 @@
       function pick(step, title, items, cur, onPick, onBack) {
         if (stopFn) { stopFn(); stopFn = null; }
         const land = innerWidth > innerHeight * 1.05 && innerWidth > 640, n = items.length;
-        const c = land ? (n <= 4 ? n : Math.ceil(n / 2)) : 2, r = Math.ceil(n / c);
+        const c = land ? (n <= 4 ? n : n <= 8 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 ? 3 : 2), r = Math.ceil(n / c);
         const grid = G.h('div', { class: 'pickgrid', style: `--c:${c};--r:${r}` }, items.map((it, i) =>
           G.h('button', { class: 'card pk c-' + it.color, 'aria-pressed': String(i === cur), onclick: () => { G.sfx.tap(); onPick(i); } },
             G.h('span', { class: 'ic' }, it.ic), G.h('span', { class: 'nm' }, it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
@@ -78,7 +79,7 @@
       const TRACKS = hard ? D.TRACKS_HARD : D.TRACKS_EASY, seedOf = (i) => (hard ? 100 : 0) + i + 1;
       function showTracks() {
         const doneSet = new Set(G.store.get('race:done:' + (hard ? 'hard' : 'easy'), []));
-        pick(3, (hard ? '🔥 어려운 ' : '') + `경기장을 골라요 (완주 ${doneSet.size}/${TRACKS.length})`, TRACKS.map((t, i) => ({ ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky'][i], ds: [br('▶ ' + t.shape), br(t.gim)] })), sel.tr,
+        pick(3, (hard ? '🔥 어려운 ' : '') + `경기장을 골라요 (완주 ${doneSet.size}/${TRACKS.length})`, TRACKS.map((t, i) => ({ ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + (t.v3d ? '🧊3D ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky'][i % 8], ds: [br('▶ ' + t.shape), br(t.gim)] })), sel.tr,
           (i) => { sel.tr = i; G.store.set('race:sel', sel); startRace(); }, showCars);
       }
 
@@ -116,7 +117,7 @@
           const ch = D.CHARS[ci], car = D.CARS[cr], idx = (M - 3 - Math.floor(slot / 2) * 4 + M) % M, c = P[idx], lat = (slot % 2 ? 0.45 : -0.45) * hw;
           return { ch, car, isPlayer, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
             offF: 0.45 + (car.st.off || 0) + (ch.mod.off || 0), iceImm: !!ch.mod.ice, x: c.x + c.nx * lat, y: c.y + c.ny * lat, h: Math.atan2(c.ty, c.tx), px: c.x + c.nx * lat, py: c.y + c.ny * lat, ph: Math.atan2(c.ty, c.tx), dx: 0, dy: 0, dh: 0, vx: 0, vy: 0, v: 0, idx, lap: 0, prog: idx, prevIdx: idx,
-            steerIn: 0, throttle: 1, boost: 0, boostMul: 1.4, shield: 0, stun: 0, frozen: 0, spin: 0, item: null, cd: [3, 4], lane: (rnd() - 0.5) * 0.7, aiVar: 0.97 + rnd() * 0.06, aiT: rnd(), fin: null, off: false, stuck: 0, tire: 0 };
+            steerIn: 0, throttle: 1, air: 0, zair: 0, boost: 0, boostMul: 1.4, shield: 0, stun: 0, frozen: 0, spin: 0, item: null, cd: [3, 4], lane: (rnd() - 0.5) * 0.7, aiVar: 0.97 + rnd() * 0.06, aiT: rnd(), fin: null, off: false, stuck: 0, tire: 0 };
         }
 
         // 상태
@@ -183,6 +184,9 @@
         const rank = (r) => { const sc = (a) => (a.fin != null ? 1e9 - a.fin : a.prog); let k = 1; for (const o of racers) if (o !== r && sc(o) > sc(r)) k++; return k; };
         const ordered = () => racers.slice().sort((a, b) => (b.fin != null ? 1e9 - b.fin : b.prog) - (a.fin != null ? 1e9 - a.fin : a.prog));
 
+        // 3D: 선수의 높이(길 높이 + 점프 높이). 평면 경기장은 0
+        const hOf = (r) => { if (!T.v3d) return 0; const pm = ((r.prog % M) + M) % M, i0 = Math.floor(pm); return T.hgt[i0] + (T.hgt[(i0 + 1) % M] - T.hgt[i0]) * (pm - i0) + r.zair; };
+        const env = { ctx: null, W: 0, H: 0, T, th, racers, objs, boxT, me, hOf, yaw: 0, t: 0, alpha: 0, dt: 0.016, lowQ: false };
         // 아이템·스킬
         const randItem = (r) => { const k = rank(r), pool = k >= 3 ? ['boost', 'boost', 'missile', 'shield', 'banana'] : k === 2 ? ['boost', 'missile', 'shield', 'banana'] : ['shield', 'banana', 'banana', 'boost']; return G.pick(pool); };
         function hit(r, kind, dur) {
@@ -260,15 +264,18 @@
           if (r.fin != null) { r.steerIn = clamp(r.steerIn, -1, 1); r.throttle = 0.6; }
           r.boost = Math.max(0, r.boost - dt); r.shield = Math.max(0, r.shield - dt); r.stun = Math.max(0, r.stun - dt); r.frozen = Math.max(0, r.frozen - dt);
           for (let s = 0; s < 2; s++) r.cd[s] = Math.max(0, r.cd[s] - dt);
-          const steer = r.stun > 0 || r.frozen > 0 ? 0 : r.steerIn;
+          r.air = Math.max(0, r.air - dt); { const a = r.air > 0 ? 1 - r.air / 0.85 : 0; r.zair = r.air > 0 ? 80 * 4 * a * (1 - a) : 0; }
+          const steer = (r.stun > 0 || r.frozen > 0 ? 0 : r.steerIn) * (r.air > 0 ? 0.25 : 1);
           let surf = r.off ? r.offF : 1, grip = 7, turnK = 1;
           for (const z of T.haz) {
             const dx = r.x - z.x, dy = r.y - z.y; if (dx * dx + dy * dy > z.r * z.r) continue;
             if (z.type === 'boost') { if (r.boost < 0.9) { r.boost = 1.0; r.boostMul = 1.4; if (r.isPlayer) G.sfx.pop(); } }
             else if (z.type === 'slow') surf *= 0.5;
             else if (z.type === 'ice' && !r.iceImm) { grip = 1.1; turnK = 0.7; }
+            else if (z.type === 'jump' && r.air <= 0 && r.v > 90) { r.air = 0.85; r.v *= 1.06; dbg.jumps = (dbg.jumps || 0) + 1; if (r.isPlayer) G.sfx.pop(); }
           }
           let maxV = r.maxV * (r.boost > 0 ? r.boostMul : 1) * (r.isPlayer ? 1 : AI.mul * r.aiVar * (r.rb || 1)) * r.throttle * surf;
+          if (T.v3d) maxV *= clamp(1 - T.slope[r.idx] * 1.0, 0.86, 1.1); // 오르막은 느리게, 내리막은 빠르게
           if (r.frozen > 0) maxV = 0; else if (r.stun > 0) maxV = Math.min(maxV, r.maxV * 0.3);
           if (r.v < maxV) r.v = Math.min(maxV, r.v + r.acc * dt * (r.boost > 0 ? 2.4 : 1)); else r.v = Math.max(maxV, r.v - (r.off ? 540 : 230) * dt);
           r.h += steer * r.turn * turnK * Math.min(1, r.v / 170) * dt;
@@ -308,6 +315,7 @@
           for (let i = 0; i < racers.length; i++) for (let j = i + 1; j < racers.length; j++) {
             const a = racers[i], b = racers[j], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01;
             if (d >= 34) continue;
+            if (T.v3d && Math.abs(hOf(a) - hOf(b)) > 45) continue; // 다리 위아래는 부딪히지 않는다
             const nx = dx / d, ny = dy / d, ov = 34 - d, wa = b.mass / (a.mass + b.mass), wb = a.mass / (a.mass + b.mass);
             a.x -= nx * ov * wa; a.y -= ny * ov * wa; b.x += nx * ov * wb; b.y += ny * ov * wb;
             const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
@@ -334,6 +342,7 @@
         function draw() {
           const zoom = Math.max(H / 680, 0.5 * dpr);
           for (const r of racers) { r.dx = r.px + (r.x - r.px) * alpha; r.dy = r.py + (r.y - r.py) * alpha; r.dh = r.ph + angDiff(r.h, r.ph) * alpha; }
+          if (T.v3d) { Object.assign(env, { ctx, W, H, yaw: pcamH + angDiff(camH, pcamH) * alpha, t, alpha, lowQ }); window.Race3D.draw(env); return; }
           const px = me.dx, py = me.dy, rot = Math.PI / 2 + pcamH + angDiff(camH, pcamH) * alpha;
           ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
           ctx.translate(W / 2, H * 0.72); ctx.scale(zoom, zoom); ctx.rotate(-rot); ctx.translate(-px, -py);
@@ -462,7 +471,7 @@
           if (acc >= STEP) acc = 0;
           alpha = acc / STEP;
           if (knob._v !== inputV) { knob._v = inputV; knob.style.left = (50 + inputV * 40) + '%'; }
-          const d0 = performance.now(); draw(); if (dbg.sync) ctx.getImageData(0, 0, 1, 1); if (dbg.rec) dbg.ms.push([performance.now() - d0, Math.abs(me.steerIn)]);
+          env.dt = raw; const d0 = performance.now(); draw(); if (dbg.sync) ctx.getImageData(0, 0, 1, 1); if (dbg.rec) dbg.ms.push([performance.now() - d0, Math.abs(me.steerIn)]);
           hudT -= raw; if (hudT <= 0) { hudT = 0.05; hud(0.05); drawMini(); }
           // 느린 기기: 해상도를 낮춰 부드럽게, 여유가 생기면 되돌린다
           ema = ema * 0.92 + raw * 0.08; nF++;

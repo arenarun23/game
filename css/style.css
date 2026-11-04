@@ -220,3 +220,7 @@ body[data-view=home] #btnHome{visibility:hidden}
 .rtoast{top:36%}
 .rchip{min-height:max(2.3rem,40px)}
 @media (max-height:460px){.rchip{min-height:40px}.rtoast{top:30%}}
+
+/* 경기장이 12개로 늘어 카드가 작아지면 설명 줄을 숨기고 이름·미리보기만 */
+@container (max-height: 150px){ .pk .ds{display:none!important} .pk .th{max-height:46cqh;width:min(70cqw,60cqh)} .pk .nm{font-size:clamp(.8rem,13cqmin,1.2rem)} }
+@container (max-height: 96px){ .pk .th{max-height:40cqh} .pk .nm{font-size:clamp(.7rem,14cqmin,1rem)} }

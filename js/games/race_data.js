@@ -29,17 +29,19 @@
 
   // 장소별 색·장식 (이지/하드 공통)
   const TH = {
-    meadow: { bg: '#7ed56f', shoulder: '#6cc35e', road: '#5a5f6a', curb: ['#e74c3c', '#ffffff'], line: '#ffffff', slow: '#8a6a3c', deco: ['🌳', '🌲', '🌼', '🌷', '🍄'] },
-    desert: { bg: '#f3d58a', shoulder: '#e8c477', road: '#7a6a55', curb: ['#d35400', '#ffffff'], line: '#fff3c4', slow: '#c9a45a', deco: ['🌵', '🪨', '🦂', '🐪', '🏜️'] },
-    snow: { bg: '#eaf6ff', shoulder: '#d8ecf8', road: '#7f8da0', curb: ['#2980b9', '#ffffff'], line: '#ffffff', slow: '#cfe3f0', deco: ['⛄', '🌲', '❄️', '🏔️', '🎿'] },
-    beach: { bg: '#ffe9a8', shoulder: '#fbdc8a', road: '#6d7a88', curb: ['#16a085', '#ffffff'], line: '#ffffff', slow: '#5dade2', deco: ['🌴', '🐚', '⛱️', '🦀', '🏐'] },
-    candy: { bg: '#ffc7e0', shoulder: '#ffb3d4', road: '#8e6bb8', curb: ['#ff6fb5', '#ffffff'], line: '#fff3fb', slow: '#c0392b', deco: ['🍭', '🧁', '🍩', '🍬', '🍪'] },
-    city: { bg: '#1f2a44', shoulder: '#2a3658', road: '#3b3f4f', curb: ['#ff4fa3', '#4fe3ff'], line: '#ffe94f', slow: '#1b1f2d', deco: ['🏢', '🏙️', '💡', '🌃', '🚦'] },
-    lava: { bg: '#3a1a14', shoulder: '#552218', road: '#4a4a52', curb: ['#ff7a1a', '#222222'], line: '#ffd6a0', slow: '#ff5a1f', deco: ['🌋', '🔥', '🪨', '💀', '🦇'] },
-    space: { bg: '#0b0b2a', shoulder: '#15154a', road: '#46486a', curb: ['#9b59b6', '#ffffff'], line: '#7ff7ff', slow: '#2c2c5a', deco: ['⭐', '🪐', '🛰️', '☄️', '🌙'] },
+    meadow: { bg: '#7ed56f', shoulder: '#6cc35e', road: '#5a5f6a', curb: ['#e74c3c', '#ffffff'], line: '#ffffff', slow: '#8a6a3c', sky: ['#6ec6ff', '#d8f3ff'], ridge: ['#9fd68f', '#7bbf6a'], deco: ['🌳', '🌲', '🌼', '🌷', '🍄'] },
+    desert: { bg: '#f3d58a', shoulder: '#e8c477', road: '#7a6a55', curb: ['#d35400', '#ffffff'], line: '#fff3c4', slow: '#c9a45a', sky: ['#ffb86b', '#ffe9b8'], ridge: ['#e0a86a', '#c98f55'], deco: ['🌵', '🪨', '🦂', '🐪', '🏜️'] },
+    snow: { bg: '#eaf6ff', shoulder: '#d8ecf8', road: '#7f8da0', curb: ['#2980b9', '#ffffff'], line: '#ffffff', slow: '#cfe3f0', sky: ['#9ec7ff', '#eef7ff'], ridge: ['#cfe3f5', '#b5cfe6'], deco: ['⛄', '🌲', '❄️', '🏔️', '🎿'] },
+    beach: { bg: '#ffe9a8', shoulder: '#fbdc8a', road: '#6d7a88', curb: ['#16a085', '#ffffff'], line: '#ffffff', slow: '#5dade2', sky: ['#52c3ff', '#fff3c2'], ridge: ['#7fd0c0', '#4fb3a6'], deco: ['🌴', '🐚', '⛱️', '🦀', '🏐'] },
+    candy: { bg: '#ffc7e0', shoulder: '#ffb3d4', road: '#8e6bb8', curb: ['#ff6fb5', '#ffffff'], line: '#fff3fb', slow: '#c0392b', sky: ['#ffa6d5', '#ffe6f3'], ridge: ['#e58bc0', '#cf6fae'], deco: ['🍭', '🧁', '🍩', '🍬', '🍪'] },
+    city: { bg: '#1f2a44', shoulder: '#2a3658', road: '#3b3f4f', curb: ['#ff4fa3', '#4fe3ff'], line: '#ffe94f', slow: '#1b1f2d', sky: ['#0b1030', '#3a4a8a'], ridge: ['#27335c', '#1a2346'], deco: ['🏢', '🏙️', '💡', '🌃', '🚦'] },
+    lava: { bg: '#3a1a14', shoulder: '#552218', road: '#4a4a52', curb: ['#ff7a1a', '#222222'], line: '#ffd6a0', slow: '#ff5a1f', sky: ['#2a0a08', '#8a2c14'], ridge: ['#5a1d12', '#3d120b'], deco: ['🌋', '🔥', '🪨', '💀', '🦇'] },
+    space: { bg: '#0b0b2a', shoulder: '#15154a', road: '#46486a', curb: ['#9b59b6', '#ffffff'], line: '#7ff7ff', slow: '#2c2c5a', sky: ['#02020f', '#1b1b5a'], ridge: ['#2a2a78', '#1a1a52'], deco: ['⭐', '🪐', '🛰️', '☄️', '🌙'] },
   };
   // 이지: 넓은 길(w 170), 부드러운 모양 / 하드: 좁은 길(w 130), 급커브·꼬인 모양, 함정 더 많음
   const T = (th, n, e, shape, gim, pts, w, s0, haz) => ({ id: th, n, e, shape, gim, poly: pts, w, s0, theme: TH[th], haz, rmin: w >= 170 ? 215 : 125 });
+  // 3D 경기장: 길 모양 + 높이 곡선(h0 + Σ A·sin(2π·k·u + φ), u = 한 바퀴 0~1). 점프대(jump)와 다리(고가도로)가 있다.
+  const T3 = (th, n, e, shape, gim, pts, w, s0, haz, h0, hills) => Object.assign(T(th, n, e, shape, gim, pts, w, s0, haz), { v3d: true, h0, hills });
   const sc = (pts, k) => pts.map((p) => [p[0] * k, p[1] * k]);
   const TRACKS_EASY = [
     T('meadow', '푸른 초원', '🌳', '콩 모양', '둥글둥글 처음 달리기 좋아요', [[-1000, -300], [-700, -650], [-100, -700], [500, -600], [1000, -350], [1150, 150], [800, 550], [300, 330], [-100, 500], [-700, 600], [-1100, 250]], 170, 0.06, { boost: 5, slow: 3, ice: 0 }),
@@ -51,6 +53,12 @@
     T('lava', '용암 동굴', '🌋', '화살촉 모양', '뾰족한 끝을 조심!', sc([[-1400, 900], [-650, -100], [0, -1050], [650, -100], [1400, 900], [0, 650]], 1.45), 170, 0.03, { boost: 4, slow: 6, ice: 0 }),
     T('space', '우주 정거장', '🪐', 'ㄷ자 모양', '활짝 열린 말굽 길', sc([[-1100, -900], [900, -900], [1250, -550], [1250, 550], [900, 900], [-1100, 900], [-1100, 300], [550, 300], [550, -300], [-1100, -300]], 1.2), 170, 0.02, { boost: 6, slow: 0, ice: 4 }),
   ];
+  TRACKS_EASY.push(
+    T3('meadow', '구름 언덕', '🏞️', '3D · 둥근 사각', '오르락내리락 언덕길', [[-1250, -520], [-500, -820], [500, -820], [1250, -420], [1250, 420], [500, 820], [-500, 820], [-1250, 520]], 170, 0.0, { boost: 4, slow: 2, ice: 0, jump: 2 }, 70, [[2, 55, 0], [3, 22, 1.2]]),
+    T3('desert', '모래 언덕', '🏜️', '3D · 세 갈래', '파도치는 모래 언덕', polar(1250, 3, 0.2, 36), 170, 0.05, { boost: 5, slow: 3, ice: 0, jump: 2 }, 80, [[3, 65, 0.5], [1, 25, 2]]),
+    T3('candy', '놀이공원 고가', '🎡', '3D · 8자 다리', '위로 넘는 다리가 있어요!', lemn(1300, 850, 20), 170, 0.14, { boost: 5, slow: 2, ice: 0, jump: 1 }, 60, [[1, 60, -Math.PI / 2]]),
+    T3('snow', '눈 롤러코스터', '⛄', '3D · ㄴ자 언덕', '눈 덮인 롤러코스터', [[-1250, -900], [150, -900], [150, 0], [1300, 0], [1300, 900], [-1250, 900]], 170, 0.02, { boost: 3, slow: 2, ice: 5, jump: 2 }, 80, [[2, 60, 0], [5, 20, 0.7]]),
+  );
   const TRACKS_HARD = [
     T('meadow', '푸른 초원', '🌳', '지그재그', '번갈아 꺾이는 S자 연속 커브', [[-1500, -300], [-1250, -850], [-900, -300], [-550, -850], [-200, -300], [150, -850], [500, -300], [850, -850], [1200, -300], [1500, 0], [1250, 850], [900, 300], [550, 850], [200, 300], [-150, 850], [-500, 300], [-850, 850], [-1200, 300]], 130, 0.0, { boost: 6, slow: 5, ice: 0 }),
     T('desert', '사막 협곡', '🌵', '꼬인 8자', '8자 + 구불구불 휘어진 길', lemn(1500, 950, 30, 150), 130, 0.14, { boost: 9, slow: 5, ice: 0 }),
@@ -61,6 +69,12 @@
     T('lava', '용암 동굴', '🌋', 'G자 서킷', '안쪽으로 파고드는 급커브', [[-1200, -900], [1200, -900], [1200, -350], [-700, -350], [-700, 350], [450, 350], [450, -50], [1200, -50], [1200, 900], [-1200, 900]], 130, 0.02, { boost: 5, slow: 9, ice: 0 }),
     T('space', '우주 정거장', '🪐', '세잎 매듭', '세 번 만나는 꼬인 길', trefoil(430, 36), 130, 0.1, { boost: 8, slow: 0, ice: 7 }),
   ];
+  TRACKS_HARD.push(
+    T3('lava', '용암 롤러코스터', '🌋', '3D · 급경사', '가파른 오르막과 점프대', [[-1300, -900], [1300, -900], [1300, -300], [-750, -300], [-750, 300], [1300, 300], [1300, 900], [-1300, 900]], 130, 0.02, { boost: 5, slow: 7, ice: 0, jump: 4 }, 110, [[2, 100, 0], [4, 38, 1]]),
+    T3('city', '밤의 고가 8자', '🌃', '3D · 8자 다리', '위아래로 얽힌 고가도로', lemn(1500, 950, 30, 120), 130, 0.14, { boost: 8, slow: 2, ice: 0, jump: 2 }, 80, [[1, 80, -Math.PI / 2], [3, 20, 0.4]]),
+    T3('space', '우주 매듭 다리', '🪐', '3D · 매듭 다리', '세 번 만나는 곳이 모두 다리!', trefoil(430, 36), 130, 0.1, { boost: 6, slow: 0, ice: 5, jump: 3 }, 115, [[3, 77, 0.32], [3, 32, 0.6]]),
+    T3('beach', '파도 절벽', '🏖️', '3D · 파도 언덕', '출렁이는 파도 위 점프', [[-1600, 0], [-1300, -480], [-900, -180], [-500, -580], [-100, -180], [300, -580], [700, -180], [1100, -480], [1600, 0], [1100, 480], [700, 180], [300, 580], [-100, 180], [-500, 580], [-900, 180], [-1300, 480]], 130, 0.03, { boost: 4, slow: 6, ice: 0, jump: 4 }, 95, [[3, 70, 0], [7, 12, 1.1]]),
+  );
 
   function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
@@ -116,27 +130,31 @@
       const p = pts[(j - 1 + M) % M], q = pts[(j + 1) % M]; let tx = q.x - p.x, ty = q.y - p.y; const l = Math.hypot(tx, ty); tx /= l; ty /= l;
       Object.assign(pts[j], { tx, ty, nx: -ty, ny: tx });
     }
+    // 높이: 길 한 바퀴를 0~1(u)로 보고 곡선을 얹는다. 평면 경기장은 모두 0.
+    const hoff = Math.floor((def.s0 || 0) * M), hgt = new Array(M);
+    for (let j = 0; j < M; j++) { const u = ((j + hoff) % M) / M; let h = def.h0 || 0; for (const [k, A, ph] of (def.hills || [])) h += A * Math.sin(Math.PI * 2 * k * u + ph); hgt[j] = h; }
+    const slope = hgt.map((_, j) => (hgt[(j + 1) % M] - hgt[(j - 1 + M) % M]) / (2 * ds));
     const hw = def.w / 2, at = (j, lat) => { const c = pts[((j % M) + M) % M]; return { x: c.x + c.nx * lat, y: c.y + c.ny * lat, a: Math.atan2(c.ty, c.tx) }; };
 
     // 아이템 상자: 8곳에 3개씩
     const boxes = [];
-    for (let g = 0; g < 8; g++) for (const f of [-0.5, 0, 0.5]) { const p = at(Math.floor((g + 0.5) / 8 * M), f * hw); boxes.push({ x: p.x, y: p.y }); }
+    for (let g = 0; g < 8; g++) for (const f of [-0.5, 0, 0.5]) { const j = Math.floor((g + 0.5) / 8 * M), p = at(j, f * hw); boxes.push({ x: p.x, y: p.y, idx: j % M }); }
     // 함정 지대: 부스트 패드 / 느려지는 곳 / 얼음
-    const RAD = { boost: 36, slow: 46, ice: 56 }, haz = [];
-    for (const type of ['boost', 'slow', 'ice']) {
+    const RAD = { boost: 36, slow: 46, ice: 56, jump: 44 }, haz = [];
+    for (const type of ['boost', 'slow', 'ice', 'jump']) {
       const n = def.haz[type] || 0;
-      for (let i = 0; i < n; i++) { const t = ((i + 0.2 + rnd() * 0.6) / n) * 0.9 + 0.05, p = at(Math.floor(t * M), (rnd() * 1.2 - 0.6) * hw); haz.push({ type, x: p.x, y: p.y, r: RAD[type], a: p.a }); }
+      for (let i = 0; i < n; i++) { const t = ((i + 0.2 + rnd() * 0.6) / n) * 0.9 + 0.05, p = at(Math.floor(t * M), (rnd() * 1.2 - 0.6) * hw); haz.push({ type, x: p.x, y: p.y, r: RAD[type], a: p.a, idx: Math.floor(t * M) % M }); }
     }
     // 길가 장식
     const decos = [], sub = pts.filter((_, i) => i % 3 === 0);
     for (let tries = 0; decos.length < 260 && tries < 2500; tries++) {
       const j = Math.floor(rnd() * M), side = rnd() < 0.5 ? -1 : 1, p = at(j, side * hw * (1.9 + rnd() * 2.6));
-      let ok = true; for (const c of sub) { const dx = c.x - p.x, dy = c.y - p.y; if (dx * dx + dy * dy < (hw * 1.85) * (hw * 1.85)) { ok = false; break; } }
-      if (ok) decos.push({ x: p.x, y: p.y, e: def.theme.deco[Math.floor(rnd() * def.theme.deco.length)], s: 44 + rnd() * 34 });
+      let ok = true, bd = 1e18, bi = 0; for (let q = 0; q < sub.length; q++) { const c = sub[q], dx = c.x - p.x, dy = c.y - p.y, d2 = dx * dx + dy * dy; if (d2 < (hw * 1.85) * (hw * 1.85)) { ok = false; break; } if (d2 < bd) { bd = d2; bi = q * 3; } }
+      if (ok) decos.push({ x: p.x, y: p.y, idx: bi % M, e: def.theme.deco[Math.floor(rnd() * def.theme.deco.length)], s: 44 + rnd() * 34 });
     }
     let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
     for (const p of pts) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); }
-    return { def, M, ds, pts, hw, len: L, minR, relaxed, boxes, haz, decos, bounds: { x0, x1, y0, y1 } };
+    return { def, M, ds, pts, hw, len: L, minR, relaxed, hgt, slope, v3d: !!def.v3d, boxes, haz, decos, bounds: { x0, x1, y0, y1 } };
   }
 
   window.RaceData = { CHARS, CARS, TRACKS_EASY, TRACKS_HARD, buildTrack };
