@@ -88,15 +88,17 @@
   const stage = () => G.$('#stage');
   function cleanup() { if (stop) { try { stop(); } catch (e) {} stop = null; } if ('speechSynthesis' in window) try { speechSynthesis.cancel(); } catch (e) {} }
 
+  // 새로고침해도 이 서비스에 머물도록, 지금 보는 게임을 주소(#게임이름)에 기억한다. 기록을 늘리지 않아 '뒤로'는 그대로 허브로 간다.
+  const remember = (id) => { try { history.replaceState(null, '', id ? '#' + id : location.pathname + location.search); } catch (e) {} };
   G.home = () => {
-    cleanup(); current = null;
+    cleanup(); current = null; remember(null);
     document.body.dataset.view = 'home';
     G.$('#title').textContent = '놀이터';
     renderHome(G.store.get('cat', 'all'));
   };
 
   G.start = (g, forceV) => {
-    cleanup(); current = g;
+    cleanup(); current = g; remember(g.id);
     document.body.dataset.view = 'game';
     G.$('#title').textContent = g.name;
     const root = G.h('div', { class: 'game' });
@@ -152,5 +154,8 @@
     const rows = Math.ceil(n / maxCols);
     cards.style.setProperty('--cols', Math.ceil(n / rows) || 1);
   }
+  // 주소의 #게임이름 으로 화면을 정한다 (새로고침·직접 열기)
+  G.route = () => { const id = decodeURIComponent((location.hash || '').slice(1)), g = G.games.find((x) => x.id === id); if (g) { if (current !== g) G.start(g); } else G.home(); };
+  addEventListener('hashchange', () => G.route());
   addEventListener('resize', () => { const c = G.$('.cards'); if (c) layoutCards(c, c.children.length); });
 })();
