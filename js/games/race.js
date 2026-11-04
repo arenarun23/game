@@ -52,14 +52,15 @@
         const s = G.h('span', { class: 'th' }); s.innerHTML = `<svg viewBox="0 0 ${w + pad * 2} ${h + pad * 2}"><rect width="100%" height="100%" rx="90" fill="${def.theme.bg}"/><path d="${d}" fill="none" stroke="${def.theme.road}" stroke-width="150" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${def.theme.line}" stroke-width="12" stroke-dasharray="40 40"/></svg>`;
         return s;
       }
+      const TRACKS = hard ? D.TRACKS_HARD : D.TRACKS_EASY, seedOf = (i) => (hard ? 100 : 0) + i + 1;
       function showTracks() {
-        pick(3, '경기장을 골라요', D.TRACKS.map((t, i) => ({ ic: thumb(t, i + 1), nm: t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky'][i], ds: [br(t.gim)] })), sel.tr,
+        pick(3, (hard ? '🔥 어려운 ' : '') + '경기장을 골라요', TRACKS.map((t, i) => ({ ic: thumb(t, seedOf(i)), nm: t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky'][i], ds: [br('▶ ' + t.shape), br(t.gim)] })), sel.tr,
           (i) => { sel.tr = i; G.store.set('race:sel', sel); startRace(); }, showCars);
       }
 
       // ───────── 경기 ─────────
       function startRace() {
-        const TD = D.TRACKS[sel.tr], T = D.buildTrack(TD, sel.tr + 1), th = TD.theme, hw = T.hw, M = T.M, P = T.pts;
+        const TD = TRACKS[sel.tr], T = D.buildTrack(TD, seedOf(sel.tr)), th = TD.theme, hw = T.hw, M = T.M, P = T.pts;
         const laps = hard ? 3 : 2, WALL = hw * 1.5;
         const keys = { left: false, right: false }, rnd = Math.random;
 
@@ -94,7 +95,7 @@
         // 상태
         const objs = [], fx = [], boxT = new Array(T.boxes.length).fill(0), AI = { mul: hard ? 1.0 : 0.86 };
         let state = 'count', cnt = 3.2, t = 0, finishing = 0, camH = me.h, last = 0, raf = 0, toastT = 0, over = false, hudT = 0;
-        const dbg = G.raceDebug = { ms: [], rec: false, q: 1, racers, T, objs, auto: false, speed: 1, get state() { return state; }, laps };
+        const dbg = G.raceDebug = { ms: [], rec: false, q: 1, walls: [0, 0], respawns: 0, racers, T, objs, auto: false, speed: 1, get state() { return state; }, laps };
         dbg.go = () => { state = 'go'; cnt = -1; countEl.textContent = ''; };
         const toast = (m, d = 1.3) => { toastEl._v = m; toastEl.textContent = m; toastT = d; };
         const rank = (r) => { const sc = (a) => (a.fin != null ? 1e9 - a.fin : a.prog); let k = 1; for (const o of racers) if (o !== r && sc(o) > sc(r)) k++; return k; };
@@ -188,12 +189,12 @@
           r.spin = r.stun > 0 ? r.spin + dt * 13 : 0;
           locate(r);
           const L = r.off_lat; r.off = Math.abs(L) > hw + 6;
-          if (Math.abs(L) > WALL) { const c = P[r.idx], sg = Math.sign(L), push = L - sg * WALL; r.x -= c.nx * push; r.y -= c.ny * push; const vn = r.vx * c.nx + r.vy * c.ny; if (vn * sg > 0) { r.vx -= c.nx * vn * 1.3; r.vy -= c.ny * vn * 1.3; } r.v *= 0.85; }
+          if (Math.abs(L) > WALL) { dbg.walls[r.isPlayer ? 0 : 1]++;  const c = P[r.idx], sg = Math.sign(L), push = L - sg * WALL; r.x -= c.nx * push; r.y -= c.ny * push; const vn = r.vx * c.nx + r.vy * c.ny; if (vn * sg > 0) { r.vx -= c.nx * vn * 1.3; r.vy -= c.ny * vn * 1.3; } r.v *= 0.85; }
           // 박스 줍기
           for (let i = 0; i < T.boxes.length; i++) { if (boxT[i] > 0) continue; const b = T.boxes[i]; if ((b.x - r.x) ** 2 + (b.y - r.y) ** 2 < 900) { boxT[i] = 4; if (!r.item && r.fin == null) { r.item = randItem(r); if (r.isPlayer) { G.sfx.ok(); toast(ITEMS[r.item].e + ' 아이템!', 1); } } } }
           // 멈춰서 꼼짝 못하면 길 위로 되돌리기
           if (state === 'go' && r.v < 25 && r.stun <= 0 && r.frozen <= 0) r.stuck += dt; else r.stuck = 0;
-          if (r.stuck > 2.2) { const c = P[r.idx]; r.x = c.x; r.y = c.y; r.h = Math.atan2(c.ty, c.tx); r.vx = r.vy = r.v = 0; r.stuck = 0; r.prevIdx = r.idx; }
+          if (r.stuck > 2.2) { dbg.respawns++;  const c = P[r.idx]; r.x = c.x; r.y = c.y; r.h = Math.atan2(c.ty, c.tx); r.vx = r.vy = r.v = 0; r.stuck = 0; r.prevIdx = r.idx; }
           if (r.fin == null && r.lap >= laps + 1) { r.fin = t; if (r.isPlayer) { finishing = 1.4; toast('🏁 골인!', 2); } }
         }
 
@@ -328,7 +329,7 @@
         toast('준비!', 1);
         function end() {
           if (over) return; over = true;
-          const k = rank(me); G.win({ stars: k === 1 ? 3 : k === 2 ? 2 : 1, text: (k === 1 ? '🏆 1등!' : k + '등으로 들어왔어요') + ` · ${TD.n}` });
+          const k = rank(me); G.win({ stars: k === 1 ? 3 : k === 2 ? 2 : 1, text: (k === 1 ? '🏆 1등!' : k + '등으로 들어왔어요') + ` · ${TD.n} (${TD.shape})` });
         }
         const STEP = 1 / 60;
         let acc = 0, ema = STEP, nF = 0, lastDown = -99;
