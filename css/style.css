@@ -94,7 +94,7 @@ body[data-view=home] #btnHome{visibility:hidden}
 .bin .st{display:flex;flex-wrap:wrap;gap:.1rem;justify-content:center;font-size:1.6rem}
 
 /* 결과 */
-.over{position:absolute;inset:0;background:rgba(255,247,230,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.8rem;z-index:50;text-align:center;animation:fade .25s}
+.over{position:absolute;inset:0;background:rgba(255,247,230,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.8rem;z-index:50;text-align:center;animation:fade .25s}
 .over h2{margin:0;font-size:2.2rem;font-weight:400}
 .over .bigstars{font-size:3rem;letter-spacing:.2rem}
 .over .row{display:flex;gap:.8rem}
@@ -103,3 +103,39 @@ body[data-view=home] #btnHome{visibility:hidden}
 @keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.confetti{display:none}}
 @media (max-height:460px){#bar{min-height:2.4rem;padding:.2rem .6rem}.round{width:2.4rem;height:2.4rem}#stage{padding-bottom:.4rem}.hint{display:none}}
+
+/* 난이도·새로고침 막대 */
+.subbar{display:flex;gap:.5rem;justify-content:center;align-items:center;flex-wrap:wrap;padding:0 0 .5rem}
+.mode{min-height:44px;padding:.2rem .9rem;border-radius:2rem;background:#fff;border:2px solid var(--line);font-size:1.05rem;box-shadow:0 3px 0 var(--line)}
+.mode[aria-pressed=true]{background:var(--btn);color:#fff;border-color:var(--btn);box-shadow:0 3px 0 #d9822b}
+.mode.refresh{background:#e8f6ff;border-color:#bcdcf5;box-shadow:0 3px 0 #bcdcf5;margin-left:.6rem}
+.mode:active{transform:translateY(2px);box-shadow:none}
+.hint.must{display:block!important}
+@media (max-height:460px){.subbar{padding-bottom:.25rem;gap:.35rem}.mode{padding:.1rem .7rem;font-size:.95rem}.mode.refresh{margin-left:.3rem}}
+
+/* 색칠: 견본 */
+.colorrow{flex:1;min-height:0;display:flex;gap:.7rem;align-items:stretch}
+.colorrow .fitbox{flex:1}
+.sample{flex:none;align-self:flex-start;width:clamp(5rem,22vmin,10rem);background:#fff;border:3px solid var(--line);border-radius:1rem;padding:.3rem;text-align:center;font-size:.95rem}
+.sample svg{width:100%;height:auto;display:block}
+@media (orientation:portrait){.colorrow{flex-direction:column}.sample{align-self:center;width:clamp(4.5rem,17vh,8rem)}}
+.sw.white{background:#fff}
+.art .p.bad{animation:shake .35s}
+
+/* 점 잇기: 안내선 */
+.dots .guide{stroke:#ffb74d;stroke-width:1.1;stroke-dasharray:2 2;opacity:.9}
+
+/* 다른 것 찾기 */
+.tile .g{display:block;line-height:1}
+.tile .cnt{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:.05em;font-size:calc(var(--s)*.22);line-height:1;padding:.1em}
+.tile .tx{font-weight:700}
+
+/* 두더지: 지시문 */
+.ask{display:flex;justify-content:center;align-items:center;gap:.5rem;font-size:1.25rem;min-height:2.2rem;text-align:center}
+.ask b{font-size:1.8rem;font-weight:400}
+
+/* 분류하기: 격자 안 */
+.tr{position:relative;z-index:5}
+.bins{position:relative;z-index:1}
+.grid .it{width:var(--s);height:var(--s);font-size:calc(var(--s)*.58)}
+.bin .st{font-size:1.5rem}

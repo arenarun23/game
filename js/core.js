@@ -61,6 +61,22 @@
   };
   G.setSound = (on) => { G.soundOn = on; G.store.set('sound', on); G.$('#btnSound').textContent = on ? '🔊' : '🔇'; if (!on && 'speechSynthesis' in window) try { speechSynthesis.cancel(); } catch (e) {} };
 
+  // 난이도(쉬움/어려움)와 문제 종류(20가지)를 섞어서 뽑는다
+  G.hard = !!G.store.get('hard', false);
+  const bags = {}, lastV = {};
+  G.nextVariant = (id, n) => {
+    let b = bags[id];
+    if (!b || !b.length) { b = G.shuffle([...Array(n).keys()]); if (n > 1 && b[b.length - 1] === lastV[id]) b.unshift(b.pop()); bags[id] = b; }
+    const v = b.pop(); lastV[id] = v; return v;
+  };
+  // n칸을 상자(box)에 가장 크게 넣는 열·행 수
+  G.bestGrid = (n, box) => {
+    const r0 = box.getBoundingClientRect(), W = r0.width || 600, H = r0.height || 400;
+    let best = null;
+    for (let c = 1; c <= Math.min(n, 8); c++) { const r = Math.ceil(n / c), s = Math.min(W / c, H / r); if (!best || s > best.s + 1e-6) best = { c, r, s }; }
+    return best;
+  };
+
   // 별
   G.starCount = G.store.get('stars', 0);
   G.showStars = () => { G.$('#stars').textContent = '⭐ ' + G.starCount; };
@@ -78,26 +94,33 @@
     renderHome(G.store.get('cat', 'all'));
   };
 
-  G.start = (g) => {
+  G.start = (g, forceV) => {
     cleanup(); current = g;
     document.body.dataset.view = 'game';
     G.$('#title').textContent = g.name;
     const root = G.h('div', { class: 'game' });
-    stage().replaceChildren(root);
-    stop = g.start(root) || null;
+    const mode = (hard, label) => G.h('button', { class: 'mode', 'aria-pressed': String(G.hard === hard),
+      onclick: () => { if (G.hard === hard) return; G.hard = hard; G.store.set('hard', hard); G.sfx.tap(); G.start(g); } }, label);
+    const sub = G.h('div', { class: 'subbar' }, mode(false, '🙂 쉬워요'), mode(true, '🔥 어려워요'),
+      G.h('button', { class: 'mode refresh', 'aria-label': '새 문제', onclick: () => { G.sfx.tap(); G.start(g); } }, '🔄 새로 하기'));
+    stage().replaceChildren(sub, root);
+    const n = g.variants || 1, v = forceV != null ? forceV : G.nextVariant(g.id, n);
+    stop = g.start(root, { hard: G.hard, v, n }) || null;
   };
 
   // 결과 창: { stars:1~3, text }
   G.win = ({ stars = 1, text = '' } = {}) => {
-    G.addStars(stars);
+    const bonus = G.hard ? 1 : 0;
+    G.addStars(stars + bonus);
     G.sfx.win(); G.speak('참 잘했어요!');
     const g = current;
     const over = G.h('div', { class: 'over' },
       G.h('h2', {}, '참 잘했어요! 🎉'),
       G.h('div', { class: 'bigstars' }, '⭐'.repeat(stars) + '☆'.repeat(3 - stars)),
-      text ? G.h('div', { class: 'hint' }, text) : null,
+      text ? G.h('div', { class: 'hint must' }, text) : null,
+      bonus ? G.h('div', { class: 'hint must' }, '🔥 어려움 보너스 ⭐ +1') : null,
       G.h('div', { class: 'row' },
-        G.h('button', { class: 'btn', onclick: () => g && G.start(g) }, '다시 하기'),
+        G.h('button', { class: 'btn', onclick: () => g && G.start(g) }, '다음 문제'),
         G.h('button', { class: 'btn alt', onclick: G.home }, '메뉴')));
     stage().append(over);
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
