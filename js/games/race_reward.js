@@ -13,7 +13,9 @@
     { id: 'sky', n: '하늘', c: '#36c5f0', at: 100 }, { id: 'orange', n: '주황', c: '#ff8a3d', at: 100 }, { id: 'gold', n: '황금', c: '#ffc400', at: 1000 }];
   const TRAILS = [{ id: 'none', n: '없음', e: null, at: 0 }, { id: 'star', n: '별', e: ['⭐'], at: 200 }, { id: 'heart', n: '하트', e: ['💖'], at: 200 }, { id: 'rainbow', n: '무지개', e: ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣'], at: 200 }];
   const HATS = [{ id: 'none', n: '없음', e: null, at: 0 }, { id: 'crown', n: '왕관', e: '👑', at: 500 }, { id: 'ribbon', n: '리본', e: '🎀', at: 500 }, { id: 'helmet', n: '헬멧', e: '⛑️', at: 500 }, { id: 'tophat', n: '모자', e: '🎩', at: 500 }];
-  const stars = () => (window.G && G.starCount) | 0;
+  // 보상은 레이싱에서 모은 별만 센다(놀이터 전체 별과 따로)
+  const stars = () => (window.G && G.store.get('race:stars', 0)) | 0;
+  const add = (n) => { const v = stars() + n; G.store.set('race:stars', v); return v; };
   const title = (s) => TITLES.filter((t) => s >= t[0]).pop()[1];
   const next = (s) => MILES.find((m) => s < m.at) || null;
   const raw = () => Object.assign({ color: 'def', trail: 'none', hat: 'none' }, G.store.get('race:cos', {}));
@@ -57,6 +59,53 @@
     }, 'image/png');
   }
 
+  // 🔁 다른 기기로 옮기기: 서버 없이 '옮기기 코드'(글자)나 파일로 별·꾸미기·완주 기록을 보낸다.
+  // (기기 모델·MAC 주소 같은 기기 식별 정보는 브라우저가 알려 주지도 않고, 수집하지도 않는다)
+  const KEYS = ['easy', 'hard', 'kid'];
+  const sum = (str) => { let a = 5381, b = 52711; for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); a = (a * 33 ^ c) >>> 0; b = (b * 31 + c) >>> 0; } return (a.toString(36) + b.toString(36)).slice(0, 6); };
+  const b64 = (o) => { const u = new TextEncoder().encode(JSON.stringify(o)); let t = ''; u.forEach((c) => (t += String.fromCharCode(c))); return btoa(t).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  const unb64 = (t) => { const bin = atob(t.replace(/-/g, '+').replace(/_/g, '/')), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return JSON.parse(new TextDecoder().decode(u)); };
+  function makeCode() {
+    const done = {}; KEYS.forEach((k) => { done[k] = G.store.get('race:done:' + k, []); });
+    const body = b64({ v: 1, s: stars(), c: raw(), d: done });
+    return 'RC1-' + body + '-' + sum(body);
+  }
+  function readCode(text) {
+    const m = String(text || '').replace(/\s+/g, '').match(/RC1-([A-Za-z0-9_-]+)-([a-z0-9]{1,6})/);
+    if (!m || sum(m[1]) !== m[2]) throw new Error('코드가 맞지 않아요. 처음부터 끝까지 그대로 붙여 넣었는지 확인해 주세요.');
+    const o = unb64(m[1]); if (!o || o.v !== 1 || !(o.s >= 0)) throw new Error('코드를 읽을 수 없어요.');
+    return o;
+  }
+  // 가져오기: 별은 더 큰 쪽, 완주 기록은 합치고, 꾸미기는 코드 쪽을 따른다
+  function applyCode(o) {
+    const had = stars(), ns = Math.max(had, Math.min(1e6, o.s | 0));
+    G.store.set('race:stars', ns);
+    if (o.c && typeof o.c === 'object') G.store.set('race:cos', { color: String(o.c.color || 'def'), trail: String(o.c.trail || 'none'), hat: String(o.c.hat || 'none') });
+    KEYS.forEach((k) => { const a = G.store.get('race:done:' + k, []), b = (o.d && Array.isArray(o.d[k]) ? o.d[k] : []).filter((x) => Number.isInteger(x) && x >= 0 && x < 40); G.store.set('race:done:' + k, [...new Set([...a, ...b])]); });
+    return ns;
+  }
+  function transferBox(root, afterImport) {
+    const h = G.h, code = makeCode();
+    const msg = h('div', { class: 'rwhint must' });
+    const out = h('textarea', { class: 'rwcode', readonly: 'readonly', rows: '3', 'aria-label': '옮기기 코드' }); out.value = code;
+    const inp = h('textarea', { class: 'rwcode', rows: '3', placeholder: 'RC1-… 코드를 여기에 붙여 넣어요', 'aria-label': '코드 붙여 넣기' });
+    const file = h('input', { type: 'file', accept: '.txt,text/plain', class: 'rwfile', 'aria-label': '코드 파일 고르기' });
+    const doImport = (text) => {
+      try { const o = readCode(text), ns = applyCode(o); msg.textContent = `✅ 가져왔어요! 지금 레이싱 별 ⭐ ${ns}개`; G.sfx.ok(); setTimeout(() => { box.remove(); afterImport(); }, 1200); }
+      catch (e) { msg.textContent = '❌ ' + (e.message || '가져오지 못했어요'); G.sfx.bad(); }
+    };
+    file.addEventListener('change', () => { const f = file.files && file.files[0]; if (!f) return; const fr = new FileReader(); fr.onload = () => { inp.value = String(fr.result || '').slice(0, 5000); doImport(inp.value); }; fr.readAsText(f); });
+    const box = h('div', { class: 'over xfer' }, h('h2', {}, '🔁 다른 기기로 옮기기'),
+      h('div', { class: 'xwrap' }, h('div', { class: 'xs' }, h('div', { class: 'hint must' }, '① 옮겨 줄 기기에서 코드를 복사해요'), out,
+      h('div', { class: 'row' },
+        h('button', { class: 'btn', onclick: async () => { G.sfx.tap(); try { await navigator.clipboard.writeText(code); msg.textContent = '📋 복사했어요! 새 기기에 붙여 넣어요'; } catch (e) { out.select(); msg.textContent = '코드를 길게 눌러 복사해 주세요'; } } }, '📋 코드 복사'),
+        h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); const bl = new Blob([code], { type: 'text/plain' }), a = document.createElement('a'); a.href = URL.createObjectURL(bl); a.download = 'race-rewards-code.txt'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); } }, '💾 파일로 저장'))),
+      h('div', { class: 'xs' }, h('div', { class: 'hint must' }, '② 새 기기에서 코드를 붙여 넣거나 파일을 골라요'), inp,
+      h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => { G.sfx.tap(); doImport(inp.value); } }, '📥 가져오기'), h('label', { class: 'btn alt rwfl' }, '📂 파일 고르기', file)))),
+      msg, h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); box.remove(); } }, '닫기'));
+    root.append(box);
+  }
+
   // 보상 페이지
   function page(root, o) {
     const h = G.h, s = stars(), nx = next(s), prev = MILES.filter((m) => s >= m.at).pop(), base = prev ? prev.at : 0;
@@ -83,7 +132,7 @@
     const hint = h('div', { class: 'rwhint' });
     const pct = nx ? Math.max(0, Math.min(100, Math.round((s - base) / (nx.at - base) * 100))) : 100;
     const left = h('div', { class: 'rwleft' },
-      h('div', { class: 'hint must' }, `🏅 내 보상 · ⭐ ${s}`), h('div', { class: 'rwtitle' }, `칭호: ${title(s)}`),
+      h('div', { class: 'hint must' }, `🏅 레이싱 보상 · 레이싱 ⭐ ${s}`), h('div', { class: 'rwtitle' }, `칭호: ${title(s)}`),
       h('div', { class: 'rwbar', role: 'progressbar', 'aria-valuenow': String(pct) }, h('i', { style: `width:${pct}%` })),
       h('div', { class: 'rwnext' }, nx ? `다음 보상 ${nx.ic} ${nx.n}까지 ⭐ ${nx.at - s}개` : '🎉 모든 보상을 모았어요!'), pv,
       h('div', { class: 'rwmiles' }, MILES.map((m) => h('div', { class: 'card rwm ' + (s >= m.at ? 'c-lemon' : 'lock') }, h('span', { class: 'ic' }, s >= m.at ? m.ic : '🔒'), h('span', { class: 'nm' }, `⭐ ${m.at}`), h('span', { class: 'ds' }, m.n)))));
@@ -92,7 +141,7 @@
       chipRow('✨ 꼬리', TRAILS, 'trail', (it) => it.e ? it.e[0] : '🚫'),
       chipRow('🎩 모자', HATS, 'hat', (it) => it.e || '🚫'), hint);
     body.append(left, right); paintPreview();
-    root.replaceChildren(h('div', { class: 'rwpage' }, body, h('div', { class: 'palette' }, h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); o.onBack(); } }, '◀ 돌아가기'), h('button', { class: 'btn', onclick: () => { G.sfx.ok(); capture(o); hint.textContent = '📸 사진으로 저장했어요! (내려받기 폴더 또는 공유 창)'; } }, '📸 사진 저장'))));
+    root.replaceChildren(h('div', { class: 'rwpage' }, body, h('div', { class: 'palette' }, h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); o.onBack(); } }, '◀ 돌아가기'), h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); transferBox(root, () => page(root, o)); } }, '🔁 옮기기'), h('button', { class: 'btn', onclick: () => { G.sfx.ok(); capture(o); hint.textContent = '📸 사진으로 저장했어요! (내려받기 폴더 또는 공유 창)'; } }, '📸 사진 저장'))));
   }
-  window.RaceReward = { MILES, COLORS, TRAILS, HATS, cos, newly, page, title, stars };
+  window.RaceReward = { MILES, COLORS, TRAILS, HATS, cos, newly, page, title, stars, add };
 })();
