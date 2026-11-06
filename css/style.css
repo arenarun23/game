@@ -346,3 +346,11 @@ html[data-game=race] .rbtn small{font-size:max(12px,clamp(.6rem,2.4vmin,.85rem))
 .xfer .hint{font-size:max(15px,1rem);color:var(--ink)}
 .rwcode{min-height:4rem;height:4rem}
 @media (min-aspect-ratio:1/1) and (min-width:640px){.xwrap{flex-direction:row;align-items:flex-start}.xs{flex:1}.over.xfer .row{gap:.4rem}}
+/* 가로 화면: 2D/3D 탭이 모드 버튼 줄 오른쪽에 붙는다 */
+.subbar .tabs{margin-left:.5rem;gap:.35rem;flex-wrap:nowrap}
+.subbar .tab{padding:.1rem .7rem;min-height:44px;white-space:nowrap}
+/* 가로 폰: 경기장 그림(지도)을 크게 */
+@container (max-height:175px){
+  html[data-game=race] .pk.trk .th{max-height:64cqh;width:min(82cqw,83cqh)}
+  html[data-game=race] .pk.trk .nm{font-size:max(15px,clamp(.9rem,14cqmin,1.3rem))}
+}

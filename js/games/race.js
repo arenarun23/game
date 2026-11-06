@@ -53,7 +53,8 @@
       // ───────── 고르기 화면 3단계 ─────────
       function pick(step, title, items, cur, onPick, onBack, extra) {
         if (stopFn) { stopFn(); stopFn = null; }
-        const land = innerWidth > innerHeight * 1.05 && innerWidth > 640, n = items.length;
+        clearTabs();
+        const land = innerWidth > innerHeight * 1.05, n = items.length;
         const c = land ? (n <= 4 ? n : n <= 8 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 ? 3 : 2), r = Math.ceil(n / c);
         const rowMode = !land && step <= 2; // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
         const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : ''), style: rowMode ? `--c:1;--r:${n}` : `--c:${c};--r:${r}` }, items.map((it, i) =>
@@ -66,9 +67,11 @@
         root.replaceChildren(...kids.filter(Boolean));
       }
       function showRewards(back) {
+        clearTabs();
         if (stopFn) { stopFn(); stopFn = null; }
         window.RaceReward.page(root, { carColor: D.CARS[sel.car].color, chEmoji: D.CHARS[sel.ch].e, onBack: back });
       }
+      const clearTabs = () => { const o = document.querySelector('.subbar .tabs'); if (o) o.remove(); }; // 가로 화면에선 2D/3D 탭을 위 모드 줄로 옮겨 둔다
       const br = (t, cls) => G.h('span', { class: 'ln' + (cls ? ' ' + cls : '') }, t);
       function showChars() {
         pick(1, '캐릭터를 골라요', D.CHARS.map((c) => ({ ic: c.e, nm: c.n, color: c.color, ds: [br('⭐ ' + c.trait), br(`${c.skill.e} 스킬: ${c.skill.n}`), br(c.skill.d, 'sd')] })), sel.ch,
@@ -93,11 +96,13 @@
         const tabs = G.h('div', { class: 'tabs' }, [[0, '🗺️ 2D'], [1, '🧊 3D']].map(([g, label]) =>
           G.h('button', { class: 'tab', 'aria-pressed': String(g === tab), onclick: () => { G.sfx.tap(); tab = g; showTracks(); } }, `${label} (${cnt(g)}/${groupIdx(g).length})`)));
         pick(3, (hard ? '🔥 어려운 ' : kid ? '🐣 아주 쉬운 ' : '') + '경기장을 골라요', idxs.map((i) => { const t = TRACKS[i]; return { ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky'][idxs.indexOf(i) % 8], ds: [br('▶ ' + t.shape), br(t.gim)] }; }), idxs.indexOf(sel.tr),
-          (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); startRace(); }, showCars, tabs);
+          (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); startRace(); }, showCars, innerWidth > innerHeight * 1.05 ? null : tabs);
+        if (innerWidth > innerHeight * 1.05) { const sb = document.querySelector('.subbar'); if (sb) sb.append(tabs); }
       }
 
       // ───────── 경기 ─────────
       function startRace() {
+        clearTabs();
         const TD = TRACKS[sel.tr], T = D.buildTrack(TD, seedOf(sel.tr)), th = TD.theme, hw = T.hw, M = T.M, P = T.pts;
         const laps = hard ? 3 : kid ? 1 : 2, WALL = hw * (kid ? 1.9 : 1.45);
         const keys = { left: false, right: false }, rnd = Math.random;
