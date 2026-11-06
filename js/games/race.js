@@ -94,7 +94,7 @@
       // ───────── 경기 ─────────
       function startRace() {
         const TD = TRACKS[sel.tr], T = D.buildTrack(TD, seedOf(sel.tr)), th = TD.theme, hw = T.hw, M = T.M, P = T.pts;
-        const laps = hard ? 3 : kid ? 1 : 2, WALL = hw * (kid ? 2.1 : 1.5);
+        const laps = hard ? 3 : kid ? 1 : 2, WALL = hw * (kid ? 1.9 : 1.45);
         const keys = { left: false, right: false }, rnd = Math.random;
 
         // 화면(HUD)
@@ -211,7 +211,7 @@
 
         // 3D: 선수의 높이(길 높이 + 점프 높이). 평면 경기장은 0
         const hOf = (r) => { if (!T.v3d) return 0; const pm = ((r.prog % M) + M) % M, i0 = Math.floor(pm); return T.hgt[i0] + (T.hgt[(i0 + 1) % M] - T.hgt[i0]) * (pm - i0) + r.zair; };
-        const env = { ctx: null, W: 0, H: 0, T, th, racers, objs, boxT, me, hOf, yaw: 0, t: 0, alpha: 0, dt: 0.016, lowQ: false };
+        const env = { wall: WALL, ctx: null, W: 0, H: 0, T, th, racers, objs, boxT, me, hOf, yaw: 0, t: 0, alpha: 0, dt: 0.016, lowQ: false };
         // 아이템·스킬
         const randItem = (r) => { const k = rank(r), pool = k >= 3 ? ['boost', 'boost', 'missile', 'shield', 'banana'] : k === 2 ? ['boost', 'missile', 'shield', 'banana'] : ['shield', 'banana', 'banana', 'boost']; return G.pick(pool); };
         function hit(r, kind, dur) {

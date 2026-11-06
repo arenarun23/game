@@ -63,7 +63,7 @@
 
   function draw(E) {
     const { ctx, W, H, T, th, me, racers } = E, M = T.M, P = T.pts, hgt = T.hgt, hw = T.hw, ds = T.ds, U = G.raceUtil;
-    const S = hw * 1.5, Cc = hw + 10, BAR = 26, fogc = th.sky[1];
+    const S = (E.wall || hw * 1.5) + 26, Cc = hw + 10, BAR = 26, fogc = th.sky[1]; // 벽은 차 몸통 폭만큼 바깥에 세운다
     // ── 카메라 ──
     const yaw = E.yaw; fx = Math.cos(yaw); fy = Math.sin(yaw); rx = -fy; ry = fx;
     const meH = E.hOf(me), idx = me.idx;
@@ -91,12 +91,14 @@
     // ── 길 표본 투영 (가까운 곳은 촘촘히, 먼 곳은 성기게) ──
     const ks = [], lowQ = E.lowQ, reach = lowQ ? 100 : 128; let kk = idx - 8;
     for (;;) { ks.push(kk); const rel = kk - (idx - 8); if (rel > reach) break; kk += rel < 24 ? 1 : rel < 60 ? 2 : 4; }
-    const n = ks.length, X = new Float32Array(n * NP), Y = new Float32Array(n * NP), ok = new Uint8Array(n), dep = new Float32Array(n);
+    const dj = new Float32Array(NP), FIXJ = [0, 9, 10, 11], FIXF = [1, 8, 1, 8], n = ks.length, X = new Float32Array(n * NP), Y = new Float32Array(n * NP), ok = new Uint8Array(n), dep = new Float32Array(n);
     for (let e = 0; e < n; e++) {
       const m = ((ks[e] % M) + M) % M, c = P[m], h = hgt[m], skirt = S + Math.max(0, h - gz) * 0.9 + 50;
       const lat = [-skirt, -S, -Cc, -hw, -3, 3, hw, Cc, S, skirt, -S, S], z = [gz, h, h, h, h, h, h, h, h, gz, h + BAR, h + BAR];
       let valid = 1;
-      for (let j = 0; j < NP; j++) { proj(c.x + c.nx * lat[j], c.y + c.ny * lat[j], z[j]); X[e * NP + j] = _sx; Y[e * NP + j] = _sy; if (_d < 8 && j >= 1 && j <= 8) valid = 0; if (j === 4) dep[e] = _d; }
+      for (let j = 0; j < NP; j++) { proj(c.x + c.nx * lat[j], c.y + c.ny * lat[j], z[j]); X[e * NP + j] = _sx; Y[e * NP + j] = _sy; dj[j] = _d; if (_d < 8 && j >= 1 && j <= 8) valid = 0; if (j === 4) dep[e] = _d; }
+      // 비탈·벽 바깥점이 카메라 뒤로 넘어가면 화면 구석(0,0)으로 찍혀 큰 삼각형이 시야를 덮는다 → 길 가장자리 점으로 접는다
+      for (let q = 0; q < 4; q++) { const j = FIXJ[q]; if (dj[j] < 8) { const f = FIXF[q]; X[e * NP + j] = X[e * NP + f]; Y[e * NP + j] = Y[e * NP + f]; } }
       ok[e] = valid;
     }
     // ── 그릴 것 목록: 길 조각 + 장식 + 상자 + 지대 + 차 + 던진 것 ──
@@ -105,10 +107,10 @@
     const rel = (i) => (((i - idx + 8) % M) + M) % M - 8, inWin = (i) => { const r = rel(i); return r >= -6 && r <= reach; };
     const cut = lowQ ? 2 : 1;
     for (let i = 0; i < T.decos.length; i += cut) { const d = T.decos[i]; if (!inWin(d.idx)) continue; const c = P[d.idx], lat = Math.abs((d.x - c.x) * c.nx + (d.y - c.y) * c.ny), z = Math.max(gz, hgt[d.idx] - Math.max(0, lat - S) * 0.9); proj(d.x, d.y, z); if (_d > 10 && _sx > -300 && _sx < W + 300) items.push({ d: _d, kind: 1, sx: _sx, sy: _sy, o: d }); }
-    for (let i = 0; i < T.boxes.length; i++) { if (E.boxT[i] > 0) continue; const b = T.boxes[i]; if (!inWin(b.idx)) continue; proj(b.x, b.y, hgt[b.idx] + 18); if (_d > 10) items.push({ d: _d, kind: 2, sx: _sx, sy: _sy, i }); }
-    for (const z of T.haz) { if (!inWin(z.idx)) continue; proj(z.x, z.y, hgt[z.idx]); if (_d > 10) items.push({ d: _d + 6, kind: 3, z }); }
-    for (const r of racers) { const hz = E.hOf(r) - r.zair; proj(r.dx, r.dy, hz); if (_d > 10) items.push({ d: _d, kind: 4, r, sx: _sx, sy: _sy, hz }); }
-    for (const o of E.objs) { const ix = o.px === undefined ? o.x : o.px + (o.x - o.px) * E.alpha, iy = o.py === undefined ? o.y : o.py + (o.y - o.py) * E.alpha; let bi = me.idx, bd = 1e18; for (let q = -20; q <= 150; q++) { const m = (idx + q + M) % M, c = P[m], dd = (c.x - ix) ** 2 + (c.y - iy) ** 2; if (dd < bd) { bd = dd; bi = m; } } proj(ix, iy, hgt[bi] + 8); if (_d > 10) items.push({ d: _d, kind: 5, o, sx: _sx, sy: _sy, gz: hgt[bi] }); }
+    for (let i = 0; i < T.boxes.length; i++) { if (E.boxT[i] > 0) continue; const b = T.boxes[i]; if (!inWin(b.idx)) continue; proj(b.x, b.y, hgt[b.idx] + 18); if (_d > 10) items.push({ d: _d - 22, dd: _d, kind: 2, sx: _sx, sy: _sy, i }); }
+    for (const z of T.haz) { if (!inWin(z.idx)) continue; proj(z.x, z.y, hgt[z.idx]); if (_d > 10) items.push({ d: _d - (z.type === 'boost' || z.type === 'jump' ? 42 : z.r + 6), dd: _d, kind: 3, z }); }
+    for (const r of racers) { const hz = E.hOf(r) - r.zair; proj(r.dx, r.dy, hz); if (_d > 10) items.push({ d: _d - 30, dd: _d, kind: 4, r, sx: _sx, sy: _sy, hz }); }
+    for (const o of E.objs) { const ix = o.px === undefined ? o.x : o.px + (o.x - o.px) * E.alpha, iy = o.py === undefined ? o.y : o.py + (o.y - o.py) * E.alpha; let bi = me.idx, bd = 1e18; for (let q = -20; q <= 150; q++) { const m = (idx + q + M) % M, c = P[m], dd = (c.x - ix) ** 2 + (c.y - iy) ** 2; if (dd < bd) { bd = dd; bi = m; } } proj(ix, iy, hgt[bi] + 8); if (_d > 10) items.push({ d: _d - 16, dd: _d, kind: 5, o, sx: _sx, sy: _sy, gz: hgt[bi] }); }
     items.sort((a, b) => b.d - a.d);
 
     // ── 그리기 (먼 것 → 가까운 것) ──
@@ -128,9 +130,9 @@
         quad(a + 1, a + 10, b + 10, b + 1, cc[L], true); quad(a + 8, a + 11, b + 11, b + 8, cc[L], true);
         continue;
       }
-      const L = lvlOf(it.d), s = F / Math.max(it.d, 1);
+      const dz = it.dd || it.d, L = lvlOf(dz), s = F / Math.max(dz, 1);
       if (it.kind === 1) { // 장식(나무·건물…): 땅에 선 그림
-        const o = it.o, sz = o.s * 1.25 * s; if (L > 5) ctx.globalAlpha = 0.5; ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz); if (L > 5) ctx.globalAlpha = 1;
+        const o = it.o, sz = o.s * 1.25 * s, near = it.d < 300 ? Math.max(0.2, (it.d - 110) / 190) : 1; if (L > 5) ctx.globalAlpha = 0.5; else if (near < 1) ctx.globalAlpha = near; // 가까운 장식은 흐리게(시야 가림 방지) ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz); if (L > 5 || near < 1) ctx.globalAlpha = 1;
       } else if (it.kind === 2) { // 아이템 상자(빙글빙글)
         const w = 30 * s * (0.35 + 0.65 * Math.abs(Math.cos(E.t * 2.4 + it.i))), h = 30 * s; ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#c98a00'; ctx.lineWidth = Math.max(1, 2 * s);
         ctx.beginPath(); ctx.roundRect(it.sx - w / 2, it.sy - h / 2, w, h, 5 * s); ctx.fill(); ctx.stroke();
@@ -147,7 +149,7 @@
         if (z.type === 'boost' || z.type === 'jump') { ctx.strokeStyle = z.type === 'jump' ? '#fff3c4' : '#ffffff'; ctx.lineWidth = Math.max(1.5, 4 * s); ctx.lineCap = 'round';
           for (const o of z.type === 'jump' ? [-18, 0, 18] : [-12, 10]) { const a1 = q(o, -18, 0), a2 = q(o + 14, 0, 0), a3 = q(o, 18, 0); ctx.beginPath(); ctx.moveTo(a1[0], a1[1]); ctx.lineTo(a2[0], a2[1]); ctx.lineTo(a3[0], a3[1]); ctx.stroke(); } }
       } else if (it.kind === 4) { // 차 (10% 크게)
-        const s = F / Math.max(it.d, 1) * 1.1;
+        const s = F / Math.max(dz, 1) * 1.1;
         const r = it.r, rel2 = Math.atan2(Math.sin(r.dh - yaw), Math.cos(r.dh - yaw)), front = Math.abs(rel2) > 2.1, spr = kartSprite(r.car, front);
         const w = 56 * s * (1 + 0.5 * Math.abs(Math.sin(rel2))), h = 40 * s, lift = r.zair * s * 0.9;
         ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.beginPath(); ctx.ellipse(it.sx, it.sy, 30 * s, 9 * s, 0, 0, TAU); ctx.fill();

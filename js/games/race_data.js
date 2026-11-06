@@ -169,8 +169,8 @@
     // 길가 장식
     const decos = [], sub = pts.filter((_, i) => i % 3 === 0);
     for (let tries = 0; decos.length < 260 && tries < 2500; tries++) {
-      const j = Math.floor(rnd() * M), side = rnd() < 0.5 ? -1 : 1, p = at(j, side * hw * (1.9 + rnd() * 2.6));
-      let ok = true, bd = 1e18, bi = 0; for (let q = 0; q < sub.length; q++) { const c = sub[q], dx = c.x - p.x, dy = c.y - p.y, d2 = dx * dx + dy * dy; if (d2 < (hw * 1.85) * (hw * 1.85)) { ok = false; break; } if (d2 < bd) { bd = d2; bi = q * 3; } }
+      const j = Math.floor(rnd() * M), side = rnd() < 0.5 ? -1 : 1, p = at(j, side * hw * (2.5 + rnd() * 2.4));
+      let ok = true, bd = 1e18, bi = 0; for (let q = 0; q < sub.length; q++) { const c = sub[q], dx = c.x - p.x, dy = c.y - p.y, d2 = dx * dx + dy * dy; if (d2 < (hw * 2.3) * (hw * 2.3)) { ok = false; break; } if (d2 < bd) { bd = d2; bi = q * 3; } }
       if (ok) decos.push({ x: p.x, y: p.y, idx: bi % M, e: def.theme.deco[Math.floor(rnd() * def.theme.deco.length)], s: 44 + rnd() * 34 });
     }
     let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
