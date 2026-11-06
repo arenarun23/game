@@ -25,12 +25,12 @@
   const lvlOf = (d) => clamp(Math.floor(d / FAR * (LEVELS - 1)), 0, LEVELS - 1);
 
   // ───── 차 그림(뒤/앞): 한 번만 그려 두고 크기만 바꿔 찍는다 ─────
-  function kartSprite(car, front) {
+  function kartSprite(car, front, col) {
     const U = G.raceUtil; // 56x40 세계 단위, 2.14배 해상도
-    return U.sprite('k3:' + car.id + (front ? 'f' : 'b'), 120, 86, (g) => {
+    return U.sprite('k3:' + car.id + col + (front ? 'f' : 'b'), 120, 86, (g) => {
       g.translate(60, 80); g.scale(2.14, 2.14); // 발 밑 중앙이 (0,0)
       g.fillStyle = '#222'; g.beginPath(); g.roundRect(-27, -17, 11, 17, 3); g.roundRect(16, -17, 11, 17, 3); g.fill(); // 바퀴
-      g.fillStyle = car.color; g.beginPath(); g.roundRect(-25, -26, 50, 20, 6); g.fill();       // 몸통
+      g.fillStyle = col; g.beginPath(); g.roundRect(-25, -26, 50, 20, 6); g.fill();       // 몸통
       g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(-25, -10, 50, 4);
       g.fillStyle = front ? 'rgba(180,225,255,.85)' : 'rgba(40,50,70,.8)'; g.beginPath(); g.roundRect(-14, -34, 28, 11, 4); g.fill(); // 창
       if (front) { g.fillStyle = '#fff5a8'; g.fillRect(-22, -22, 9, 5); g.fillRect(13, -22, 9, 5); }
@@ -110,6 +110,7 @@
     for (let i = 0; i < T.boxes.length; i++) { if (E.boxT[i] > 0) continue; const b = T.boxes[i]; if (!inWin(b.idx)) continue; proj(b.x, b.y, hgt[b.idx] + 18); if (_d > 10) items.push({ d: _d - 22, dd: _d, kind: 2, sx: _sx, sy: _sy, i }); }
     for (const z of T.haz) { if (!inWin(z.idx)) continue; proj(z.x, z.y, hgt[z.idx]); if (_d > 10) items.push({ d: _d - (z.type === 'boost' || z.type === 'jump' ? 42 : z.r + 6), dd: _d, kind: 3, z }); }
     for (const r of racers) { const hz = E.hOf(r) - r.zair; proj(r.dx, r.dy, hz); if (_d > 10) items.push({ d: _d - 30, dd: _d, kind: 4, r, sx: _sx, sy: _sy, hz }); }
+    for (const p of me.tr || []) { proj(p.x, p.y, p.h + 10); if (_d > 10) items.push({ d: _d - 6, dd: _d, kind: 6, p, sx: _sx, sy: _sy }); }
     for (const o of E.objs) { const ix = o.px === undefined ? o.x : o.px + (o.x - o.px) * E.alpha, iy = o.py === undefined ? o.y : o.py + (o.y - o.py) * E.alpha; let bi = me.idx, bd = 1e18; for (let q = -20; q <= 150; q++) { const m = (idx + q + M) % M, c = P[m], dd = (c.x - ix) ** 2 + (c.y - iy) ** 2; if (dd < bd) { bd = dd; bi = m; } } proj(ix, iy, hgt[bi] + 8); if (_d > 10) items.push({ d: _d - 16, dd: _d, kind: 5, o, sx: _sx, sy: _sy, gz: hgt[bi] }); }
     items.sort((a, b) => b.d - a.d);
 
@@ -148,16 +149,18 @@
         ctx.fillStyle = pc(base)[L]; ctx.beginPath(); poly.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath(); ctx.fill();
         if (z.type === 'boost' || z.type === 'jump') { ctx.strokeStyle = z.type === 'jump' ? '#fff3c4' : '#ffffff'; ctx.lineWidth = Math.max(1.5, 4 * s); ctx.lineCap = 'round';
           for (const o of z.type === 'jump' ? [-18, 0, 18] : [-12, 10]) { const a1 = q(o, -18, 0), a2 = q(o + 14, 0, 0), a3 = q(o, 18, 0); ctx.beginPath(); ctx.moveTo(a1[0], a1[1]); ctx.lineTo(a2[0], a2[1]); ctx.lineTo(a3[0], a3[1]); ctx.stroke(); } }
+      } else if (it.kind === 6) { // 내 차 꼬리 효과
+        const p = it.p, sz = 26 * s * (1 - 0.4 * p.t / 0.6); ctx.globalAlpha = 1 - p.t / 0.6; ctx.drawImage(U.emo(p.e), it.sx - sz / 2, it.sy - sz * 0.6, sz, sz); ctx.globalAlpha = 1;
       } else if (it.kind === 4) { // 차 (10% 크게)
         const s = F / Math.max(dz, 1) * 1.1;
-        const r = it.r, rel2 = Math.atan2(Math.sin(r.dh - yaw), Math.cos(r.dh - yaw)), front = Math.abs(rel2) > 2.1, spr = kartSprite(r.car, front);
+        const r = it.r, rel2 = Math.atan2(Math.sin(r.dh - yaw), Math.cos(r.dh - yaw)), front = Math.abs(rel2) > 2.1, spr = kartSprite(r.car, front, r.col);
         const w = 56 * s * (1 + 0.5 * Math.abs(Math.sin(rel2))), h = 40 * s, lift = r.zair * s * 0.9;
         ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.beginPath(); ctx.ellipse(it.sx, it.sy, 30 * s, 9 * s, 0, 0, TAU); ctx.fill();
         ctx.save(); ctx.translate(it.sx, it.sy - lift); if (r.stun > 0) ctx.rotate(Math.sin(r.spin * 1.5) * 0.45);
         if (r.boost > 0) { ctx.fillStyle = '#ff9f1c'; ctx.beginPath(); ctx.moveTo(-7 * s, -4 * s); ctx.lineTo(0, 22 * s * (0.7 + Math.random() * 0.5)); ctx.lineTo(7 * s, -4 * s); ctx.fill(); }
         ctx.drawImage(spr, -w / 2, -h * 1.02, w, h);
         const ey = -h * 0.92, showFace = E.state === 'count' || Math.abs(rel2) > 1.25; // 출발 전엔 얼굴, 출발하면 뒷모습
-        ctx.save(); ctx.translate(0, ey); ctx.scale(s, s); if (showFace) U.stamp(ctx, r.ch.e, 24); else { const sz = 96 * 24 / 76; ctx.drawImage(charBack(r.ch), -sz / 2, -sz / 2, sz, sz); } ctx.restore();
+        ctx.save(); ctx.translate(0, ey); ctx.scale(s, s); if (showFace) U.stamp(ctx, r.ch.e, 24); else { const sz = 96 * 24 / 76; ctx.drawImage(charBack(r.ch), -sz / 2, -sz / 2, sz, sz); } if (r.hat) { ctx.translate(0, -13); U.stamp(ctx, r.hat, 15); } ctx.restore();
         if (r.shield > 0) { ctx.strokeStyle = 'rgba(80,220,255,.9)'; ctx.lineWidth = Math.max(2, 4 * s); ctx.beginPath(); ctx.ellipse(0, -h * 0.55, 34 * s, 30 * s, 0, 0, TAU); ctx.stroke(); }
         if (r.frozen > 0) { ctx.save(); ctx.translate(0, -h * 0.5); ctx.scale(s, s); ctx.globalAlpha = 0.85; U.stamp(ctx, '🧊', 44); ctx.restore(); }
         if (r.isPlayer) { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-7 * s, -h * 1.42); ctx.lineTo(7 * s, -h * 1.42); ctx.lineTo(0, -h * 1.22); ctx.closePath(); ctx.stroke(); ctx.fill(); }

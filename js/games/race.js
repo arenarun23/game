@@ -19,7 +19,7 @@
 
   let pendingTrack = null; // 질문에서 '네'를 눌러 모드를 바꿨을 때, 고르기를 건너뛰고 바로 시작할 경기장
   const saved = G.store.get('race:sel', {});
-  const sel = { ch: clamp(saved.ch | 0, 0, 3), car: clamp(saved.car | 0, 0, 3), tr: clamp(saved.tr | 0, 0, 7) };
+  const sel = { ch: clamp(saved.ch | 0, 0, D.CHARS.length - 1), car: clamp(saved.car | 0, 0, D.CARS.length - 1), tr: clamp(saved.tr | 0, 0, 7) };
 
   // 사용법 화면 (고르기 화면과 경기 중 모두에서 연다)
   function helpOverlay(root, ch, car, onClose) {
@@ -61,8 +61,13 @@
             G.h('span', { class: 'ic' }, it.ic), G.h('span', Object.assign({ class: 'nm' }, typeof it.ic === 'string' ? { 'data-e': it.ic } : {}), it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
         const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), extra || null, G.h('div', { class: 'fitbox' }, grid)];
         kids.push(G.h('div', { class: 'palette' }, onBack ? G.h('button', { class: 'btn alt', onclick: onBack }, '◀ 이전') : null,
-          G.h('button', { class: 'btn alt', onclick: () => helpOverlay(root, D.CHARS[sel.ch], D.CARS[sel.car]) }, '❓ 사용법')));
+          G.h('button', { class: 'btn alt', onclick: () => helpOverlay(root, D.CHARS[sel.ch], D.CARS[sel.car]) }, '❓ 사용법'),
+          G.h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); showRewards(step === 1 ? showChars : step === 2 ? showCars : showTracks); } }, '🏅 내 보상')));
         root.replaceChildren(...kids.filter(Boolean));
+      }
+      function showRewards(back) {
+        if (stopFn) { stopFn(); stopFn = null; }
+        window.RaceReward.page(root, { carColor: D.CARS[sel.car].color, chEmoji: D.CHARS[sel.ch].e, onBack: back });
       }
       const br = (t, cls) => G.h('span', { class: 'ln' + (cls ? ' ' + cls : '') }, t);
       function showChars() {
@@ -123,7 +128,8 @@
         const me = racers[0];
         function mk(ci, cr, isPlayer, slot) {
           const ch = D.CHARS[ci], car = D.CARS[cr], idx = (M - 3 - Math.floor(slot / 2) * 4 + M) % M, c = P[idx], lat = (slot % 2 ? 0.45 : -0.45) * hw;
-          return { ch, car, isPlayer, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
+          const cs = isPlayer ? window.RaceReward.cos() : null;
+          return { ch, car, col: (cs && cs.color.c) || car.color, hat: cs && cs.hat.e, trail: cs && cs.trail.e, tr: [], trT: 0, isPlayer, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
             offF: 0.45 + (car.st.off || 0) + (ch.mod.off || 0), iceImm: !!ch.mod.ice, x: c.x + c.nx * lat, y: c.y + c.ny * lat, h: Math.atan2(c.ty, c.tx), px: c.x + c.nx * lat, py: c.y + c.ny * lat, ph: Math.atan2(c.ty, c.tx), dx: 0, dy: 0, dh: 0, vx: 0, vy: 0, v: 0, idx, lap: 0, prog: idx, prevIdx: idx,
             steerIn: 0, throttle: 1, air: 0, zair: 0, boost: 0, boostMul: 1.4, shield: 0, stun: 0, frozen: 0, spin: 0, item: null, cd: [3, 4], lane: (rnd() - 0.5) * 0.7, aiVar: 0.97 + rnd() * 0.06, aiT: rnd(), fin: null, off: false, stuck: 0, tire: 0 };
         }
@@ -290,6 +296,8 @@
           else if (r.isPlayer && !dbg.auto) playerControl(r);
           else aiThink(r, dt);
           if (r.fin != null) { r.steerIn = clamp(r.steerIn, -1, 1); r.throttle = 0.6; }
+          if (r.trail && state === 'go') { r.trT -= dt; if (r.trT <= 0 && r.v > 60) { r.trT = 0.07; r.trI = (r.trI || 0) + 1; r.tr.push({ x: r.x - Math.cos(r.h) * 22, y: r.y - Math.sin(r.h) * 22, h: hOf(r) - r.zair, t: 0, e: r.trail[r.trI % r.trail.length] }); } }
+          for (let i = r.tr.length - 1; i >= 0; i--) { r.tr[i].t += dt; if (r.tr[i].t > 0.6) r.tr.splice(i, 1); }
           r.boost = Math.max(0, r.boost - dt); r.shield = Math.max(0, r.shield - dt); r.stun = Math.max(0, r.stun - dt); r.frozen = Math.max(0, r.frozen - dt);
           for (let s = 0; s < 2; s++) r.cd[s] = Math.max(0, r.cd[s] - dt);
           r.air = Math.max(0, r.air - dt); { const a = r.air > 0 ? 1 - r.air / JUMP : 0; r.zair = r.air > 0 ? 80 * 4 * a * (1 - a) : 0; }
@@ -358,8 +366,8 @@
         }
 
         // ───────── 그리기 ─────────
-        function carShape(c, car) {
-          const col = car.color; c.fillStyle = '#222';
+        function carShape(c, car, col) {
+          c.fillStyle = '#222';
           for (const [x, y] of [[-14, -13], [-14, 13], [13, -13], [13, 13]]) c.fillRect(x - 6, y - 4, 12, 8);
           c.fillStyle = col; c.beginPath(); c.roundRect(-24, -14, 48, 28, 8); c.fill();
           c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.roundRect(-6, -10, 16, 20, 5); c.fill();
@@ -370,7 +378,7 @@
           else if (car.id === 'bus') { c.fillStyle = 'rgba(255,255,255,.55)'; for (let i = -20; i < 18; i += 10) c.fillRect(i, -10, 7, 20); }
           else { c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(-22, -2, 10, 4); }
         }
-        const kartSpr = (car) => sprite('kart:' + car.id, 120, 80, (g) => { g.scale(2, 2); g.translate(30, 20); carShape(g, car); });
+        const kartSpr = (car, col) => sprite('kart:' + car.id + col, 120, 80, (g) => { g.scale(2, 2); g.translate(30, 20); carShape(g, car, col); });
         const runs = [], ord = racers.slice();
         let alpha = 0, pcamH = camH, lowQ = false;
         function draw() {
@@ -426,11 +434,12 @@
             ctx.restore(); }
           // 차 (아래쪽에 있는 차를 위에 그린다)
           for (let i = 1; i < ord.length; i++) { const v = ord[i]; let j = i - 1; while (j >= 0 && ord[j].dy > v.dy) { ord[j + 1] = ord[j]; j--; } ord[j + 1] = v; }
+          for (const p of me.tr) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(rot); ctx.globalAlpha = 1 - p.t / 0.6; stamp(ctx, p.e, 20 * (1 - 0.4 * p.t / 0.6)); ctx.restore(); }
           for (const r of ord) {
             ctx.save(); ctx.translate(r.dx, r.dy); ctx.scale(1.1, 1.1); // 차를 10% 크게
             if (r.boost > 0) { ctx.save(); ctx.rotate(r.dh); ctx.fillStyle = '#ff9f1c'; ctx.beginPath(); ctx.moveTo(-24, -9); ctx.lineTo(-24 - 18 - rnd() * 10, 0); ctx.lineTo(-24, 9); ctx.fill(); ctx.restore(); }
-            ctx.save(); ctx.rotate(r.dh + r.spin); ctx.drawImage(kartSpr(r.car), -30, -20, 60, 40); ctx.restore();
-            ctx.save(); ctx.rotate(rot); stamp(ctx, r.ch.e, 26);
+            ctx.save(); ctx.rotate(r.dh + r.spin); ctx.drawImage(kartSpr(r.car, r.col), -30, -20, 60, 40); ctx.restore();
+            ctx.save(); ctx.rotate(rot); stamp(ctx, r.ch.e, 26); if (r.hat) { ctx.translate(0, -15); stamp(ctx, r.hat, 17); }
             if (r.isPlayer) { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-8, -40); ctx.lineTo(8, -40); ctx.lineTo(0, -28); ctx.closePath(); ctx.stroke(); ctx.fill(); }
             if (r.shield > 0) { ctx.strokeStyle = 'rgba(80,220,255,.9)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 30 + Math.sin(t * 10) * 2, 0, TAU); ctx.stroke(); }
             if (r.frozen > 0) { ctx.globalAlpha = 0.85; stamp(ctx, '🧊', 44); ctx.globalAlpha = 1; }
@@ -479,7 +488,8 @@
             G.store.set(key, [...done].filter((i) => !mine.includes(i)));
             ask = { q: `🏆 하드 ${gname} 경기장 ${n}개까지 모두 완주했어요!\n이지 ${gname} 경기장부터 다시 달려 볼까요?`, yes: { label: '✅ 네, 다시!', fn: switchTo(false, mine[0]) }, no: { label: '❌ 아니요', fn: () => goFirst() } };
           }
-          G.win({ stars: k === 1 ? 3 : k === 2 ? 2 : 1, text: (k === 1 ? '🏆 1등!' : k + '등으로 들어왔어요') + ` · ${TD.n} (${TD.shape}) · ${gname} 완주 ${doneCnt}/${n}`, ask });
+          const gain = (k === 1 ? 3 : k === 2 ? 2 : 1) + (G.hard ? 1 : 0), nw = window.RaceReward.newly(G.starCount, G.starCount + gain);
+          G.win({ stars: k === 1 ? 3 : k === 2 ? 2 : 1, text: (k === 1 ? '🏆 1등!' : k + '등으로 들어왔어요') + ` · ${TD.n} (${TD.shape}) · ${gname} 완주 ${doneCnt}/${n}` + (nw.length ? ' · 🎉 새 보상! ' + nw.map((m) => m.ic + ' ' + m.n).join(', ') + ' (🏅 내 보상에서 확인)' : ''), ask });
         }
         const STEP = 1 / 60;
         let acc = 0, ema = STEP, nF = 0, lastDown = -99;

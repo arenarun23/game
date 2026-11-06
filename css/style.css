@@ -302,3 +302,36 @@ html[data-game=race] .rbtn small{font-size:max(12px,clamp(.6rem,2.4vmin,.85rem))
   html[data-game=race] .pk:not(.trk){column-gap:.3rem;padding:.2rem .4rem}
   html[data-game=race] .pk:not(.trk) .ds{font-size:max(13px,clamp(.75rem,6cqmin,1rem))}
 }
+
+/* ── 레이싱 별 보상 페이지 ── */
+.rwpage{width:100%;height:100%;display:flex;flex-direction:column;gap:.5rem;min-height:0}
+.rwbody{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:.7rem;padding:.1rem .2rem;-webkit-overflow-scrolling:touch}
+.rwleft,.rwright{display:flex;flex-direction:column;gap:.45rem;align-items:center}
+.rwtitle{font-size:max(17px,1.2rem);font-weight:700}
+.rwbar{width:min(26rem,92%);height:1rem;border-radius:1rem;background:rgba(0,0,0,.12);overflow:hidden;border:2px solid var(--line)}
+.rwbar i{display:block;height:100%;background:linear-gradient(90deg,#ffb347,#ff7e5f);border-radius:1rem}
+.rwnext{font-size:max(15px,1.05rem);text-align:center}
+.rwpv{position:relative;width:11rem;height:6.2rem;flex:none}
+.rwcar{position:absolute;left:3.2rem;top:2.6rem;width:5.6rem;height:2.4rem;border-radius:.7rem;box-shadow:inset 0 -.4rem 0 rgba(0,0,0,.2)}
+.rww{position:absolute;top:4.3rem;width:1.4rem;height:.9rem;border-radius:.3rem;background:#222}.rww.w1{left:3.6rem}.rww.w2{left:7.2rem}
+.rwch{position:absolute;left:4.6rem;top:.9rem;font-size:2.6rem;line-height:1}
+.rwhat{position:absolute;left:5.1rem;top:-.2rem;font-size:1.8rem;line-height:1}
+.rwtr{position:absolute;top:3rem;font-size:1.1rem}
+.rwmiles{display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem;width:100%}
+.card.rwm{padding:.3rem .2rem;gap:.1rem;min-height:5.2rem;justify-content:center;text-align:center}
+.card.rwm .ic{font-size:1.8rem}.card.rwm .nm{font-size:max(14px,.95rem)}.card.rwm .ds{font-size:max(11.5px,.75rem);line-height:1.15}
+.card.rwm.lock{opacity:.55;filter:grayscale(.6)}
+.rwrow{width:100%;display:flex;flex-direction:column;gap:.25rem}
+.rwrow>b{font-size:max(16px,1.1rem)}
+.rwchips{display:flex;flex-wrap:wrap;gap:.4rem}
+.rwc{min-width:52px;min-height:52px;padding:.15rem .4rem;border-radius:.9rem;background:var(--card);border:2px solid var(--line);font-size:1.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+.rwc small{font-size:max(11.5px,.72rem);opacity:.85}
+.rwc[aria-pressed=true]{border-color:var(--btn);box-shadow:0 0 0 3px var(--btn)}
+.rwc .sw{display:block;width:1.6rem;height:1.6rem;border-radius:50%;border:2px solid rgba(0,0,0,.25)}
+.rwhint{min-height:1.3rem;font-size:max(14px,1rem);text-align:center}
+@media (min-aspect-ratio:1/1) and (min-width:640px){
+  .rwbody{flex-direction:row;align-items:flex-start;gap:1rem}.rwleft,.rwright{flex:1;min-width:0}
+  .rwpv{height:5.4rem}.rwmiles{grid-template-columns:repeat(5,1fr)}
+}
+@media (max-width:420px){.rwmiles{grid-template-columns:repeat(3,1fr)}}
+@media (max-height:460px){.rwpv{transform:scale(.8);transform-origin:top center;height:4.6rem}}

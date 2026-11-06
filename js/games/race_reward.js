@@ -1,0 +1,98 @@
+// 레이싱 별 보상: 별을 모으면 꾸미기(차 색·꼬리·모자)와 칭호가 열린다. 그림 파일 없이 이모지·색으로만.
+(function () {
+  'use strict';
+  const MILES = [
+    { at: 50, ic: '🥉', n: '첫 트로피', d: '칭호 「새내기 레이서」' },
+    { at: 100, ic: '🎨', n: '차 색깔 바꾸기', d: '차를 5가지 색으로 꾸며요' },
+    { at: 200, ic: '✨', n: '꼬리 효과', d: '달리면 별·하트·무지개가 따라와요' },
+    { at: 500, ic: '🎩', n: '캐릭터 모자', d: '왕관·리본·헬멧·모자, 칭호 「레이싱 왕」' },
+    { at: 1000, ic: '🏆', n: '전설의 보상', d: '황금 차, 칭호 「전설의 레이서」' },
+  ];
+  const TITLES = [[0, '꼬마 레이서'], [50, '새내기 레이서'], [500, '레이싱 왕'], [1000, '전설의 레이서']];
+  const COLORS = [{ id: 'def', n: '기본', c: null, at: 0 }, { id: 'pink', n: '분홍', c: '#ff6fb5', at: 100 }, { id: 'purple', n: '보라', c: '#9b59b6', at: 100 }, { id: 'green', n: '초록', c: '#2ecc71', at: 100 },
+    { id: 'sky', n: '하늘', c: '#36c5f0', at: 100 }, { id: 'orange', n: '주황', c: '#ff8a3d', at: 100 }, { id: 'gold', n: '황금', c: '#ffc400', at: 1000 }];
+  const TRAILS = [{ id: 'none', n: '없음', e: null, at: 0 }, { id: 'star', n: '별', e: ['⭐'], at: 200 }, { id: 'heart', n: '하트', e: ['💖'], at: 200 }, { id: 'rainbow', n: '무지개', e: ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣'], at: 200 }];
+  const HATS = [{ id: 'none', n: '없음', e: null, at: 0 }, { id: 'crown', n: '왕관', e: '👑', at: 500 }, { id: 'ribbon', n: '리본', e: '🎀', at: 500 }, { id: 'helmet', n: '헬멧', e: '⛑️', at: 500 }, { id: 'tophat', n: '모자', e: '🎩', at: 500 }];
+  const stars = () => (window.G && G.starCount) | 0;
+  const title = (s) => TITLES.filter((t) => s >= t[0]).pop()[1];
+  const next = (s) => MILES.find((m) => s < m.at) || null;
+  const raw = () => Object.assign({ color: 'def', trail: 'none', hat: 'none' }, G.store.get('race:cos', {}));
+  // 지금 쓸 수 있는 꾸미기만 돌려준다(아직 안 열린 것은 기본값)
+  function cos() {
+    const s = stars(), r = raw(), pick = (arr, id) => { const o = arr.find((x) => x.id === id); return o && s >= o.at ? o : arr[0]; };
+    return { color: pick(COLORS, r.color), trail: pick(TRAILS, r.trail), hat: pick(HATS, r.hat) };
+  }
+  const newly = (before, after) => MILES.filter((m) => before < m.at && after >= m.at);
+
+
+  // 📸 보상 화면을 그림 파일(PNG)로 저장한다. 폰은 공유 창, 컴퓨터는 내려받기.
+  function capture(o) {
+    const s = stars(), c = cos(), nx = next(s), W = 900, H = 640, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'), E = (t, x, y, px, al) => { g.font = `${px}px "Jua","Noto Sans KR",sans-serif`; g.textAlign = al || 'center'; g.textBaseline = 'middle'; g.fillText(t, x, y); };
+    const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#fff3d6'); bg.addColorStop(1, '#ffd9a8'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#ff9f43'; g.lineWidth = 10; g.strokeRect(14, 14, W - 28, H - 28);
+    g.fillStyle = '#4a3b2a'; E('🏅 내 레이싱 보상', W / 2, 70, 54); E(`⭐ ${s}   칭호: ${title(s)}`, W / 2, 130, 38);
+    // 진행 막대
+    const base = (MILES.filter((m) => s >= m.at).pop() || { at: 0 }).at, pct = nx ? Math.max(0, Math.min(1, (s - base) / (nx.at - base))) : 1;
+    g.fillStyle = 'rgba(0,0,0,.15)'; g.beginPath(); g.roundRect(150, 165, 600, 26, 13); g.fill();
+    g.fillStyle = '#ff7e5f'; g.beginPath(); g.roundRect(150, 165, Math.max(26, 600 * pct), 26, 13); g.fill();
+    g.fillStyle = '#4a3b2a'; E(nx ? `다음 보상 ${nx.ic} ${nx.n}까지 ⭐ ${nx.at - s}개` : '🎉 모든 보상을 모았어요!', W / 2, 220, 30);
+    // 내 차(색·모자·꼬리)
+    const cx = W / 2, cy = 362, col = c.color.c || o.carColor;
+    if (c.trail.e) for (let i = 0; i < 4; i++) { g.globalAlpha = 0.35 + i * 0.15; E(c.trail.e[i % c.trail.e.length], cx - 150 + i * 36, cy + 18, 40); } g.globalAlpha = 1;
+    g.fillStyle = '#222'; g.beginPath(); g.roundRect(cx - 80, cy + 30, 36, 24, 6); g.roundRect(cx + 44, cy + 30, 36, 24, 6); g.fill();
+    g.fillStyle = col; g.beginPath(); g.roundRect(cx - 100, cy - 20, 200, 62, 18); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.roundRect(cx - 20, cy - 12, 60, 40, 10); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.arc(cx, cy - 36, 54, 0, 6.2832); g.fill(); g.fillStyle = '#4a3b2a';
+    E(o.chEmoji, cx, cy - 36, 96); if (c.hat.e) E(c.hat.e, cx, cy - 92, 56);
+    // 보상 5개
+    const w = 160, gap = 15, x0 = (W - (w * 5 + gap * 4)) / 2;
+    MILES.forEach((m, i) => { const x = x0 + i * (w + gap), ok = s >= m.at; g.fillStyle = ok ? '#fff3b0' : 'rgba(255,255,255,.55)'; g.beginPath(); g.roundRect(x, 440, w, 150, 18); g.fill(); g.strokeStyle = ok ? '#f5b700' : '#bbb'; g.lineWidth = 4; g.stroke();
+      g.fillStyle = ok ? '#4a3b2a' : '#999'; E(ok ? m.ic : '🔒', x + w / 2, 485, 54); E(`⭐ ${m.at}`, x + w / 2, 538, 30); E(m.n, x + w / 2, 570, 21); });
+    g.fillStyle = '#8a7a63'; E(new Date().toLocaleDateString('ko-KR'), W - 40, H - 36, 22, 'right');
+    cv.toBlob(async (blob) => {
+      if (!blob) return;
+      const name = `race-rewards-${s}.png`, file = new File([blob], name, { type: 'image/png' });
+      try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: '내 레이싱 보상' }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+      const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }, 'image/png');
+  }
+
+  // 보상 페이지
+  function page(root, o) {
+    const h = G.h, s = stars(), nx = next(s), prev = MILES.filter((m) => s >= m.at).pop(), base = prev ? prev.at : 0;
+    const body = h('div', { class: 'rwbody' });
+    const pv = h('div', { class: 'rwpv' });
+    function paintPreview() {
+      const c = cos(), col = c.color.c || o.carColor, tr = c.trail.e;
+      pv.replaceChildren(
+        ...(tr ? [0, 1, 2, 3].map((i) => h('span', { class: 'rwtr', style: `left:${6 + i * 15}px;opacity:${0.35 + i * 0.15}` }, tr[i % tr.length])) : []),
+        h('span', { class: 'rwcar', style: `background:${col}` }), h('span', { class: 'rww w1' }), h('span', { class: 'rww w2' }),
+        h('span', { class: 'rwch' }, o.chEmoji), ...(c.hat.e ? [h('span', { class: 'rwhat' }, c.hat.e)] : []));
+    }
+    const chipRow = (label, list, key, render) => {
+      const row = h('div', { class: 'rwrow' }, h('b', {}, label), h('div', { class: 'rwchips' }));
+      const chips = row.lastChild;
+      const draw = () => chips.replaceChildren(...list.map((it) => {
+        const ok = stars() >= it.at, on = ok && (cos()[key].id === it.id);
+        return h('button', { class: 'rwc', 'aria-pressed': String(on), 'aria-label': it.n, style: it.c ? `--sw:${it.c}` : '',
+          onclick: () => { if (!ok) { G.sfx.bad(); hint.textContent = `🔒 ⭐ ${it.at}개를 모으면 열려요`; return; } G.sfx.tap(); const r = raw(); r[key] = it.id; G.store.set('race:cos', r); hint.textContent = ''; draw(); paintPreview(); } },
+          ok ? render(it) : '🔒', h('small', {}, ok ? it.n : '⭐' + it.at));
+      }));
+      draw(); return row;
+    };
+    const hint = h('div', { class: 'rwhint' });
+    const pct = nx ? Math.max(0, Math.min(100, Math.round((s - base) / (nx.at - base) * 100))) : 100;
+    const left = h('div', { class: 'rwleft' },
+      h('div', { class: 'hint must' }, `🏅 내 보상 · ⭐ ${s}`), h('div', { class: 'rwtitle' }, `칭호: ${title(s)}`),
+      h('div', { class: 'rwbar', role: 'progressbar', 'aria-valuenow': String(pct) }, h('i', { style: `width:${pct}%` })),
+      h('div', { class: 'rwnext' }, nx ? `다음 보상 ${nx.ic} ${nx.n}까지 ⭐ ${nx.at - s}개` : '🎉 모든 보상을 모았어요!'), pv,
+      h('div', { class: 'rwmiles' }, MILES.map((m) => h('div', { class: 'card rwm ' + (s >= m.at ? 'c-lemon' : 'lock') }, h('span', { class: 'ic' }, s >= m.at ? m.ic : '🔒'), h('span', { class: 'nm' }, `⭐ ${m.at}`), h('span', { class: 'ds' }, m.n)))));
+    const right = h('div', { class: 'rwright' },
+      chipRow('🎨 차 색깔', COLORS, 'color', (it) => h('span', { class: 'sw', style: it.c ? `background:${it.c}` : 'background:conic-gradient(#e74c3c,#f1c40f,#2ecc71,#3498db,#e74c3c)' })),
+      chipRow('✨ 꼬리', TRAILS, 'trail', (it) => it.e ? it.e[0] : '🚫'),
+      chipRow('🎩 모자', HATS, 'hat', (it) => it.e || '🚫'), hint);
+    body.append(left, right); paintPreview();
+    root.replaceChildren(h('div', { class: 'rwpage' }, body, h('div', { class: 'palette' }, h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); o.onBack(); } }, '◀ 돌아가기'), h('button', { class: 'btn', onclick: () => { G.sfx.ok(); capture(o); hint.textContent = '📸 사진으로 저장했어요! (내려받기 폴더 또는 공유 창)'; } }, '📸 사진 저장'))));
+  }
+  window.RaceReward = { MILES, COLORS, TRAILS, HATS, cos, newly, page, title, stars };
+})();
