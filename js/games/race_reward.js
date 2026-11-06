@@ -27,7 +27,7 @@
   const newly = (before, after) => MILES.filter((m) => before < m.at && after >= m.at);
 
 
-  // 📸 보상 화면을 그림 파일(PNG)로 저장한다. 폰은 공유 창, 컴퓨터는 내려받기.
+  // 📸 보상 화면을 그림 파일(PNG)로 바로 저장(내려받기)한다.
   function capture(o) {
     const s = stars(), c = cos(), nx = next(s), W = 900, H = 640, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const g = cv.getContext('2d'), E = (t, x, y, px, al) => { g.font = `${px}px "Jua","Noto Sans KR",sans-serif`; g.textAlign = al || 'center'; g.textBaseline = 'middle'; g.fillText(t, x, y); };
@@ -51,10 +51,9 @@
     MILES.forEach((m, i) => { const x = x0 + i * (w + gap), ok = s >= m.at; g.fillStyle = ok ? '#fff3b0' : 'rgba(255,255,255,.55)'; g.beginPath(); g.roundRect(x, 440, w, 150, 18); g.fill(); g.strokeStyle = ok ? '#f5b700' : '#bbb'; g.lineWidth = 4; g.stroke();
       g.fillStyle = ok ? '#4a3b2a' : '#999'; E(ok ? m.ic : '🔒', x + w / 2, 485, 54); E(`⭐ ${m.at}`, x + w / 2, 538, 30); E(m.n, x + w / 2, 570, 21); });
     g.fillStyle = '#8a7a63'; E(new Date().toLocaleDateString('ko-KR'), W - 40, H - 36, 22, 'right');
-    cv.toBlob(async (blob) => {
+    cv.toBlob((blob) => {
       if (!blob) return;
-      const name = `race-rewards-${s}.png`, file = new File([blob], name, { type: 'image/png' });
-      try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: '내 레이싱 보상' }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+      const name = `race-rewards-${s}.png`;
       const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
     }, 'image/png');
   }
@@ -141,7 +140,7 @@
       chipRow('✨ 꼬리', TRAILS, 'trail', (it) => it.e ? it.e[0] : '🚫'),
       chipRow('🎩 모자', HATS, 'hat', (it) => it.e || '🚫'), hint);
     body.append(left, right); paintPreview();
-    root.replaceChildren(h('div', { class: 'rwpage' }, body, h('div', { class: 'palette' }, h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); o.onBack(); } }, '◀ 돌아가기'), h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); transferBox(root, () => page(root, o)); } }, '🔁 옮기기'), h('button', { class: 'btn', onclick: () => { G.sfx.ok(); capture(o); hint.textContent = '📸 사진으로 저장했어요! (내려받기 폴더 또는 공유 창)'; } }, '📸 사진 저장'))));
+    root.replaceChildren(h('div', { class: 'rwpage' }, body, h('div', { class: 'palette' }, h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); o.onBack(); } }, '◀ 돌아가기'), h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); transferBox(root, () => page(root, o)); } }, '🔁 옮기기'), h('button', { class: 'btn', onclick: () => { G.sfx.ok(); capture(o); hint.textContent = '📸 사진으로 저장했어요! (내려받기 폴더 · 갤러리/내 파일에서 확인)'; } }, '📸 사진 저장'))));
   }
   window.RaceReward = { MILES, COLORS, TRAILS, HATS, cos, newly, page, title, stars, add };
 })();
