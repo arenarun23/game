@@ -1,4 +1,4 @@
-// 레이싱 데이터: 캐릭터 4, 차 4, 경기장 8 + 트랙 만들기
+// 레이싱 데이터: 캐릭터 5, 차 5, 경기장 8 + 트랙 만들기
 (function () {
   'use strict';
   const TAU = Math.PI * 2;
@@ -9,6 +9,7 @@
     { id: 'gom', n: '곰곰이', e: '🐻', color: 'orange', trait: '튼튼해서 잘 안 밀려요', skill: { id: 'shield', tag: '방패', n: '방패', e: '🛡️', d: '3초 동안 공격을 막아요', cd: 12 }, mod: { acc: 0.95, max: 1, turn: 0.95, mass: 1.5, off: 0.12 } },
     { id: 'yeo', n: '여우리', e: '🦊', color: 'lemon', trait: '핸들이 아주 좋아요', skill: { id: 'trap', tag: '함정', n: '함정', e: '🪤', d: '뒤에 함정을 놓아요', cd: 9 }, mod: { acc: 1, max: 1, turn: 1.2, mass: 0.85, off: 0 } },
     { id: 'peng', n: '펭구', e: '🐧', color: 'sky', trait: '얼음길에서도 안 미끄러워요', skill: { id: 'ice', tag: '얼음', n: '얼음 발사', e: '🧊', d: '맞은 차가 꽁꽁 얼어요', cd: 10 }, mod: { acc: 1, max: 1.04, turn: 1, mass: 1, off: 0, ice: 1 } },
+    { id: 'leo', n: '레오', e: '🦁', color: 'lemon', trait: '부스트가 더 세게 나가요', skill: { id: 'roar', tag: '포효', n: '사자 포효', e: '📣', d: '앞에 있는 차들이 놀라서 빙글 돌아요', cd: 11 }, mod: { acc: 0.95, max: 1.02, turn: 0.95, mass: 1.15, off: 0, boost: 1.18 } },
   ];
 
   // 차: 능력치(st) + 전용 스킬. bars = 화면에 보여 줄 별점(속도·가속·핸들·튼튼)
@@ -17,6 +18,7 @@
     { id: 'tank', n: '튼튼이', e: '🚙', color: '#27ae60', ui: 'mint', trait: '풀밭도 잘 달려요', skill: { id: 'wave', tag: '충격', n: '충격파', e: '💥', d: '주변 차를 밀어내요', cd: 13 }, st: { speed: 1.0, acc: 1.0, turn: 0.95, mass: 1.4, off: 0.3 }, bars: [3, 3, 3, 5] },
     { id: 'slide', n: '미끄리', e: '🛻', color: '#3498db', ui: 'sky', trait: '커브를 잘 돌아요', skill: { id: 'oil', tag: '기름', n: '기름 웅덩이', e: '🛢️', d: '밟으면 미끄러져요', cd: 10 }, st: { speed: 0.97, acc: 1.0, turn: 1.22, mass: 0.9, off: 0 }, bars: [3, 3, 5, 2] },
     { id: 'van', n: '든든이', e: '🚐', color: '#f1c40f', ui: 'lemon', trait: '출발이 빨라요', skill: { id: 'magnet', tag: '뽑기', n: '아이템 뽑기', e: '🎁', d: '아이템을 바로 받아요', cd: 11 }, st: { speed: 0.95, acc: 1.18, turn: 1, mass: 1.1, off: 0.05 }, bars: [2, 5, 3, 3] },
+    { id: 'bus', n: '빵빵이', e: '🚌', color: '#ff8a3d', ui: 'peach', trait: '아주 커서 부딪치면 상대가 튕겨 나가요', skill: { id: 'express', tag: '급행', n: '급행 출발', e: '🚍', d: '방패를 쓰고 쌩 달려요', cd: 13 }, st: { speed: 0.93, acc: 0.82, turn: 0.82, mass: 1.8, off: 0.1 }, bars: [2, 2, 2, 5] },
   ];
 
   // ───────── 경기장 ─────────

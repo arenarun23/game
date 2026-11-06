@@ -117,7 +117,7 @@
         fit(); const ro = new ResizeObserver(fit); ro.observe(wrap);
 
         // 선수
-        const order4 = (() => { const others = G.shuffle([0, 1, 2, 3].filter((i) => i !== sel.ch)), cars = G.shuffle([0, 1, 2, 3]); return [sel.ch, ...others].map((c, i) => [c, i === 0 ? sel.car : cars[i]]); })();
+        const order4 = (() => { const others = G.shuffle(D.CHARS.map((_, i) => i).filter((i) => i !== sel.ch)).slice(0, 3), cars = G.shuffle(D.CARS.map((_, i) => i)); return [sel.ch, ...others].map((c, i) => [c, i === 0 ? sel.car : cars[i]]); })();
         const slots = G.shuffle([0, 1, 2, 3]);
         const racers = order4.map(([ci, cr], i) => mk(ci, cr, i === 0, slots[i]));
         const me = racers[0];
@@ -243,6 +243,9 @@
             case 'ice': shoot('ice', r, 900, 1.1, null); break;
             case 'wave': fx.push({ k: 'ring', x: r.x, y: r.y, t: 0, life: 0.5 });
               for (const o of racers) if (o !== r) { const dx = o.x - r.x, dy = o.y - r.y, d = Math.hypot(dx, dy) || 1; if (d < 230) { if (hit(o, 'spin', 0.8)) { o.vx += dx / d * 300; o.vy += dy / d * 300; } } } break;
+            case 'roar': fx.push({ k: 'ring', x: r.x, y: r.y, t: 0, life: 0.5 });
+              for (const o of racers) if (o !== r) { const dx = o.x - r.x, dy = o.y - r.y, d = Math.hypot(dx, dy); if (d < 460 && dx * Math.cos(r.h) + dy * Math.sin(r.h) > 0) hit(o, 'spin', 0.9); } break;
+            case 'express': r.shield = Math.max(r.shield, 2.5); r.boost = Math.max(r.boost, 1.6); r.boostMul = 1.4; break;
             case 'magnet': if (!r.item) r.item = randItem(r); else { r.boost = Math.max(r.boost, 0.9); } break;
           }
           r.cd[slot] = sk.cd; if (r.isPlayer) { G.sfx.ok(); toast(sk.e + ' ' + sk.n + '!'); } return true;
@@ -267,7 +270,7 @@
           const p = hard ? 0.7 : kid ? 0.12 : 0.4;
           if (r.item && rnd() < p) { if (r.item === 'missile') { if (near(600, true)) useItem(r); } else if (r.item === 'banana') { if (near(260, false)) useItem(r); } else if (curve < 0.3) useItem(r); }
           for (const s of [0, 1]) { if (r.cd[s] > 0 || rnd() > p * 0.6) continue; const id = (s === 0 ? r.ch : r.car).skill.id;
-            if ((id === 'dash' || id === 'turbo') && curve < 0.25) useSkill(r, s); else if (id === 'shield' && near(180)) useSkill(r, s);
+            if ((id === 'dash' || id === 'turbo' || id === 'express') && curve < 0.25) useSkill(r, s); else if (id === 'roar' && near(420, true)) useSkill(r, s); else if (id === 'shield' && near(180)) useSkill(r, s);
             else if ((id === 'trap' || id === 'oil') && near(260, false)) useSkill(r, s); else if (id === 'ice' && near(450, true)) useSkill(r, s);
             else if (id === 'wave' && near(170)) useSkill(r, s); else if (id === 'magnet' && !r.item) useSkill(r, s); }
         }
@@ -299,7 +302,7 @@
             else if (z.type === 'ice' && !r.iceImm) { grip = 1.1; turnK = 0.7; }
             else if (z.type === 'jump' && r.air <= 0 && r.v > 90) { r.air = JUMP; dbg.jumps = (dbg.jumps || 0) + 1; if (r.isPlayer) G.sfx.pop(); }
           }
-          let maxV = r.maxV * (r.boost > 0 ? r.boostMul : 1) * (r.isPlayer ? 1 : AI.mul * r.aiVar * (r.rb || 1)) * r.throttle * surf;
+          let maxV = r.maxV * (r.boost > 0 ? r.boostMul * (r.ch.mod.boost || 1) : 1) * (r.isPlayer ? 1 : AI.mul * r.aiVar * (r.rb || 1)) * r.throttle * surf;
           if (T.v3d) maxV *= clamp(1 - T.slope[r.idx] * 1.0, 0.86, 1.1); // 오르막은 느리게, 내리막은 빠르게
           if (r.frozen > 0) maxV = 0; else if (r.stun > 0) maxV = Math.min(maxV, r.maxV * 0.3);
           if (r.v < maxV) r.v = Math.min(maxV, r.v + r.acc * dt * (r.boost > 0 ? 2.4 : 1)); else r.v = Math.max(maxV, r.v - (r.off ? 540 : 230) * dt);
@@ -364,6 +367,7 @@
           if (car.id === 'bolt') { c.fillStyle = '#fff'; c.fillRect(-24, -3, 36, 6); c.fillStyle = '#222'; c.fillRect(-27, -14, 5, 28); }
           else if (car.id === 'tank') { c.fillStyle = 'rgba(0,0,0,.28)'; c.fillRect(-20, -10, 3, 20); c.fillRect(-12, -10, 3, 20); }
           else if (car.id === 'slide') { c.fillStyle = 'rgba(0,0,0,.28)'; c.fillRect(-24, -12, 14, 24); }
+          else if (car.id === 'bus') { c.fillStyle = 'rgba(255,255,255,.55)'; for (let i = -20; i < 18; i += 10) c.fillRect(i, -10, 7, 20); }
           else { c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(-22, -2, 10, 4); }
         }
         const kartSpr = (car) => sprite('kart:' + car.id, 120, 80, (g) => { g.scale(2, 2); g.translate(30, 20); carShape(g, car); });

@@ -37,6 +37,7 @@
       else { g.fillStyle = '#ff3b3b'; g.fillRect(-23, -23, 9, 5); g.fillRect(14, -23, 9, 5); }
       if (car.id === 'bolt') { g.fillStyle = '#222'; g.fillRect(-26, -36, 52, 4); g.fillRect(-18, -34, 3, 8); g.fillRect(15, -34, 3, 8); }
       else if (car.id === 'tank') { g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-20, -37, 40, 3); }
+      else if (car.id === 'bus') { g.fillStyle = 'rgba(255,255,255,.7)'; for (let i = -22; i < 20; i += 11) g.fillRect(i, -32, 8, 8); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-25, -12, 50, 3); }
       else if (car.id === 'van') { g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-23, -32, 46, 3); }
     });
   }
@@ -50,6 +51,7 @@
       if (ch.id === 'toto') { ell(33, 26, 9, 25, -0.14, '#e4e0ec'); ell(63, 26, 9, 25, 0.14, '#e4e0ec'); ell(33, 28, 4, 17, -0.14, '#d3cbe0'); ell(63, 28, 4, 17, 0.14, '#d3cbe0'); head('#eeeaf4'); ell(48, 82, 16, 8, 0, '#e4e0ec'); }
       else if (ch.id === 'gom') { ell(25, 34, 12, 12, 0, '#b07a45'); ell(71, 34, 12, 12, 0, '#b07a45'); ell(25, 35, 6, 6, 0, '#8f5f33'); ell(71, 35, 6, 6, 0, '#8f5f33'); head('#b98450'); ell(48, 84, 17, 8, 0, '#a06f3d'); }
       else if (ch.id === 'yeo') { tri([[17, 44], [26, 4], [47, 32]], '#f08a2c'); tri([[79, 44], [70, 4], [49, 32]], '#f08a2c'); tri([[22, 20], [26, 4], [37, 22]], '#4a2a14'); tri([[74, 20], [70, 4], [59, 22]], '#4a2a14'); head('#f4952f'); tri([[19, 64], [28, 86], [42, 74]], '#fff4e6'); tri([[77, 64], [68, 86], [54, 74]], '#fff4e6'); }
+      else if (ch.id === 'leo') { g.fillStyle = '#b8742c'; g.beginPath(); g.arc(48, 56, 38, 0, TAU); g.fill(); g.fillStyle = '#8a5120'; for (let a = 0; a < 12; a++) { g.beginPath(); g.arc(48 + Math.cos(a / 12 * TAU) * 34, 56 + Math.sin(a / 12 * TAU) * 34, 8, 0, TAU); g.fill(); } ell(24, 28, 9, 9, 0, '#e2a24f'); ell(72, 28, 9, 9, 0, '#e2a24f'); head('#e8b35e'); ell(48, 84, 14, 7, 0, '#d79a45'); }
       else { ell(15, 70, 7, 15, 0.45, '#232733'); ell(81, 70, 7, 15, -0.45, '#232733'); head('#2d3240'); ell(48, 86, 15, 7, 0, '#232733'); }
       g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.ellipse(38, 46, 12, 8, -0.6, 0, TAU); g.fill();
       g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 2; g.beginPath(); g.arc(48, 58, 29, 0, TAU); g.stroke();
