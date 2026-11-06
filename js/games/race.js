@@ -47,6 +47,7 @@
     start(root, { hard, kid }) {
       document.documentElement.dataset.game = 'race'; // 레이싱 동안 글자를 크게
       let stopFn = null;
+      const goFirst = () => G.start(G.games.find((x) => x.id === 'race')); // 그만두면 놀이터가 아니라 레이싱 첫 화면으로
       const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
       // ───────── 고르기 화면 3단계 ─────────
@@ -178,7 +179,7 @@
             G.h('div', { class: 'row col' },
               G.h('button', { class: 'btn', onclick: () => { G.sfx.tap(); closePause(); } }, '▶ 계속하기'),
               G.h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); closePause(); if (stopFn) stopFn(); startRace(); } }, '🔁 처음부터 다시'),
-              G.h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); G.home(); } }, '⏹ 그만두기')));
+              G.h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); goFirst(); } }, '⏹ 그만두기')));
           root.append(pauseBox);
         }
         bPause.addEventListener('click', () => (pauseBox ? closePause() : openPause()));
@@ -422,7 +423,7 @@
           // 차 (아래쪽에 있는 차를 위에 그린다)
           for (let i = 1; i < ord.length; i++) { const v = ord[i]; let j = i - 1; while (j >= 0 && ord[j].dy > v.dy) { ord[j + 1] = ord[j]; j--; } ord[j + 1] = v; }
           for (const r of ord) {
-            ctx.save(); ctx.translate(r.dx, r.dy);
+            ctx.save(); ctx.translate(r.dx, r.dy); ctx.scale(1.1, 1.1); // 차를 10% 크게
             if (r.boost > 0) { ctx.save(); ctx.rotate(r.dh); ctx.fillStyle = '#ff9f1c'; ctx.beginPath(); ctx.moveTo(-24, -9); ctx.lineTo(-24 - 18 - rnd() * 10, 0); ctx.lineTo(-24, 9); ctx.fill(); ctx.restore(); }
             ctx.save(); ctx.rotate(r.dh + r.spin); ctx.drawImage(kartSpr(r.car), -30, -20, 60, 40); ctx.restore();
             ctx.save(); ctx.rotate(rot); stamp(ctx, r.ch.e, 26);
@@ -463,16 +464,16 @@
           let ask;
           if (left.length) {
             const nx = left.find((i) => i > sel.tr); const nxt = nx === undefined ? left[0] : nx, t = TRACKS[nxt];
-            ask = { q: `다음 경기를 할까요?\n▶ ${t.e} ${t.n} (${t.shape})`, yes: { label: '✅ 네, 계속!', fn: () => { sel.tr = nxt; G.store.set('race:sel', sel); if (stopFn) stopFn(); startRace(); } }, no: { label: '❌ 아니요, 그만', fn: () => G.home() } };
+            ask = { q: `다음 경기를 할까요?\n▶ ${t.e} ${t.n} (${t.shape})`, yes: { label: '✅ 네, 계속!', fn: () => { sel.tr = nxt; G.store.set('race:sel', sel); if (stopFn) stopFn(); startRace(); } }, no: { label: '❌ 아니요, 그만', fn: () => goFirst() } };
           } else if (kid) { // 아주 쉬움 8개 완료 → 쉬워요에 도전?
             G.store.set(key, [...done].filter((i) => !mine.includes(i)));
-            ask = { q: `🎉 아주 쉬운 ${gname} 경기장 ${n}개를 모두 달렸어요!\n🙂 쉬운 ${gname} 경기장에 도전할까요?`, yes: { label: '🙂 네, 도전!', fn: switchTo(false, mine[0]) }, no: { label: '❌ 아니요', fn: () => G.home() } };
+            ask = { q: `🎉 아주 쉬운 ${gname} 경기장 ${n}개를 모두 달렸어요!\n🙂 쉬운 ${gname} 경기장에 도전할까요?`, yes: { label: '🙂 네, 도전!', fn: switchTo(false, mine[0]) }, no: { label: '❌ 아니요', fn: () => goFirst() } };
           } else if (!hard) { // 이 탭(2D 또는 3D)의 8개를 모두 달림 → 같은 탭의 하드에 도전?
             G.store.set(key, [...done].filter((i) => !mine.includes(i)));
-            ask = { q: `🎉 이지 ${gname} 경기장 ${n}개를 모두 달렸어요!\n🔥 어려운 ${gname} 경기장에 도전할까요?`, yes: { label: '🔥 네, 도전!', fn: switchTo(true, mine[0]) }, no: { label: '❌ 아니요', fn: () => G.home() } };
+            ask = { q: `🎉 이지 ${gname} 경기장 ${n}개를 모두 달렸어요!\n🔥 어려운 ${gname} 경기장에 도전할까요?`, yes: { label: '🔥 네, 도전!', fn: switchTo(true, mine[0]) }, no: { label: '❌ 아니요', fn: () => goFirst() } };
           } else {
             G.store.set(key, [...done].filter((i) => !mine.includes(i)));
-            ask = { q: `🏆 하드 ${gname} 경기장 ${n}개까지 모두 완주했어요!\n이지 ${gname} 경기장부터 다시 달려 볼까요?`, yes: { label: '✅ 네, 다시!', fn: switchTo(false, mine[0]) }, no: { label: '❌ 아니요', fn: () => G.home() } };
+            ask = { q: `🏆 하드 ${gname} 경기장 ${n}개까지 모두 완주했어요!\n이지 ${gname} 경기장부터 다시 달려 볼까요?`, yes: { label: '✅ 네, 다시!', fn: switchTo(false, mine[0]) }, no: { label: '❌ 아니요', fn: () => goFirst() } };
           }
           G.win({ stars: k === 1 ? 3 : k === 2 ? 2 : 1, text: (k === 1 ? '🏆 1등!' : k + '등으로 들어왔어요') + ` · ${TD.n} (${TD.shape}) · ${gname} 완주 ${doneCnt}/${n}`, ask });
         }

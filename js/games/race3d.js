@@ -144,7 +144,8 @@
         ctx.fillStyle = pc(base)[L]; ctx.beginPath(); poly.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath(); ctx.fill();
         if (z.type === 'boost' || z.type === 'jump') { ctx.strokeStyle = z.type === 'jump' ? '#fff3c4' : '#ffffff'; ctx.lineWidth = Math.max(1.5, 4 * s); ctx.lineCap = 'round';
           for (const o of z.type === 'jump' ? [-18, 0, 18] : [-12, 10]) { const a1 = q(o, -18, 0), a2 = q(o + 14, 0, 0), a3 = q(o, 18, 0); ctx.beginPath(); ctx.moveTo(a1[0], a1[1]); ctx.lineTo(a2[0], a2[1]); ctx.lineTo(a3[0], a3[1]); ctx.stroke(); } }
-      } else if (it.kind === 4) { // 차
+      } else if (it.kind === 4) { // 차 (10% 크게)
+        const s = F / Math.max(it.d, 1) * 1.1;
         const r = it.r, rel2 = Math.atan2(Math.sin(r.dh - yaw), Math.cos(r.dh - yaw)), front = Math.abs(rel2) > 2.1, spr = kartSprite(r.car, front);
         const w = 56 * s * (1 + 0.5 * Math.abs(Math.sin(rel2))), h = 40 * s, lift = r.zair * s * 0.9;
         ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.beginPath(); ctx.ellipse(it.sx, it.sy, 30 * s, 9 * s, 0, 0, TAU); ctx.fill();
