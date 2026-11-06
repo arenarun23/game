@@ -44,7 +44,7 @@
     space: { bg: '#0b0b2a', shoulder: '#15154a', road: '#46486a', curb: ['#9b59b6', '#ffffff'], line: '#7ff7ff', slow: '#2c2c5a', sky: ['#02020f', '#1b1b5a'], ridge: ['#2a2a78', '#1a1a52'], deco: ['⭐', '🪐', '🛰️', '☄️', '🌙'] },
   };
   // 이지: 넓은 길(w 170), 부드러운 모양 / 하드: 좁은 길(w 130), 급커브·꼬인 모양, 함정 더 많음
-  const T = (th, n, e, shape, gim, pts, w, s0, haz) => ({ id: th, n, e, shape, gim, poly: pts, w, s0, theme: TH[th], haz, rmin: w >= 170 ? 215 : 125 });
+  const T = (th, n, e, shape, gim, pts, w, s0, haz) => ({ id: th, n, e, shape, gim, poly: pts, w, s0, theme: TH[th], haz, rmin: w >= 170 ? 215 : 165 });
   // 3D 경기장: 길 모양 + 높이 곡선(h0 + Σ A·sin(2π·k·u + φ), u = 한 바퀴 0~1). 점프대(jump)와 다리(고가도로)가 있다.
   const T3 = (th, n, e, shape, gim, pts, w, s0, haz, h0, hills) => Object.assign(T(th, n, e, shape, gim, pts, w, s0, haz), { v3d: true, h0, hills });
   const sc = (pts, k) => pts.map((p) => [p[0] * k, p[1] * k]);
