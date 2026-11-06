@@ -65,6 +65,7 @@
 
   // 난이도(쉬움/어려움)와 문제 종류(20가지)를 섞어서 뽑는다
   G.hard = !!G.store.get('hard', false);
+  G.kid = !G.hard && !!G.store.get('kid', false); // 레이싱 전용 '아주 쉬워요'
   const bags = {}, lastV = {};
   G.nextVariant = (id, n) => {
     let b = bags[id];
@@ -103,13 +104,14 @@
     document.body.dataset.view = 'game';
     G.$('#title').textContent = g.name;
     const root = G.h('div', { class: 'game' });
-    const mode = (hard, label) => G.h('button', { class: 'mode', 'aria-pressed': String(G.hard === hard),
-      onclick: () => { if (G.hard === hard) return; G.hard = hard; G.store.set('hard', hard); G.sfx.tap(); G.start(g); } }, label);
-    const sub = G.h('div', { class: 'subbar' }, mode(false, '🙂 쉬워요'), mode(true, '🔥 어려워요'),
+    const kidOn = !!(g.kid && G.kid);
+    const mode = (hard, kid, label) => G.h('button', { class: 'mode', 'aria-pressed': String(hard ? G.hard : kid ? kidOn : !G.hard && !kidOn),
+      onclick: () => { if ((hard ? G.hard : kid ? kidOn : !G.hard && !kidOn)) return; G.hard = hard; G.kid = kid; G.store.set('hard', hard); G.store.set('kid', kid); G.sfx.tap(); G.start(g); } }, label);
+    const sub = G.h('div', { class: 'subbar' }, g.kid ? mode(false, true, '🐣 아주 쉬워요') : null, mode(false, false, '🙂 쉬워요'), mode(true, false, '🔥 어려워요'),
       G.h('button', { class: 'mode refresh', 'aria-label': '새 문제', onclick: () => { G.sfx.tap(); G.start(g); } }, '🔄', G.h('span', { class: 'lbl' }, ' 새로 하기')));
     stage().replaceChildren(sub, root);
     const n = g.variants || 1, v = forceV != null ? forceV : G.nextVariant(g.id, n);
-    stop = g.start(root, { hard: G.hard, v, n }) || null;
+    stop = g.start(root, { hard: G.hard, kid: kidOn, v, n }) || null;
   };
 
   // 결과 창: { stars:1~3, text }
