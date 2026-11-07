@@ -12,3 +12,5 @@ AIEDU 허브(`arenarun23/aiedu`)의 하위 서비스. 구조와 게임 추가 �
 - **AIEDU 복귀 아이콘**(`a.aiedu-home`, 웃는 별 44px): 모든 서비스가 같은 모양·같은 자리(페이지 왼쪽 위 8px, `<body>` 첫 요소, 링크 `../`)에 둔다. 지우거나 옮기지 않는다. 레이아웃을 바꿀 때 왼쪽 위 52×52px 를 비워 둔다 — 이 앱의 자리 확보: `#bar{padding-left:calc(.7rem + 46px)}`(상단 바). 원본 코드: 허브 저장소 `templates/aiedu-home.html`.
 
 - **외부 호스트 호출 금지(보안, CSP 가 브라우저에서 차단)**: 허용되는 외부 주소는 필기 인식 `inputtools.google.com` 하나뿐이다. 글꼴은 허브의 자체 호스팅 CSS 를 쓴다 — `<link rel="stylesheet" href="../fonts/jua.css">`(`jua`·`gowun-dodum`·`noto-sans-kr`·`noto-serif-kr`·`noto-serif-tc`). **Google Fonts 링크, CDN 이미지·스크립트를 넣지 않는다.** 이미지·데이터는 이 저장소 안에 둔다. 사용자·인식 결과를 HTML 에 넣을 땐 `esc()`/`textContent`, 속성은 큰따옴표. 자세한 규칙: 허브 저장소 `.claude/skills/aiedu-hub/references/security.md`.
+
+- **이용 기록(익명)**: `<head>` 에 `<script src="../aiedu-log.js"></script>` 를 유지한다. 시작·완료·사용 지점에서 `window.aieduLog && aieduLog("start"|"finish"|"use", "영문소문자태그")` 만 호출하고, **아이가 입력한 낱말·필기·음성·정답·나라 이름 등 내용은 절대 넘기지 않는다**(IP·내용 미기록 원칙). 상세: 허브 저장소 `.claude/skills/aiedu-hub/references/usage-log.md`.
