@@ -493,7 +493,7 @@
             G.store.set(key, [...done].filter((i) => !mine.includes(i)));
             ask = { q: `🏆 하드 ${gname} 경기장 ${n}개까지 모두 완주했어요!\n이지 ${gname} 경기장부터 다시 달려 볼까요?`, yes: { label: '✅ 네, 다시!', fn: switchTo(false, mine[0]) }, no: { label: '❌ 아니요', fn: () => goFirst() } };
           }
-          const gain = (k === 1 ? 3 : k === 2 ? 2 : 1) + (G.hard ? 1 : 0), before = window.RaceReward.stars(), nw = window.RaceReward.newly(before, window.RaceReward.add(gain));
+          const gain = (k === 1 ? 3 : k === 2 ? 2 : 1) + (G.hard ? 1 : 0), nw = window.RaceReward.newly(G.starCount, G.starCount + gain); // G.win 이 별을 더하기 전 값으로 비교
           G.win({ stars: k === 1 ? 3 : k === 2 ? 2 : 1, text: (k === 1 ? '🏆 1등!' : k + '등으로 들어왔어요') + ` · ${TD.n} (${TD.shape}) · ${gname} 완주 ${doneCnt}/${n}` + (nw.length ? ' · 🎉 새 보상! ' + nw.map((m) => m.ic + ' ' + m.n).join(', ') + ' (🏅 내 보상에서 확인)' : ''), ask });
         }
         const STEP = 1 / 60;

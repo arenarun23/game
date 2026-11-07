@@ -13,10 +13,8 @@
     { id: 'sky', n: '하늘', c: '#36c5f0', at: 100 }, { id: 'orange', n: '주황', c: '#ff8a3d', at: 100 }, { id: 'gold', n: '황금', c: '#ffc400', at: 1000 }];
   const TRAILS = [{ id: 'none', n: '없음', e: null, at: 0 }, { id: 'star', n: '별', e: ['⭐'], at: 200 }, { id: 'heart', n: '하트', e: ['💖'], at: 200 }, { id: 'rainbow', n: '무지개', e: ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣'], at: 200 }];
   const HATS = [{ id: 'none', n: '없음', e: null, at: 0 }, { id: 'crown', n: '왕관', e: '👑', at: 500 }, { id: 'ribbon', n: '리본', e: '🎀', at: 500 }, { id: 'helmet', n: '헬멧', e: '⛑️', at: 500 }, { id: 'tophat', n: '모자', e: '🎩', at: 500 }];
-  // 보상은 레이싱에서 모은 별만 센다(놀이터 전체 별과 따로)
-  // 처음 한 번은 지금까지 모은 별(대부분 레이싱)로 시작해서, 레이싱 별만 따로 세기 전에 모은 별이 사라지지 않게 한다
-  const stars = () => { let v = G.store.get('race:stars', null); if (v === null) { v = Math.max(0, G.starCount | 0); G.store.set('race:stars', v); } return v | 0; };
-  const add = (n) => { const v = stars() + n; G.store.set('race:stars', v); return v; };
+  // 보상은 놀이터에서 모은 별(상단 ⭐)로 열린다
+  const stars = () => (window.G && G.starCount) | 0;
   const title = (s) => TITLES.filter((t) => s >= t[0]).pop()[1];
   const next = (s) => MILES.find((m) => s < m.at) || null;
   const raw = () => Object.assign({ color: 'def', trail: 'none', hat: 'none' }, G.store.get('race:cos', {}));
@@ -79,7 +77,7 @@
   // 가져오기: 별은 더 큰 쪽, 완주 기록은 합치고, 꾸미기는 코드 쪽을 따른다
   function applyCode(o) {
     const had = stars(), ns = Math.max(had, Math.min(1e6, o.s | 0));
-    G.store.set('race:stars', ns);
+    G.starCount = ns; G.store.set('stars', ns); if (G.showStars) G.showStars();
     if (o.c && typeof o.c === 'object') G.store.set('race:cos', { color: String(o.c.color || 'def'), trail: String(o.c.trail || 'none'), hat: String(o.c.hat || 'none') });
     KEYS.forEach((k) => { const a = G.store.get('race:done:' + k, []), b = (o.d && Array.isArray(o.d[k]) ? o.d[k] : []).filter((x) => Number.isInteger(x) && x >= 0 && x < 40); G.store.set('race:done:' + k, [...new Set([...a, ...b])]); });
     return ns;
@@ -91,7 +89,7 @@
     const inp = h('textarea', { class: 'rwcode', rows: '3', placeholder: 'RC1-… 코드를 여기에 붙여 넣어요', 'aria-label': '코드 붙여 넣기' });
     const file = h('input', { type: 'file', accept: '.txt,text/plain', class: 'rwfile', 'aria-label': '코드 파일 고르기' });
     const doImport = (text) => {
-      try { const o = readCode(text), ns = applyCode(o); msg.textContent = `✅ 가져왔어요! 지금 레이싱 별 ⭐ ${ns}개`; G.sfx.ok(); setTimeout(() => { box.remove(); afterImport(); }, 1200); }
+      try { const o = readCode(text), ns = applyCode(o); msg.textContent = `✅ 가져왔어요! 지금 별 ⭐ ${ns}개`; G.sfx.ok(); setTimeout(() => { box.remove(); afterImport(); }, 1200); }
       catch (e) { msg.textContent = '❌ ' + (e.message || '가져오지 못했어요'); G.sfx.bad(); }
     };
     file.addEventListener('change', () => { const f = file.files && file.files[0]; if (!f) return; const fr = new FileReader(); fr.onload = () => { inp.value = String(fr.result || '').slice(0, 5000); doImport(inp.value); }; fr.readAsText(f); });
@@ -132,7 +130,7 @@
     const hint = h('div', { class: 'rwhint' });
     const pct = nx ? Math.max(0, Math.min(100, Math.round((s - base) / (nx.at - base) * 100))) : 100;
     const left = h('div', { class: 'rwleft' },
-      h('div', { class: 'hint must' }, `🏅 레이싱 보상 · 레이싱 ⭐ ${s}`), h('div', { class: 'rwtitle' }, `칭호: ${title(s)}`),
+      h('div', { class: 'hint must' }, `🏅 내 보상 · ⭐ ${s}`), h('div', { class: 'rwtitle' }, `칭호: ${title(s)}`),
       h('div', { class: 'rwbar', role: 'progressbar', 'aria-valuenow': String(pct) }, h('i', { style: `width:${pct}%` })),
       h('div', { class: 'rwnext' }, nx ? `다음 보상 ${nx.ic} ${nx.n}까지 ⭐ ${nx.at - s}개` : '🎉 모든 보상을 모았어요!'), pv,
       h('div', { class: 'rwmiles' }, MILES.map((m) => h('div', { class: 'card rwm ' + (s >= m.at ? 'c-lemon' : 'lock') }, h('span', { class: 'ic' }, s >= m.at ? m.ic : '🔒'), h('span', { class: 'nm' }, `⭐ ${m.at}`), h('span', { class: 'ds' }, m.n)))));
@@ -143,5 +141,5 @@
     body.append(left, right); paintPreview();
     root.replaceChildren(h('div', { class: 'rwpage' }, body, h('div', { class: 'palette' }, h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); o.onBack(); } }, '◀ 돌아가기'), h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); transferBox(root, () => page(root, o)); } }, '🔁 옮기기'), h('button', { class: 'btn', onclick: () => { G.sfx.ok(); capture(o); hint.textContent = '📸 사진으로 저장했어요! (내려받기 폴더 · 갤러리/내 파일에서 확인)'; } }, '📸 사진 저장'))));
   }
-  window.RaceReward = { MILES, COLORS, TRAILS, HATS, cos, newly, page, title, stars, add };
+  window.RaceReward = { MILES, COLORS, TRAILS, HATS, cos, newly, page, title, stars };
 })();
