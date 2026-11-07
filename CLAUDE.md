@@ -14,3 +14,5 @@ AIEDU 허브(`arenarun23/aiedu`)의 하위 서비스. 구조와 게임 추가 �
 - **외부 호스트 호출 금지(보안, CSP 가 브라우저에서 차단)**: 허용되는 외부 주소는 필기 인식 `inputtools.google.com` 하나뿐이다. 글꼴은 허브의 자체 호스팅 CSS 를 쓴다 — `<link rel="stylesheet" href="../fonts/jua.css">`(`jua`·`gowun-dodum`·`noto-sans-kr`·`noto-serif-kr`·`noto-serif-tc`). **Google Fonts 링크, CDN 이미지·스크립트를 넣지 않는다.** 이미지·데이터는 이 저장소 안에 둔다. 사용자·인식 결과를 HTML 에 넣을 땐 `esc()`/`textContent`, 속성은 큰따옴표. 자세한 규칙: 허브 저장소 `.claude/skills/aiedu-hub/references/security.md`.
 
 - **이용 기록(익명)**: `<head>` 에 `<script src="../aiedu-log.js"></script>` 를 유지한다. 시작·완료·사용 지점에서 `window.aieduLog && aieduLog("start"|"finish"|"use", "영문소문자태그")` 만 호출하고, **아이가 입력한 낱말·필기·음성·정답·나라 이름 등 내용은 절대 넘기지 않는다**(IP·내용 미기록 원칙). 상세: 허브 저장소 `.claude/skills/aiedu-hub/references/usage-log.md`.
+
+- **미로찾기(`maze.js`)**(2026-11-07 합침): 게임이 `noSub: true` 로 공통 난이도 막대를 끄고 자기 메뉴(`.mz .side`)를 만든다. 난이도는 `G.store 'maze-level'`(0~2), 보너스 별은 `G.win({bonus})`. 음악은 `G.mazeMusic`(`js/maze_music.js`) — 레이싱 `G.music` 과 이름·저장 키를 분리했으니 섞지 않는다(소리 버튼 연동은 `core.js` 의 `G.setSound`). 방향 상수 `N E S W` 와 같은 이름의 지역 변수를 쓰지 않는다(벽이 안 그려지는 사고가 있었다). 방해꾼 지킴이는 옆길을 드나들게 해야 풀 수 있는 맵이 된다. 시험: 그림 벽=데이터(66판), 방해꾼 이동 규칙, 단계별 마릿수.

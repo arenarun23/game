@@ -61,7 +61,7 @@
     if (!G.soundOn || !('speechSynthesis' in window)) return;
     try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'ko-KR'; u.rate = 0.95; speechSynthesis.speak(u); } catch (e) {}
   };
-  G.setSound = (on) => { G.soundOn = on; G.store.set('sound', on); if (G.music) G.music.onSound(on); G.$('#btnSound').textContent = on ? '🔊' : '🔇'; if (!on && 'speechSynthesis' in window) try { speechSynthesis.cancel(); } catch (e) {} };
+  G.setSound = (on) => { G.soundOn = on; G.store.set('sound', on); if (G.music) G.music.onSound(on); if (G.mazeMusic) G.mazeMusic.onSound(on); G.$('#btnSound').textContent = on ? '🔊' : '🔇'; if (!on && 'speechSynthesis' in window) try { speechSynthesis.cancel(); } catch (e) {} };
 
   // 난이도(쉬움/어려움)와 문제 종류(20가지)를 섞어서 뽑는다
   G.hard = !!G.store.get('hard', false);
@@ -110,15 +110,15 @@
       onclick: () => { if ((hard ? G.hard : kid ? kidOn : !G.hard && !kidOn)) return; G.hard = hard; G.kid = kid; G.store.set('hard', hard); G.store.set('kid', kid); G.sfx.tap(); G.start(g); } }, label);
     const sub = G.h('div', { class: 'subbar' }, g.kid ? mode(false, true, '🐣 아주 쉬워요') : null, mode(false, false, '🙂 쉬워요'), mode(true, false, '🔥 어려워요'),
       G.h('button', { class: 'mode refresh', 'aria-label': '새 문제', onclick: () => { G.sfx.tap(); G.start(g); } }, '🔄', G.h('span', { class: 'lbl' }, ' 새로 하기')));
-    stage().replaceChildren(sub, root);
+    stage().replaceChildren(...(g.noSub ? [root] : [sub, root]));
     const n = g.variants || 1, v = forceV != null ? forceV : G.nextVariant(g.id, n);
     stop = g.start(root, { hard: G.hard, kid: kidOn, v, n }) || null;
   };
 
   // 결과 창: { stars:1~3, text }
-  G.win = ({ stars = 1, text = '', ask = null } = {}) => {
+  G.win = ({ stars = 1, text = '', ask = null, bonus: bonusIn } = {}) => {
     window.aieduLog && aieduLog('finish', current && current.id);
-    const bonus = G.hard ? 1 : 0;
+    const bonus = bonusIn != null ? bonusIn : (G.hard ? 1 : 0);                  // 게임이 보너스를 직접 줄 수 있다(미로: 단계별 0/1/2)
     G.addStars(stars + bonus);
     G.sfx.win(); G.speak('참 잘했어요!');
     const g = current, close = (fn) => () => { over.remove(); if (fn) fn(); };
@@ -126,7 +126,7 @@
       G.h('h2', {}, '참 잘했어요! 🎉'),
       G.h('div', { class: 'bigstars' }, '⭐'.repeat(stars) + '☆'.repeat(3 - stars)),
       text ? G.h('div', { class: 'hint must' }, text) : null,
-      bonus ? G.h('div', { class: 'hint must' }, '🔥 어려움 보너스 ⭐ +1') : null,
+      bonus ? G.h('div', { class: 'hint must' }, (bonus > 1 ? '💀 매우 어려움 보너스 ⭐ +' : '🔥 어려움 보너스 ⭐ +') + bonus) : null,
       ask ? G.h('div', { class: 'hint must ask' }, ask.q) : null,
       G.h('div', { class: 'row' }, ask
         ? [G.h('button', { class: 'btn', onclick: close(ask.yes.fn) }, ask.yes.label), G.h('button', { class: 'btn alt', onclick: close(ask.no.fn) }, ask.no.label)]
