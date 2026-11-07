@@ -354,3 +354,6 @@ html[data-game=race] .rbtn small{font-size:max(12px,clamp(.6rem,2.4vmin,.85rem))
   html[data-game=race] .pk.trk .th{max-height:64cqh;width:min(82cqw,83cqh)}
   html[data-game=race] .pk.trk .nm{font-size:max(15px,clamp(.9rem,14cqmin,1.3rem))}
 }
+/* 폰 세로: 경기장이 많을 땐 2열, 아래로 넘겨 보기 */
+.pickgrid.many{height:auto;min-height:100%;align-content:start;grid-template-rows:none;grid-auto-rows:7rem}
+.fitbox:has(.pickgrid.many){overflow:auto;place-items:start center;-webkit-overflow-scrolling:touch}

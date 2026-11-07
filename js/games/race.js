@@ -19,7 +19,7 @@
 
   let pendingTrack = null; // 질문에서 '네'를 눌러 모드를 바꿨을 때, 고르기를 건너뛰고 바로 시작할 경기장
   const saved = G.store.get('race:sel', {});
-  const sel = { ch: clamp(saved.ch | 0, 0, D.CHARS.length - 1), car: clamp(saved.car | 0, 0, D.CARS.length - 1), tr: clamp(saved.tr | 0, 0, 7) };
+  const sel = { ch: clamp(saved.ch | 0, 0, D.CHARS.length - 1), car: clamp(saved.car | 0, 0, D.CARS.length - 1), tr: Math.max(0, saved.tr | 0) }; // 경기장 번호(모드마다 개수가 다르므로 시작할 때 범위를 다시 맞춘다)
 
   // 사용법 화면 (고르기 화면과 경기 중 모두에서 연다)
   function helpOverlay(root, ch, car, onClose) {
@@ -55,9 +55,9 @@
         if (stopFn) { stopFn(); stopFn = null; }
         clearTabs();
         const land = innerWidth > innerHeight * 1.05, n = items.length;
-        const c = land ? (n <= 4 ? n : n <= 8 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 ? 3 : 2), r = Math.ceil(n / c);
-        const rowMode = !land && step <= 2; // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
-        const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : ''), style: rowMode ? `--c:1;--r:${n}` : `--c:${c};--r:${r}` }, items.map((it, i) =>
+        const c = land ? (n <= 4 ? n : n <= 10 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 && step < 3 ? 3 : 2), r = Math.ceil(n / c);
+        const rowMode = !land && step <= 2, many = !land && step === 3 && n > 8; // 폰 세로에서 경기장이 8개를 넘으면 2열로 두고 아래로 넘겨 본다 // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
+        const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : many ? ' many' : ''), style: rowMode ? `--c:1;--r:${n}` : `--c:${c};--r:${r}` }, items.map((it, i) =>
           G.h('button', { class: 'card pk c-' + it.color + (typeof it.ic === 'string' ? '' : ' trk'), 'aria-pressed': String(i === cur), onclick: () => { G.sfx.tap(); onPick(i); } },
             G.h('span', { class: 'ic' }, it.ic), G.h('span', Object.assign({ class: 'nm' }, typeof it.ic === 'string' ? { 'data-e': it.ic } : {}), it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
         const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), extra || null, G.h('div', { class: 'fitbox' }, grid)];
@@ -95,7 +95,7 @@
         const cnt = (g) => groupIdx(g).filter((i) => doneSet.has(i)).length;
         const tabs = G.h('div', { class: 'tabs' }, [[0, '🗺️ 2D'], [1, '🧊 3D']].map(([g, label]) =>
           G.h('button', { class: 'tab', 'aria-pressed': String(g === tab), onclick: () => { G.sfx.tap(); tab = g; showTracks(); } }, `${label} (${cnt(g)}/${groupIdx(g).length})`)));
-        pick(3, (hard ? '🔥 어려운 ' : kid ? '🐣 아주 쉬운 ' : '') + '경기장을 골라요', idxs.map((i) => { const t = TRACKS[i]; return { ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky'][idxs.indexOf(i) % 8], ds: [br('▶ ' + t.shape), br(t.gim)] }; }), idxs.indexOf(sel.tr),
+        pick(3, (hard ? '🔥 어려운 ' : kid ? '🐣 아주 쉬운 ' : '') + '경기장을 골라요', idxs.map((i) => { const t = TRACKS[i]; return { ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky', 'lemon', 'mint'][idxs.indexOf(i) % 10], ds: [br('▶ ' + t.shape), br(t.gim)] }; }), idxs.indexOf(sel.tr),
           (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); startRace(); }, showCars, innerWidth > innerHeight * 1.05 ? null : tabs);
         if (innerWidth > innerHeight * 1.05) { const sb = document.querySelector('.subbar'); if (sb) sb.append(tabs); }
       }
@@ -483,10 +483,10 @@
           if (left.length) {
             const nx = left.find((i) => i > sel.tr); const nxt = nx === undefined ? left[0] : nx, t = TRACKS[nxt];
             ask = { q: `다음 경기를 할까요?\n▶ ${t.e} ${t.n} (${t.shape})`, yes: { label: '✅ 네, 계속!', fn: () => { sel.tr = nxt; G.store.set('race:sel', sel); if (stopFn) stopFn(); startRace(); } }, no: { label: '❌ 아니요, 그만', fn: () => goFirst() } };
-          } else if (kid) { // 아주 쉬움 8개 완료 → 쉬워요에 도전?
+          } else if (kid) { // 아주 쉬움 코스를 모두 완료 → 쉬워요에 도전?
             G.store.set(key, [...done].filter((i) => !mine.includes(i)));
             ask = { q: `🎉 아주 쉬운 ${gname} 경기장 ${n}개를 모두 달렸어요!\n🙂 쉬운 ${gname} 경기장에 도전할까요?`, yes: { label: '🙂 네, 도전!', fn: switchTo(false, mine[0]) }, no: { label: '❌ 아니요', fn: () => goFirst() } };
-          } else if (!hard) { // 이 탭(2D 또는 3D)의 8개를 모두 달림 → 같은 탭의 하드에 도전?
+          } else if (!hard) { // 이 탭(2D 또는 3D)의 경기장을 모두 달림 → 같은 탭의 하드에 도전?
             G.store.set(key, [...done].filter((i) => !mine.includes(i)));
             ask = { q: `🎉 이지 ${gname} 경기장 ${n}개를 모두 달렸어요!\n🔥 어려운 ${gname} 경기장에 도전할까요?`, yes: { label: '🔥 네, 도전!', fn: switchTo(true, mine[0]) }, no: { label: '❌ 아니요', fn: () => goFirst() } };
           } else {
