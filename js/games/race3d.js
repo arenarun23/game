@@ -11,7 +11,7 @@
   const hex = (c) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
   const mixHex = (a, b, t) => { const x = rgb(a), y = rgb(b); return hex(x.map((v, i) => v + (y[i] - v) * t)); };
   const tables = new Map();
-  function tbl(color, fogc) { const key = color + fogc; let t = tables.get(key); if (!t) { t = []; for (let i = 0; i < LEVELS; i++) t.push(mixHex(color, fogc, (i / (LEVELS - 1)) * 0.88)); tables.set(key, t); } return t; }
+  function tbl(color, fogc) { const key = color + fogc; let t = tables.get(key); if (!t) { t = []; for (let i = 0; i < LEVELS; i++) t.push(mixHex(color, fogc, Math.pow(i / (LEVELS - 1), 1.5) * 0.62)); tables.set(key, t); } return t; }
 
   // ───── 카메라 투영 (장면마다 갱신) ─────
   let Cx = 0, Cy = 0, Cz = 0, fx = 1, fy = 0, rx = 0, ry = 1, cp = 1, sp = 0, F = 800, cxs = 0, cys = 0;
@@ -79,7 +79,7 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const gr = ctx.createLinearGradient(0, 0, 0, Math.max(10, hy)); gr.addColorStop(0, th.sky[0]); gr.addColorStop(1, th.sky[1]);
     ctx.fillStyle = gr; ctx.fillRect(0, 0, W, Math.max(10, hy) + 1);
-    ctx.fillStyle = mixHex(th.bg, fogc, 0.55); ctx.fillRect(0, hy, W, H - hy + 1);
+    ctx.fillStyle = mixHex(th.bg, fogc, 0.22); ctx.fillRect(0, hy, W, H - hy + 1);
     const sc = H / 640;
     for (let layer = 0; layer < 2; layer++) {
       const ox = -yaw * F * (0.5 + 0.35 * layer), amp = (34 + layer * 16) * sc, base = hy + 1;
@@ -133,7 +133,7 @@
       }
       const dz = it.dd || it.d, L = lvlOf(dz), s = F / Math.max(dz, 1);
       if (it.kind === 1) { // 장식(나무·건물…): 땅에 선 그림
-        const o = it.o, sz = o.s * 1.25 * s, near = it.d < 300 ? Math.max(0.2, (it.d - 110) / 190) : 1; if (L > 5) ctx.globalAlpha = 0.5; else if (near < 1) ctx.globalAlpha = near; // 가까운 장식은 흐리게(시야 가림 방지) ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz); if (L > 5 || near < 1) ctx.globalAlpha = 1;
+        const o = it.o, sz = o.s * 1.25 * s, near = it.d < 440 ? Math.max(0, (it.d - 290) / 150) : 1; if (near <= 0.02) continue; // 카메라·내 차 가까이 온 장식은 그리지 않는다(내 차 위를 덮어 희미하게 보임) if (L > 5) ctx.globalAlpha = 0.5; else if (near < 1) ctx.globalAlpha = near; // 가까운 장식은 흐리게(시야 가림 방지) ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz); if (L > 5 || near < 1) ctx.globalAlpha = 1;
       } else if (it.kind === 2) { // 아이템 상자(빙글빙글)
         const w = 30 * s * (0.35 + 0.65 * Math.abs(Math.cos(E.t * 2.4 + it.i))), h = 30 * s; ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#c98a00'; ctx.lineWidth = Math.max(1, 2 * s);
         ctx.beginPath(); ctx.roundRect(it.sx - w / 2, it.sy - h / 2, w, h, 5 * s); ctx.fill(); ctx.stroke();

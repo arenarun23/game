@@ -14,7 +14,8 @@
   const TRAILS = [{ id: 'none', n: '없음', e: null, at: 0 }, { id: 'star', n: '별', e: ['⭐'], at: 200 }, { id: 'heart', n: '하트', e: ['💖'], at: 200 }, { id: 'rainbow', n: '무지개', e: ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣'], at: 200 }];
   const HATS = [{ id: 'none', n: '없음', e: null, at: 0 }, { id: 'crown', n: '왕관', e: '👑', at: 500 }, { id: 'ribbon', n: '리본', e: '🎀', at: 500 }, { id: 'helmet', n: '헬멧', e: '⛑️', at: 500 }, { id: 'tophat', n: '모자', e: '🎩', at: 500 }];
   // 보상은 레이싱에서 모은 별만 센다(놀이터 전체 별과 따로)
-  const stars = () => (window.G && G.store.get('race:stars', 0)) | 0;
+  // 처음 한 번은 지금까지 모은 별(대부분 레이싱)로 시작해서, 레이싱 별만 따로 세기 전에 모은 별이 사라지지 않게 한다
+  const stars = () => { let v = G.store.get('race:stars', null); if (v === null) { v = Math.max(0, G.starCount | 0); G.store.set('race:stars', v); } return v | 0; };
   const add = (n) => { const v = stars() + n; G.store.set('race:stars', v); return v; };
   const title = (s) => TITLES.filter((t) => s >= t[0]).pop()[1];
   const next = (s) => MILES.find((m) => s < m.at) || null;
