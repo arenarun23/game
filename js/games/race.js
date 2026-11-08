@@ -56,8 +56,8 @@
         clearTabs();
         const land = innerWidth > innerHeight * 1.05, n = items.length;
         const c = land ? (n <= 4 ? n : n <= 10 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 && step < 3 ? 3 : 2), r = Math.ceil(n / c);
-        const rowMode = !land && step <= 2, many = !land && step === 3 && n > 8; // 폰 세로에서 경기장이 8개를 넘으면 2열로 두고 아래로 넘겨 본다 // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
-        const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : many ? ' many' : ''), style: rowMode ? `--c:1;--r:${n}` : `--c:${c};--r:${r}` }, items.map((it, i) =>
+        const rowMode = !land && step <= 2, many = !land && (step === 3 ? n > 8 : n > 5); // 폰 세로에서 경기장이 8개를 넘으면 2열로 두고 아래로 넘겨 본다 // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
+        const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : '') + (many ? ' many' : ''), style: rowMode ? `--c:1;--r:${n}` : `--c:${c};--r:${r}` }, items.map((it, i) =>
           G.h('button', { class: 'card pk c-' + it.color + (typeof it.ic === 'string' ? '' : ' trk'), 'aria-pressed': String(i === cur), onclick: () => { G.sfx.tap(); onPick(i); } },
             G.h('span', { class: 'ic' }, it.ic), G.h('span', Object.assign({ class: 'nm' }, typeof it.ic === 'string' ? { 'data-e': it.ic } : {}), it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
         const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), extra || null, G.h('div', { class: 'fitbox' }, grid)];
@@ -134,7 +134,7 @@
         function mk(ci, cr, isPlayer, slot) {
           const ch = D.CHARS[ci], car = D.CARS[cr], idx = (M - 3 - Math.floor(slot / 2) * 4 + M) % M, c = P[idx], lat = (slot % 2 ? 0.45 : -0.45) * hw;
           const cs = isPlayer ? window.RaceReward.cos() : null;
-          return { ch, car, col: (cs && cs.color.c) || car.color, hat: cs && cs.hat.e, trail: cs && cs.trail.e, tr: [], trT: 0, isPlayer, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
+          return { ch, car, col: (cs && cs.color.c) || car.color, hat: cs && cs.hat.e, trail: cs && cs.trail.e, tr: [], trT: 0, isPlayer, plow: !!ch.mod.plow, plowCd: 0, hop: 0, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
             offF: 0.45 + (car.st.off || 0) + (ch.mod.off || 0), iceImm: !!ch.mod.ice, x: c.x + c.nx * lat, y: c.y + c.ny * lat, h: Math.atan2(c.ty, c.tx), px: c.x + c.nx * lat, py: c.y + c.ny * lat, ph: Math.atan2(c.ty, c.tx), dx: 0, dy: 0, dh: 0, vx: 0, vy: 0, v: 0, idx, lap: 0, prog: idx, prevIdx: idx,
             steerIn: 0, throttle: 1, air: 0, zair: 0, boost: 0, boostMul: 1.4, shield: 0, stun: 0, frozen: 0, spin: 0, item: null, cd: [3, 4], lane: (rnd() - 0.5) * 0.7, aiVar: 0.97 + rnd() * 0.06, aiT: rnd(), fin: null, off: false, stuck: 0, tire: 0 };
         }
@@ -231,7 +231,7 @@
           if (kind === 'freeze') r.frozen = Math.max(r.frozen, dur); else { r.stun = Math.max(r.stun, dur); }
           r.v *= 0.3; if (r.isPlayer) { G.sfx.bad(); toast(kind === 'freeze' ? '🧊 꽁꽁!' : '😵 앗!'); } return true;
         }
-        const drop = (kind, r, back) => objs.push({ k: kind, x: r.x + Math.cos(r.h) * back, y: r.y + Math.sin(r.h) * back, life: kind === 'oil' ? 14 : 18, owner: r, grace: 0.6, r: kind === 'oil' ? 40 : 24 });
+        const drop = (kind, r, back) => objs.push({ k: kind, x: r.x + Math.cos(r.h) * back, y: r.y + Math.sin(r.h) * back, life: kind === 'oil' ? 14 : kind === 'pit' ? 5 : 18, owner: r, grace: kind === 'pit' ? 0.4 : 0.6, r: kind === 'oil' ? 40 : kind === 'pit' ? 46 : 24, fell: kind === 'pit' ? new Set() : null });
         function shoot(kind, r, sp, life, tgt) { objs.push({ k: kind, x: r.x + Math.cos(r.h) * 34, y: r.y + Math.sin(r.h) * 34, h: r.h, sp, life, owner: r, grace: 0.25, r: 22, tgt }); }
         function useItem(r) {
           if (state !== 'go' || !r.item || r.fin != null) return;
@@ -257,6 +257,8 @@
             case 'roar': fx.push({ k: 'ring', x: r.x, y: r.y, t: 0, life: 0.5 });
               for (const o of racers) if (o !== r) { const dx = o.x - r.x, dy = o.y - r.y, d = Math.hypot(dx, dy); if (d < 460 && dx * Math.cos(r.h) + dy * Math.sin(r.h) > 0) hit(o, 'spin', 0.9); } break;
             case 'express': r.shield = Math.max(r.shield, 2.5); r.boost = Math.max(r.boost, 1.6); r.boostMul = 1.4; break;
+            case 'pit': drop('pit', r, -40); break;
+            case 'hop': r.air = JUMP; r.hop = JUMP * 1.25; r.boost = Math.max(r.boost, 0.5); r.boostMul = 1.2; break; // 뛰어서 다른 차 위를 지나간다
             case 'magnet': if (!r.item) r.item = randItem(r); else { r.boost = Math.max(r.boost, 0.9); } break;
           }
           r.cd[slot] = sk.cd; if (r.isPlayer) { G.sfx.ok(); toast(sk.e + ' ' + sk.n + '!'); } return true;
@@ -282,7 +284,7 @@
           if (r.item && rnd() < p) { if (r.item === 'missile') { if (near(600, true)) useItem(r); } else if (r.item === 'banana') { if (near(260, false)) useItem(r); } else if (curve < 0.3) useItem(r); }
           for (const s of [0, 1]) { if (r.cd[s] > 0 || rnd() > p * 0.6) continue; const id = (s === 0 ? r.ch : r.car).skill.id;
             if ((id === 'dash' || id === 'turbo' || id === 'express') && curve < 0.25) useSkill(r, s); else if (id === 'roar' && near(420, true)) useSkill(r, s); else if (id === 'shield' && near(180)) useSkill(r, s);
-            else if ((id === 'trap' || id === 'oil') && near(260, false)) useSkill(r, s); else if (id === 'ice' && near(450, true)) useSkill(r, s);
+            else if ((id === 'trap' || id === 'oil' || id === 'pit') && near(260, false)) useSkill(r, s); else if (id === 'hop' && near(200, true)) useSkill(r, s); else if (id === 'ice' && near(450, true)) useSkill(r, s);
             else if (id === 'wave' && near(170)) useSkill(r, s); else if (id === 'magnet' && !r.item) useSkill(r, s); }
         }
 
@@ -303,6 +305,7 @@
           if (r.fin != null) { r.steerIn = clamp(r.steerIn, -1, 1); r.throttle = 0.6; }
           if (r.trail && state === 'go') { r.trT -= dt; if (r.trT <= 0 && r.v > 60) { r.trT = 0.07; r.trI = (r.trI || 0) + 1; r.tr.push({ x: r.x - Math.cos(r.h) * 22, y: r.y - Math.sin(r.h) * 22, h: hOf(r) - r.zair, t: 0, e: r.trail[r.trI % r.trail.length] }); } }
           for (let i = r.tr.length - 1; i >= 0; i--) { r.tr[i].t += dt; if (r.tr[i].t > 0.6) r.tr.splice(i, 1); }
+          r.plowCd = Math.max(0, r.plowCd - dt); r.hop = Math.max(0, r.hop - dt);
           r.boost = Math.max(0, r.boost - dt); r.shield = Math.max(0, r.shield - dt); r.stun = Math.max(0, r.stun - dt); r.frozen = Math.max(0, r.frozen - dt);
           for (let s = 0; s < 2; s++) r.cd[s] = Math.max(0, r.cd[s] - dt);
           r.air = Math.max(0, r.air - dt); { const a = r.air > 0 ? 1 - r.air / JUMP : 0; r.zair = r.air > 0 ? 80 * 4 * a * (1 - a) : 0; }
@@ -348,8 +351,9 @@
               o.x += Math.cos(o.h) * o.sp * dt; o.y += Math.sin(o.h) * o.sp * dt;
             }
             let gone = o.life <= 0;
-            for (const r of racers) { if (gone) break; if (o.grace > 0 && r === o.owner) continue; const d = (r.x - o.x) ** 2 + (r.y - o.y) ** 2; if (d > (o.r + 16) ** 2) continue;
+            for (const r of racers) { if (gone) break; if (o.grace > 0 && r === o.owner) continue; if (r.hop > 0 && o.k !== 'pit') continue; const d = (r.x - o.x) ** 2 + (r.y - o.y) ** 2; if (d > (o.r + 16) ** 2) continue;
               if (o.k === 'banana') { hit(r, 'spin', 1.2); gone = true; } else if (o.k === 'trap') { if (hit(r, 'spin', 1.6)) r.v *= 0.5; gone = true; }
+              else if (o.k === 'pit') { if (r.air <= 0 && !(r.hop > 0) && !o.fell.has(r) && hit(r, 'spin', 1.1)) { r.v *= 0.35; o.fell.add(r); } } // 구멍: 한 번씩 빠진다(점프 중엔 넘어간다)
               else if (o.k === 'oil') { if (r.stun <= 0 && hit(r, 'spin', 0.9)) { r.vx *= 1.1; } o.life -= dt * 2; }
               else if (o.k === 'ice') { hit(r, 'freeze', 1.6); gone = true; } else if (o.k === 'missile') { hit(r, 'spin', 1.4); fx.push({ k: 'ring', x: o.x, y: o.y, t: 0, life: 0.35 }); gone = true; } }
             if (gone) objs.splice(i, 1);
@@ -362,7 +366,14 @@
             const a = racers[i], b = racers[j], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01;
             if (d >= 34) continue;
             if (T.v3d && Math.abs(hOf(a) - hOf(b)) > 45) continue; // 다리 위아래는 부딪히지 않는다
+            if (a.hop > 0 || b.hop > 0) continue; // 점프 중인 차는 다른 차 위를 지나간다
             const nx = dx / d, ny = dy / d, ov = 34 - d, wa = b.mass / (a.mass + b.mass), wb = a.mass / (a.mass + b.mass);
+            if (a.plow !== b.plow && (a.plow || b.plow)) { // 코끼리: 부딪쳐도 안 멈추고 상대를 밀치며 돌파한다
+              const e = a.plow ? a : b, o = a.plow ? b : a, sg = a.plow ? 1 : -1, ex = nx * sg, ey = ny * sg; // e → o 방향
+              o.x += ex * ov; o.y += ey * ov; o.vx += ex * 160; o.vy += ey * 160; o.v *= 0.82;
+              if (e.plowCd <= 0 && e.v > 120) { e.plowCd = 1.6; hit(o, 'spin', 0.6); }
+              continue;
+            }
             a.x -= nx * ov * wa; a.y -= ny * ov * wa; b.x += nx * ov * wb; b.y += ny * ov * wb;
             const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
             if (rv < 0) { const imp = -rv * 1.4 / (1 / a.mass + 1 / b.mass); a.vx -= nx * imp / a.mass; a.vy -= ny * imp / a.mass; b.vx += nx * imp / b.mass; b.vy += ny * imp / b.mass; a.v *= 0.96; b.v *= 0.96; }
@@ -380,6 +391,7 @@
           if (car.id === 'bolt') { c.fillStyle = '#fff'; c.fillRect(-24, -3, 36, 6); c.fillStyle = '#222'; c.fillRect(-27, -14, 5, 28); }
           else if (car.id === 'tank') { c.fillStyle = 'rgba(0,0,0,.28)'; c.fillRect(-20, -10, 3, 20); c.fillRect(-12, -10, 3, 20); }
           else if (car.id === 'slide') { c.fillStyle = 'rgba(0,0,0,.28)'; c.fillRect(-24, -12, 14, 24); }
+          else if (car.id === 'hop') { c.fillStyle = '#fff'; c.fillRect(-4, -5, 8, 10); c.fillStyle = 'rgba(0,0,0,.28)'; for (let i = -22; i < 20; i += 8) c.fillRect(i, -14, 4, 4); }
           else if (car.id === 'bus') { c.fillStyle = 'rgba(255,255,255,.55)'; for (let i = -20; i < 18; i += 10) c.fillRect(i, -10, 7, 20); }
           else { c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(-22, -2, 10, 4); }
         }
@@ -435,13 +447,14 @@
           // 던진 것
           for (const o of objs) { const ox = (o.px === undefined ? o.x : o.px + (o.x - o.px) * alpha), oy = (o.py === undefined ? o.y : o.py + (o.y - o.py) * alpha); ctx.save(); ctx.translate(ox, oy);
             if (o.k === 'oil') { ctx.fillStyle = 'rgba(20,20,30,.85)'; ctx.beginPath(); ctx.ellipse(0, 0, o.r, o.r * 0.75, 0.3, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(120,140,255,.35)'; ctx.beginPath(); ctx.ellipse(-8, -6, o.r * 0.4, o.r * 0.2, 0.3, 0, TAU); ctx.fill(); }
+            else if (o.k === 'pit') { ctx.fillStyle = '#6b4a2b'; ctx.beginPath(); ctx.ellipse(0, 0, o.r, o.r * 0.78, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#120c08'; ctx.beginPath(); ctx.ellipse(0, 0, o.r * 0.8, o.r * 0.6, 0, 0, TAU); ctx.fill(); }
             else { ctx.rotate(rot); stamp(ctx, o.k === 'banana' ? '🍌' : o.k === 'trap' ? '🪤' : o.k === 'ice' ? '🧊' : '🎯', 34); }
             ctx.restore(); }
           // 차 (아래쪽에 있는 차를 위에 그린다)
           for (let i = 1; i < ord.length; i++) { const v = ord[i]; let j = i - 1; while (j >= 0 && ord[j].dy > v.dy) { ord[j + 1] = ord[j]; j--; } ord[j + 1] = v; }
           for (const p of me.tr) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(rot); ctx.globalAlpha = 1 - p.t / 0.6; stamp(ctx, p.e, 20 * (1 - 0.4 * p.t / 0.6)); ctx.restore(); }
           for (const r of ord) {
-            ctx.save(); ctx.translate(r.dx, r.dy); ctx.scale(1.1, 1.1); // 차를 10% 크게
+            ctx.save(); ctx.translate(r.dx, r.dy); { const k = 1.1 * (1 + r.zair / 220); ctx.scale(k, k); } // 차를 10% 크게(점프 땐 더 크게)
             if (r.boost > 0) { ctx.save(); ctx.rotate(r.dh); ctx.fillStyle = '#ff9f1c'; ctx.beginPath(); ctx.moveTo(-24, -9); ctx.lineTo(-24 - 18 - rnd() * 10, 0); ctx.lineTo(-24, 9); ctx.fill(); ctx.restore(); }
             ctx.save(); ctx.rotate(r.dh + r.spin); ctx.drawImage(kartSpr(r.car, r.col), -30, -20, 60, 40); ctx.restore();
             ctx.save(); ctx.rotate(rot); stamp(ctx, r.ch.e, 26); if (r.hat) { ctx.translate(0, -15); stamp(ctx, r.hat, 17); }
