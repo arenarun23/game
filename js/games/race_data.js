@@ -57,6 +57,9 @@
     moon: { bg: '#8b8b92', shoulder: '#7a7a82', road: '#4b4d58', curb: ['#7ff7ff', '#10303c'], line: '#bff9ff', slow: '#a9a39a', sky: ['#01020a', '#101a44'], ridge: ['#6c6c75', '#54545d'], stars: true, planet: 'earth', deco: ['crater', 'crater', 'rock', 'rock', '🛰️', '📡'] },
     mars: { bg: '#b3623e', shoulder: '#a05632', road: '#5b4338', curb: ['#ffd08a', '#6a280f'], line: '#ffe2c4', slow: '#c4784a', sky: ['#b77a52', '#f1cfa4'], ridge: ['#9d573a', '#7c4129'], planet: 'phobos', deco: ['crater', 'rock', 'rock', 'rock', '⛰️', '🛸'] },
     europa: { bg: '#d6e3ee', shoulder: '#c4d6e6', road: '#56667f', curb: ['#a8e6ff', '#14305a'], line: '#eaf6ff', slow: '#9fc0dc', sky: ['#040824', '#27406e'], ridge: ['#a9bcd2', '#8aa1bb'], stars: true, planet: 'jupiter', deco: ['crater', 'ice', 'ice', 'ice', '🧊', '📡'] },
+    titan: { bg: '#b5782c', shoulder: '#a26a22', road: '#4b3a2c', curb: ['#ffc15a', '#3a2008'], line: '#ffe3b0', slow: '#6a8a7a', sky: ['#4a2c0c', '#e0a35a'], ridge: ['#9a6224', '#7a4a18'], planet: 'saturn', deco: ['lake', 'lake', 'rock', 'crater', '📡'] },
+    io: { bg: '#cdb83a', shoulder: '#b8a42e', road: '#54432a', curb: ['#ff6a2e', '#2c0c04'], line: '#ffe08a', slow: '#8a7a2a', sky: ['#14070a', '#7e2c12'], ridge: ['#8a6a18', '#5a4410'], stars: true, planet: 'jupiter', deco: ['vent', 'vent', 'rock', 'crater', 'rock'] },
+    ceres: { bg: '#6f6962', shoulder: '#5f5a54', road: '#3d3f46', curb: ['#86ffa3', '#0a2a14'], line: '#dffff0', slow: '#cfd8d2', sky: ['#000104', '#0b0f22'], ridge: ['#565049', '#403b36'], stars: true, planet: 'belt', deco: ['rock', 'rock', 'crater', 'crater', '☄️', '🛰️'] },
     space: { bg: '#0b0b2a', shoulder: '#15154a', road: '#46486a', curb: ['#9b59b6', '#ffffff'], line: '#7ff7ff', slow: '#2c2c5a', sky: ['#02020f', '#1b1b5a'], ridge: ['#2a2a78', '#1a1a52'], deco: ['⭐', '🪐', '🛰️', '☄️', '🌙'] },
   };
   // 이지: 넓은 길(w 170), 부드러운 모양 / 하드: 좁은 길(w 130), 급커브·꼬인 모양, 함정 더 많음
@@ -149,6 +152,19 @@
   ];
   TRACKS_EASY.push(...mkSpace(170));
   TRACKS_HARD.push(...mkSpace(130));
+  // 🚀 우주 코스 2차: 타이탄(메탄 늪), 이오(화산), 세레스(아주 가벼운 중력)
+  const BOOT = [[-300, -250], [250, -250], [320, -150], [320, 150], [200, 260], [-50, 260], [-100, 100], [-300, 100], [-340, -100]];
+  const wob = (n, a, k, ph) => Array.from({ length: n }, (_, i) => a * Math.sin(Math.PI * 2 * k * i / n + ph));
+  const mkSpace2 = (w) => [
+    Object.assign(T3('titan', '타이탄 늪 서킷', '🪐', '3D · 타이탄', '주황 안개 속 메탄 늪 구간', poly((t) => { const r = 1 + 0.2 * Math.cos(2 * t) + 0.07 * Math.cos(3 * t); return [1500 * r * Math.cos(t), 1100 * r * Math.sin(t)]; }, 40), w, 0.0, { boost: 5, slow: 0, ice: 0, jump: 2 }, 0, []),
+      { mus: 'titan', space: { g: 1.35, dust: [[0.12, 0.2], [0.45, 0.53], [0.7, 0.78]], zone: '메탄 늪 구간', soft: '늪용', ico: '🪐', place: '토성의 위성', storm: { label: '후반 메탄 비', toast: '메탄 비가 내려요! 도로가 질척한 늪으로 덮여요', chip: '메탄 비 · 도로가 늪으로 덮였어요' } }, hctl: wob(40, 70, 2, 0.5).map((v, i) => 80 + v + 25 * Math.sin(Math.PI * 2 * 5 * i / 40)) }),
+    Object.assign(T3('io', '이오 화산 서킷', '🌋', '3D · 이오', '화산이 솟은 유황 땅', BOOT.map((q) => [q[0] * 6, q[1] * 6]), w, 0.0, { boost: 6, slow: 0, ice: 0, jump: 2 }, 0, []),
+      { mus: 'io', space: { g: 1.8, dust: [[0.18, 0.27], [0.5, 0.58], [0.82, 0.9]], zone: '유황 구간', soft: '유황용', ico: '🌋', place: '목성의 위성', storm: { label: '후반 화산 분출', toast: '화산이 폭발했어요! 유황 재가 도로를 덮어요', chip: '화산 분출 · 도로가 유황 재로 덮였어요' } }, hctl: [0, 40, 90, 130, 110, 70, 30, 10, 0].map((v) => v * 1.1) }),
+    Object.assign(T3('ceres', '세레스 소행성 서킷', '☄️', '3D · 세레스', '중력이 거의 없어서 점프가 아주 멀리!', poly((t) => { const r = 1 + 0.36 * Math.cos(2 * t) + 0.06 * Math.cos(3 * t); return [1500 * r * Math.cos(t), 950 * r * Math.sin(t)]; }, 40), w, 0.0, { boost: 5, slow: 0, ice: 0, jump: 2 }, 0, []),
+      { mus: 'ceres', space: { g: 0.28, dust: [[0.15, 0.23], [0.5, 0.58], [0.76, 0.84]], zone: '소금 구간', soft: '소금용', ico: '☄️', place: '소행성대', frost: true, storm: { label: '후반 먼지 폭풍', toast: '소행성 먼지가 흩날려요! 소금 먼지가 도로를 덮어요', chip: '먼지 폭풍 · 도로가 먼지로 덮였어요' } }, hctl: wob(40, 45, 3, 0.2).map((v) => 55 + v) }),
+  ];
+  TRACKS_EASY.push(...mkSpace2(170));
+  TRACKS_HARD.push(...mkSpace2(130));
   function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
   // 꼭짓점 → 부드러운 닫힌 곡선(모서리 깎기 반복) → 일정 간격(약 12)의 점

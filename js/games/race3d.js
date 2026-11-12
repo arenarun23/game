@@ -81,6 +81,17 @@
       const cols = ['#c58a52', '#e6c08e', '#b9764a', '#f0d6a8', '#c98f5a', '#e2b684', '#a9663f']; cols.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(cx - r, cy - r + (i / cols.length) * 2 * r, 2 * r, (2 * r) / cols.length + 1); });
       ctx.fillStyle = '#b4472f'; ctx.beginPath(); ctx.ellipse(cx + r * 0.35, cy + r * 0.28, r * 0.2, r * 0.11, 0, 0, TAU); ctx.fill();
       const sh = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.2, cx, cy, r * 1.05); sh.addColorStop(0, 'rgba(255,255,255,.12)'); sh.addColorStop(1, 'rgba(0,0,20,.55)'); ctx.fillStyle = sh; ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r); ctx.restore();
+    } else if (kind === 'saturn') {
+      const r = H * 0.17, cx = wrap(W * 0.72 - yaw * F * 0.08), cy = hy * 0.5; if (cx < -r * 2.4 || cx > W + r * 2.4) return;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.28);
+      ctx.strokeStyle = 'rgba(230,200,150,.55)'; ctx.lineWidth = r * 0.22; ctx.beginPath(); ctx.ellipse(0, 0, r * 2.0, r * 0.52, 0, Math.PI, TAU); ctx.stroke(); // 뒤쪽 고리
+      const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r); g.addColorStop(0, '#f6e2b0'); g.addColorStop(1, '#a8803f'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(150,100,50,.25)'; ctx.lineWidth = r * 0.07; for (const dy of [-0.4, -0.1, 0.25]) { ctx.beginPath(); ctx.moveTo(-Math.sqrt(1 - dy * dy) * r, dy * r); ctx.lineTo(Math.sqrt(1 - dy * dy) * r, dy * r); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(240,215,165,.8)'; ctx.lineWidth = r * 0.22; ctx.beginPath(); ctx.ellipse(0, 0, r * 2.0, r * 0.52, 0, 0, Math.PI); ctx.stroke(); // 앞쪽 고리
+      ctx.strokeStyle = 'rgba(160,120,70,.5)'; ctx.lineWidth = r * 0.06; ctx.beginPath(); ctx.ellipse(0, 0, r * 2.12, r * 0.55, 0, 0, Math.PI); ctx.stroke(); ctx.restore();
+    } else if (kind === 'belt') { // 소행성들이 하늘에 둥둥
+      for (let i = 0; i < 9; i++) { const r = H * (0.012 + ((i * 37) % 11) * 0.0045), cx = wrap(W * (((i * 71) % 100) / 100) - yaw * F * (0.05 + (i % 3) * 0.03)), cy = hy * (0.12 + ((i * 53) % 70) / 100); ctx.fillStyle = i % 2 ? '#8c857d' : '#6e6862'; ctx.beginPath(); ctx.ellipse(cx, cy, r * 1.3, r, i * 0.7, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.ellipse(cx - r * 0.3, cy - r * 0.3, r * 0.5, r * 0.35, 0, 0, TAU); ctx.fill(); }
+      const r = H * 0.05, cx = wrap(W * 0.2 - yaw * F * 0.06), cy = hy * 0.55; ctx.fillStyle = '#ffe9a8'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,233,168,.2)'; ctx.beginPath(); ctx.arc(cx, cy, r * 1.9, 0, TAU); ctx.fill(); // 멀리 작은 해
     } else if (kind === 'phobos') {
       for (const [fx, fy, rr, c] of [[0.3, 0.4, 0.045, '#8d7d70'], [0.62, 0.28, 0.028, '#a59686']]) { const r = H * rr, cx = wrap(W * fx - yaw * F * 0.09), cy = hy * fy; ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(cx, cy, r * 1.25, r, 0.4, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(cx + r * 0.3, cy + r * 0.1, r * 0.5, r * 0.4, 0, 0, TAU); ctx.fill(); }
     }
@@ -170,6 +181,15 @@
           const rr = o.s * 1.4; let okc = true; const ring = [], inner = [];
           for (let k2 = 0; k2 < 12; k2++) { const an = k2 / 12 * TAU, ca = Math.cos(an), sa = Math.sin(an); proj(o.x + ca * rr, o.y + sa * rr, it.z); if (_d < 8) { okc = false; break; } ring.push(_sx, _sy); proj(o.x + ca * rr * 0.72 + rr * 0.1, o.y + sa * rr * 0.72, it.z); inner.push(_sx, _sy); }
           if (okc) { ctx.fillStyle = craterRim; ctx.beginPath(); for (let k2 = 0; k2 < 12; k2++) ctx.lineTo(ring[k2 * 2], ring[k2 * 2 + 1]); ctx.closePath(); ctx.fill(); ctx.fillStyle = craterIn; ctx.beginPath(); for (let k2 = 0; k2 < 12; k2++) ctx.lineTo(inner[k2 * 2], inner[k2 * 2 + 1]); ctx.closePath(); ctx.fill(); }
+        } else if (o.e === 'lake') { // 타이탄: 메탄 호수(땅 위 납작한 타원, 반짝임)
+          const rr = o.s * 1.6; let okc = true; const ring = [];
+          for (let k2 = 0; k2 < 12; k2++) { const an = k2 / 12 * TAU; proj(o.x + Math.cos(an) * rr, o.y + Math.sin(an) * rr * 0.8, it.z); if (_d < 8) { okc = false; break; } ring.push(_sx, _sy); }
+          if (okc) { ctx.fillStyle = '#2f4a45'; ctx.beginPath(); for (let k2 = 0; k2 < 12; k2++) ctx.lineTo(ring[k2 * 2], ring[k2 * 2 + 1]); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(255,225,170,.45)'; ctx.lineWidth = Math.max(1, 2 * s); ctx.stroke(); }
+        } else if (o.e === 'vent') { // 이오: 화산 분출구와 연기
+          const w2 = sz * 0.9, h2 = sz * 0.7, X0 = it.sx, Y0 = it.sy;
+          ctx.fillStyle = '#4a3418'; ctx.beginPath(); ctx.moveTo(X0 - w2 * 0.55, Y0); ctx.lineTo(X0 - w2 * 0.14, Y0 - h2); ctx.lineTo(X0 + w2 * 0.14, Y0 - h2); ctx.lineTo(X0 + w2 * 0.55, Y0); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#ff7a2a'; ctx.beginPath(); ctx.ellipse(X0, Y0 - h2, w2 * 0.14, h2 * 0.1, 0, 0, TAU); ctx.fill();
+          for (let k2 = 0; k2 < 4; k2++) { ctx.fillStyle = `rgba(${230 - k2 * 20},${190 - k2 * 25},${90},${0.55 - k2 * 0.1})`; ctx.beginPath(); ctx.arc(X0 + Math.sin(E.t * 1.2 + k2) * w2 * 0.12, Y0 - h2 - (k2 + 0.5) * h2 * 0.45, w2 * (0.16 + k2 * 0.07), 0, TAU); ctx.fill(); }
         } else if (o.e === 'rock') { // 우주: 모난 바위
           const w2 = sz * 0.95, h2 = sz * 0.75, X0 = it.sx, Y0 = it.sy, pts = [[-0.5, 0], [-0.45, -0.4], [-0.18, -0.8], [0.12, -0.62], [0.34, -1], [0.5, -0.35], [0.46, 0]];
           ctx.fillStyle = rockCol; ctx.beginPath(); pts.forEach(([a2, b2], k2) => (k2 ? ctx.lineTo(X0 + a2 * w2, Y0 + b2 * h2) : ctx.moveTo(X0 + a2 * w2, Y0 + b2 * h2))); ctx.closePath(); ctx.fill();

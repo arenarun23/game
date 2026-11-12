@@ -104,7 +104,7 @@
         const tabs = G.h('div', { class: 'tabs' }, [[0, '🗺️ 2D'], [1, '🧊 3D'], [2, '🚀 우주']].map(([g, label]) =>
           G.h('button', { class: 'tab', 'aria-pressed': String(g === tab), onclick: () => { G.sfx.tap(); tab = g; showTracks(); } }, innerWidth > innerHeight * 1.05 ? label : `${label} (${cnt(g)}/${groupIdx(g).length})`)));
         const spExtra = tab === 2 ? spaceOptions(showTracks) : null, land3 = innerWidth > innerHeight * 1.05;
-        pick(3, (hard ? '🔥 어려운 ' : kid ? '🐣 아주 쉬운 ' : '') + '경기장을 골라요', idxs.map((i) => { const t = TRACKS[i]; return { ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky', 'lemon', 'mint'][idxs.indexOf(i) % 10], ds: [br('▶ ' + t.shape), br(t.gim)] }; }), idxs.indexOf(sel.tr),
+        pick(3, (hard ? '🔥 어려운 ' : kid ? '🐣 아주 쉬운 ' : '') + `경기장을 골라요 · ${hard ? 3 : kid ? 1 : 2}바퀴`, idxs.map((i) => { const t = TRACKS[i]; return { ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky', 'lemon', 'mint'][idxs.indexOf(i) % 10], ds: [br('▶ ' + t.shape), br(t.gim)] }; }), idxs.indexOf(sel.tr),
           (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); startRace(); }, showCars, land3 ? spExtra : (spExtra ? G.h('div', {}, tabs, spExtra) : tabs));
         if (innerWidth > innerHeight * 1.05) { const sb = document.querySelector('.subbar'); if (sb) sb.append(tabs); }
       }
@@ -115,7 +115,7 @@
         const TD = TRACKS[sel.tr], T = D.buildTrack(TD, seedOf(sel.tr)), th = TD.theme, hw = T.hw, M = T.M, P = T.pts;
         const laps = hard ? 3 : kid ? 1 : 2, WALL = hw * (kid ? 1.9 : 1.45);
         // 🚀 우주 코스: 중력(점프), 먼지·서리 구간, 옵션(후반 날씨·바퀴·피트)
-        const SP = TD.space, spo = SP ? spOpt() : null, GK = SP ? Math.pow(9.8 / SP.g, 0.3) : 1, stormOn = !!(SP && spo.storm), tireOn = !!(SP && spo.tire);
+        const SP = TD.space, spo = SP ? spOpt() : null, GK = SP ? Math.min(2.4, Math.pow(9.8 / SP.g, 0.3)) : 1, stormOn = !!(SP && spo.storm), tireOn = !!(SP && spo.tire);
         const TIRES = SP ? { rock: { n: '암반용', road: 1, dust: 0.72, grip: 3 }, all: { n: '겸용', road: 0.97, dust: 0.9, grip: 5.5 }, dust: { n: SP.soft, road: 0.93, dust: 1, grip: 7 } } : null;
         let stormN = 0, stormFired = false, pitNext = null; // stormN: 0~1 도로가 덮인 정도
         const keys = { left: false, right: false }, rnd = Math.random;
