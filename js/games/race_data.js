@@ -141,11 +141,11 @@
   const spacePts = (k, sx) => SPACE_PTS[k].p.map((q) => [q[0] * sx, q[1] * sx]), spaceH = (k, sy) => SPACE_PTS[k].h.map((v) => v * sy);
   const mkSpace = (w) => [
     Object.assign(T3('moon', '달 기지 서킷', '🌙', '3D · 달', '중력이 약해서 점프가 둥실 떠요', spacePts('moon', 7), w, 0.0, { boost: 5, slow: 0, ice: 0, jump: 2 }, 0, []),
-      { mus: 'space', space: { g: 1.62, dust: [[0.29, 0.37], [0.69, 0.77]], zone: '먼지 구간', soft: '먼지용', ico: '🌙', place: '고요의 바다', storm: { label: '후반 태양풍', toast: '태양풍이 강해졌어요! 먼지가 떠올라 도로를 덮어요', chip: '태양풍 · 도로가 먼지로 덮였어요' } }, hctl: spaceH('moon', 10) }),
+      { mus: 'moon', space: { g: 1.62, dust: [[0.29, 0.37], [0.69, 0.77]], zone: '먼지 구간', soft: '먼지용', ico: '🌙', place: '고요의 바다', storm: { label: '후반 태양풍', toast: '태양풍이 강해졌어요! 먼지가 떠올라 도로를 덮어요', chip: '태양풍 · 도로가 먼지로 덮였어요' } }, hctl: spaceH('moon', 10) }),
     Object.assign(T3('mars', '화성 협곡 서킷', '🔴', '3D · 화성', '붉은 모래 구간이 세 곳 있어요', spacePts('mars', 8), w, 0.0, { boost: 5, slow: 0, ice: 0, jump: 2 }, 0, []),
-      { mus: 'desert', space: { g: 3.71, dust: [[0.2, 0.28], [0.52, 0.6], [0.8, 0.86]], zone: '모래 구간', soft: '모래용', ico: '🔴', place: '마리너스 협곡', storm: { label: '후반 모래 폭풍', toast: '모래 폭풍이 불어와요! 붉은 모래가 도로를 덮어요', chip: '모래 폭풍 · 도로가 모래로 덮였어요' } }, hctl: spaceH('mars', 9) }),
+      { mus: 'mars', space: { g: 3.71, dust: [[0.2, 0.28], [0.52, 0.6], [0.8, 0.86]], zone: '모래 구간', soft: '모래용', ico: '🔴', place: '마리너스 협곡', storm: { label: '후반 모래 폭풍', toast: '모래 폭풍이 불어와요! 붉은 모래가 도로를 덮어요', chip: '모래 폭풍 · 도로가 모래로 덮였어요' } }, hctl: spaceH('mars', 9) }),
     Object.assign(T3('europa', '유로파 얼음 서킷', '🪐', '3D · 유로파', '서리 구간은 얼음처럼 미끄러워요', spacePts('europa', 7), w, 0.0, { boost: 5, slow: 0, ice: 0, jump: 2 }, 0, []),
-      { mus: 'snow', space: { g: 1.31, dust: [[0.16, 0.24], [0.47, 0.55], [0.74, 0.8]], zone: '서리 구간', soft: '서리용', ico: '🪐', place: '목성의 위성', frost: true, storm: { label: '후반 얼음 분출', toast: '얼음 분출이 솟아올랐어요! 서리가 도로를 덮어요', chip: '얼음 분출 · 도로가 서리로 덮였어요' } }, hctl: spaceH('europa', 12) }),
+      { mus: 'europa', space: { g: 1.31, dust: [[0.16, 0.24], [0.47, 0.55], [0.74, 0.8]], zone: '서리 구간', soft: '서리용', ico: '🪐', place: '목성의 위성', frost: true, storm: { label: '후반 얼음 분출', toast: '얼음 분출이 솟아올랐어요! 서리가 도로를 덮어요', chip: '얼음 분출 · 도로가 서리로 덮였어요' } }, hctl: spaceH('europa', 12) }),
   ];
   TRACKS_EASY.push(...mkSpace(170));
   TRACKS_HARD.push(...mkSpace(130));
