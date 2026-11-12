@@ -64,6 +64,28 @@
   const st = { T: null };
   function hOfTrack(T, i0, f) { const M = T.M; return T.hgt[i0] + (T.hgt[(i0 + 1) % M] - T.hgt[i0]) * f; }
 
+  // 🚀 하늘의 큰 천체: 달에서 본 지구, 화성의 작은 위성, 유로파에서 본 목성
+  function drawPlanet(ctx, kind, W, hy, F, yaw, H) {
+    const wrap = (x) => ((x % (W * 1.5)) + W * 1.5) % (W * 1.5) - W * 0.25;
+    if (kind === 'earth') {
+      const r = H * 0.15, cx = wrap(W * 0.74 - yaw * F * 0.1), cy = hy * 0.46; if (cx < -r || cx > W + r) return;
+      const g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r); g.addColorStop(0, '#9fd2ff'); g.addColorStop(0.55, '#3a7fd6'); g.addColorStop(1, '#14336b');
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fillStyle = g; ctx.fill(); ctx.clip();
+      ctx.fillStyle = 'rgba(70,170,90,.85)'; ctx.beginPath(); ctx.ellipse(cx - r * 0.3, cy - r * 0.1, r * 0.34, r * 0.22, 0.5, 0, TAU); ctx.ellipse(cx + r * 0.35, cy + r * 0.25, r * 0.22, r * 0.3, -0.4, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = r * 0.09; ctx.beginPath(); ctx.arc(cx - r * 0.1, cy - r * 0.25, r * 0.55, 3.4, 5.2); ctx.stroke(); ctx.beginPath(); ctx.arc(cx + r * 0.1, cy + r * 0.3, r * 0.5, 0.2, 1.8); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,20,.35)'; ctx.beginPath(); ctx.arc(cx + r * 0.42, cy + r * 0.2, r * 1.05, 0, TAU); ctx.fill(); ctx.restore();
+      ctx.strokeStyle = 'rgba(140,200,255,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, r + 2, 0, TAU); ctx.stroke();
+    } else if (kind === 'jupiter') {
+      const r = H * 0.34, cx = wrap(W * 0.7 - yaw * F * 0.08), cy = hy * 0.62; if (cx < -r || cx > W + r) return;
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fillStyle = '#d8a468'; ctx.fill(); ctx.clip();
+      const cols = ['#c58a52', '#e6c08e', '#b9764a', '#f0d6a8', '#c98f5a', '#e2b684', '#a9663f']; cols.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(cx - r, cy - r + (i / cols.length) * 2 * r, 2 * r, (2 * r) / cols.length + 1); });
+      ctx.fillStyle = '#b4472f'; ctx.beginPath(); ctx.ellipse(cx + r * 0.35, cy + r * 0.28, r * 0.2, r * 0.11, 0, 0, TAU); ctx.fill();
+      const sh = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.2, cx, cy, r * 1.05); sh.addColorStop(0, 'rgba(255,255,255,.12)'); sh.addColorStop(1, 'rgba(0,0,20,.55)'); ctx.fillStyle = sh; ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r); ctx.restore();
+    } else if (kind === 'phobos') {
+      for (const [fx, fy, rr, c] of [[0.3, 0.4, 0.045, '#8d7d70'], [0.62, 0.28, 0.028, '#a59686']]) { const r = H * rr, cx = wrap(W * fx - yaw * F * 0.09), cy = hy * fy; ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(cx, cy, r * 1.25, r, 0.4, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(cx + r * 0.3, cy + r * 0.1, r * 0.5, r * 0.4, 0, 0, TAU); ctx.fill(); }
+    }
+  }
+
   function draw(E) {
     const { ctx, W, H, T, th, me, racers } = E, M = T.M, P = T.pts, hgt = T.hgt, hw = T.hw, ds = T.ds, U = G.raceUtil;
     const S = (E.wall || hw * 1.5) + 26, Cc = hw + 10, BAR = 26, fogc = th.sky[1]; // 벽은 차 몸통 폭만큼 바깥에 세운다
@@ -83,12 +105,14 @@
     const gr = ctx.createLinearGradient(0, 0, 0, Math.max(10, hy)); gr.addColorStop(0, th.sky[0]); gr.addColorStop(1, th.sky[1]);
     ctx.fillStyle = gr; ctx.fillRect(0, 0, W, Math.max(10, hy) + 1);
     if (th.stars && hy > 8) { ctx.fillStyle = '#fff'; for (let i = 0; i < 70; i++) { const x = (((i * 733) % 997) / 997 * W * 1.6 - yaw * F * 0.18) % W, y = ((i * 389) % 991) / 991 * hy * 0.92, sz = 1 + (i % 3) * 0.7; ctx.globalAlpha = 0.45 + (i % 4) * 0.13; ctx.fillRect(x < 0 ? x + W : x, y, sz, sz); } ctx.globalAlpha = 1; } // 별
+    const SPC = !!T.space, craterRim = mixHex(th.bg, '#000000', 0.18), craterIn = mixHex(th.bg, '#000000', 0.38), rockCol = mixHex(th.ridge[1], '#000000', 0.2), rockHi = mixHex(th.ridge[0], '#ffffff', 0.25), iceCol = '#bfe6ff'; // 🚀 우주 코스는 하늘·산·벽·차 유리를 따로 꾸민다
+    if (SPC && th.planet && hy > 20) drawPlanet(ctx, th.planet, W, hy, F, yaw, H);
     ctx.fillStyle = mixHex(th.bg, fogc, 0.22); ctx.fillRect(0, hy, W, H - hy + 1);
     const sc = H / 640;
     for (let layer = 0; layer < 2; layer++) {
       const ox = -yaw * F * (0.5 + 0.35 * layer), amp = (34 + layer * 16) * sc, base = hy + 1;
       ctx.fillStyle = th.ridge[layer]; ctx.beginPath(); ctx.moveTo(0, base);
-      for (let x = 0; x <= W + 16; x += 16) { const q = (x + ox) * (0.0045 + layer * 0.003); ctx.lineTo(x, base - amp * (0.55 + 0.32 * Math.sin(q) + 0.22 * Math.sin(q * 2.7 + layer * 2) + 0.12 * Math.sin(q * 6.1))); }
+      for (let x = 0; x <= W + 16; x += 16) { const q = (x + ox) * (0.0045 + layer * 0.003); if (SPC) { const tri = (v) => Math.abs((((v / 6.2832) % 1) + 1) % 1 * 2 - 1); ctx.lineTo(x, base - amp * (0.25 + 0.95 * tri(q * 1.3 + layer * 2) * (0.55 + 0.45 * tri(q * 3.7)))); } else ctx.lineTo(x, base - amp * (0.55 + 0.32 * Math.sin(q) + 0.22 * Math.sin(q * 2.7 + layer * 2) + 0.12 * Math.sin(q * 6.1))); }
       ctx.lineTo(W, base); ctx.closePath(); ctx.fill();
     }
 
@@ -110,7 +134,7 @@
     for (let e = 0; e < n - 1; e++) if (ok[e] && ok[e + 1]) items.push({ d: (dep[e] + dep[e + 1]) / 2, kind: 0, e });
     const rel = (i) => (((i - idx + BACK) % M) + M) % M - BACK, inWin = (i) => { const r = rel(i); return r >= -(BACK - 2) && r <= reach; };
     const cut = lowQ ? 2 : 1;
-    for (let i = 0; i < T.decos.length; i += cut) { const d = T.decos[i]; if (!inWin(d.idx)) continue; const c = P[d.idx], lat = Math.abs((d.x - c.x) * c.nx + (d.y - c.y) * c.ny), z = Math.max(gz, hgt[d.idx] - Math.max(0, lat - S) * 0.9); proj(d.x, d.y, z); if (_d > 10 && _sx > -300 && _sx < W + 300) items.push({ d: _d, kind: 1, sx: _sx, sy: _sy, o: d }); }
+    for (let i = 0; i < T.decos.length; i += cut) { const d = T.decos[i]; if (!inWin(d.idx)) continue; const c = P[d.idx], lat = Math.abs((d.x - c.x) * c.nx + (d.y - c.y) * c.ny), z = Math.max(gz, hgt[d.idx] - Math.max(0, lat - S) * 0.9); proj(d.x, d.y, z); if (_d > 10 && _sx > -300 && _sx < W + 300) items.push({ d: _d, kind: 1, sx: _sx, sy: _sy, o: d, z }); }
     for (let i = 0; i < T.boxes.length; i++) { if (E.boxT[i] > 0) continue; const b = T.boxes[i]; if (!inWin(b.idx)) continue; proj(b.x, b.y, hgt[b.idx] + 18); if (_d > 10) items.push({ d: _d - 22, dd: _d, kind: 2, sx: _sx, sy: _sy, i }); }
     for (const z of T.haz) { if (!inWin(z.idx)) continue; proj(z.x, z.y, hgt[z.idx]); if (_d > 10) items.push({ d: _d - (z.type === 'boost' || z.type === 'jump' ? 42 : z.r + 6), dd: _d, kind: 3, z }); }
     for (const r of racers) { const hz = E.hOf(r) - r.zair; proj(r.dx, r.dy, hz); if (_d > 10) items.push({ d: _d - 30, dd: _d, kind: 4, r, sx: _sx, sy: _sy, hz }); }
@@ -132,12 +156,29 @@
         quad(a + 2, a + 3, b + 3, b + 2, cc[L], true); quad(a + 6, a + 7, b + 7, b + 6, cc[L], true);
         { const dm = T.space && (T.dust[((ks[e] % M) + M) % M] || E.stormN > 0.5); quad(a + 3, a + 6, b + 6, b + 3, (dm ? (stripe ? cols.dust : cols.dust2) : (stripe ? cols.road : cols.road2))[L], true); }
         if (st2) quad(a + 4, a + 5, b + 5, b + 4, cols.line[L], true);
+        if (SPC) ctx.globalAlpha = 0.5; // 우주: 벽이 반투명한 빛의 울타리
         quad(a + 1, a + 10, b + 10, b + 1, cc[L], true); quad(a + 8, a + 11, b + 11, b + 8, cc[L], true);
+        if (SPC) ctx.globalAlpha = 1;
         continue;
       }
       const dz = it.dd || it.d, L = lvlOf(dz), s = F / Math.max(dz, 1);
       if (it.kind === 1) { // 장식(나무·건물…): 땅에 선 그림
-        const o = it.o, sz = o.s * 1.25 * s, near = it.d < DIST + 200 ? Math.max(0, (it.d - (DIST + 50)) / 150) : 1; if (near <= 0.02) continue; // 카메라·내 차 가까이 온 장식은 그리지 않는다(내 차 위를 덮어 희미하게 보임) if (L > 5) ctx.globalAlpha = 0.5; else if (near < 1) ctx.globalAlpha = near; // 가까운 장식은 흐리게(시야 가림 방지) ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz); if (L > 5 || near < 1) ctx.globalAlpha = 1;
+        const o = it.o, sz = o.s * 1.25 * s, near = it.d < DIST + 200 ? Math.max(0, (it.d - (DIST + 50)) / 150) : 1;
+        if (near <= 0.02) continue; // 카메라·내 차 가까이 온 장식은 그리지 않는다(내 차 위를 덮어 희미하게 보임)
+        const fade = L > 5 ? 0.5 : near; if (fade < 1) ctx.globalAlpha = fade;
+        if (o.e === 'crater') { // 🚀 우주: 땅에 눌린 크레이터(타원 두 겹)
+          const rr = o.s * 1.4; let okc = true; const ring = [], inner = [];
+          for (let k2 = 0; k2 < 12; k2++) { const an = k2 / 12 * TAU, ca = Math.cos(an), sa = Math.sin(an); proj(o.x + ca * rr, o.y + sa * rr, it.z); if (_d < 8) { okc = false; break; } ring.push(_sx, _sy); proj(o.x + ca * rr * 0.72 + rr * 0.1, o.y + sa * rr * 0.72, it.z); inner.push(_sx, _sy); }
+          if (okc) { ctx.fillStyle = craterRim; ctx.beginPath(); for (let k2 = 0; k2 < 12; k2++) ctx.lineTo(ring[k2 * 2], ring[k2 * 2 + 1]); ctx.closePath(); ctx.fill(); ctx.fillStyle = craterIn; ctx.beginPath(); for (let k2 = 0; k2 < 12; k2++) ctx.lineTo(inner[k2 * 2], inner[k2 * 2 + 1]); ctx.closePath(); ctx.fill(); }
+        } else if (o.e === 'rock') { // 우주: 모난 바위
+          const w2 = sz * 0.95, h2 = sz * 0.75, X0 = it.sx, Y0 = it.sy, pts = [[-0.5, 0], [-0.45, -0.4], [-0.18, -0.8], [0.12, -0.62], [0.34, -1], [0.5, -0.35], [0.46, 0]];
+          ctx.fillStyle = rockCol; ctx.beginPath(); pts.forEach(([a2, b2], k2) => (k2 ? ctx.lineTo(X0 + a2 * w2, Y0 + b2 * h2) : ctx.moveTo(X0 + a2 * w2, Y0 + b2 * h2))); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = rockHi; ctx.beginPath(); ctx.moveTo(X0 - 0.45 * w2, Y0 - 0.4 * h2); ctx.lineTo(X0 - 0.18 * w2, Y0 - 0.8 * h2); ctx.lineTo(X0 + 0.02 * w2, Y0 - 0.3 * h2); ctx.closePath(); ctx.fill();
+        } else if (o.e === 'ice') { // 우주(유로파): 얼음 기둥
+          const w2 = sz * 0.9, h2 = sz * 1.1, X0 = it.sx, Y0 = it.sy;
+          for (const [dx2, hh, ww] of [[-0.28, 0.7, 0.26], [0, 1, 0.3], [0.3, 0.6, 0.24]]) { ctx.fillStyle = iceCol; ctx.beginPath(); ctx.moveTo(X0 + (dx2 - ww / 2) * w2, Y0); ctx.lineTo(X0 + dx2 * w2, Y0 - hh * h2); ctx.lineTo(X0 + (dx2 + ww / 2) * w2, Y0); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.moveTo(X0 + dx2 * w2, Y0 - hh * h2); ctx.lineTo(X0 + (dx2 + ww / 2) * w2, Y0); ctx.lineTo(X0 + dx2 * w2, Y0); ctx.closePath(); ctx.fill(); }
+        } else ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz);
+        if (fade < 1) ctx.globalAlpha = 1;
       } else if (it.kind === 2) { // 아이템 상자(빙글빙글)
         const w = 30 * s * (0.35 + 0.65 * Math.abs(Math.cos(E.t * 2.4 + it.i))), h = 30 * s; ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#c98a00'; ctx.lineWidth = Math.max(1, 2 * s);
         ctx.beginPath(); ctx.roundRect(it.sx - w / 2, it.sy - h / 2, w, h, 5 * s); ctx.fill(); ctx.stroke();
@@ -165,6 +206,15 @@
         ctx.drawImage(spr, -w / 2, -h * 1.02, w, h);
         const ey = -h * 0.92, showFace = E.state === 'count' || Math.abs(rel2) > 1.25; // 출발 전엔 얼굴, 출발하면 뒷모습
         ctx.save(); ctx.translate(0, ey); ctx.scale(s, s); if (showFace) U.stamp(ctx, r.ch.e, 24); else { const sz = 96 * 24 / 76; ctx.drawImage(charBack(r.ch), -sz / 2, -sz / 2, sz, sz); } if (r.hat) { ctx.translate(0, -13); U.stamp(ctx, r.hat, 15); } ctx.restore();
+        if (T.space) { // 🚀 우주 코스: 운전석에 유리 돔(반투명 + 반사광 + 아래 테두리)
+          ctx.save(); ctx.translate(0, ey); ctx.scale(s, s);
+          const gl = ctx.createRadialGradient(-7, -9, 2, 0, 0, 25); gl.addColorStop(0, 'rgba(235,250,255,.55)'); gl.addColorStop(0.55, 'rgba(150,215,255,.14)'); gl.addColorStop(1, 'rgba(120,190,255,.32)');
+          ctx.fillStyle = gl; ctx.beginPath(); ctx.ellipse(0, 1, 23, 22, 0, 0, TAU); ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.8; ctx.stroke();
+          ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0, 1, 17, 3.5, 4.55); ctx.stroke();
+          ctx.fillStyle = 'rgba(45,55,80,.9)'; ctx.fillRect(-21, 15, 42, 5);
+          ctx.restore();
+        }
         if (r.shield > 0) { ctx.strokeStyle = 'rgba(80,220,255,.9)'; ctx.lineWidth = Math.max(2, 4 * s); ctx.beginPath(); ctx.ellipse(0, -h * 0.55, 34 * s, 30 * s, 0, 0, TAU); ctx.stroke(); }
         if (r.frozen > 0) { ctx.save(); ctx.translate(0, -h * 0.5); ctx.scale(s, s); ctx.globalAlpha = 0.85; U.stamp(ctx, '🧊', 44); ctx.restore(); }
         if (r.isPlayer) { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-7 * s, -h * 1.42); ctx.lineTo(7 * s, -h * 1.42); ctx.lineTo(0, -h * 1.22); ctx.closePath(); ctx.stroke(); ctx.fill(); }

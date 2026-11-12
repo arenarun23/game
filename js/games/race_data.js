@@ -54,9 +54,9 @@
     candy: { bg: '#ffc7e0', shoulder: '#ffb3d4', road: '#8e6bb8', curb: ['#ff6fb5', '#ffffff'], line: '#fff3fb', slow: '#c0392b', sky: ['#ffa6d5', '#ffe6f3'], ridge: ['#e58bc0', '#cf6fae'], deco: ['🍭', '🧁', '🍩', '🍬', '🍪'] },
     city: { bg: '#1f2a44', shoulder: '#2a3658', road: '#3b3f4f', curb: ['#ff4fa3', '#4fe3ff'], line: '#ffe94f', slow: '#1b1f2d', sky: ['#0b1030', '#3a4a8a'], ridge: ['#27335c', '#1a2346'], deco: ['🏢', '🏙️', '💡', '🌃', '🚦'] },
     lava: { bg: '#3a1a14', shoulder: '#552218', road: '#4a4a52', curb: ['#ff7a1a', '#222222'], line: '#ffd6a0', slow: '#ff5a1f', sky: ['#2a0a08', '#8a2c14'], ridge: ['#5a1d12', '#3d120b'], deco: ['🌋', '🔥', '🪨', '💀', '🦇'] },
-    moon: { bg: '#8b8b92', shoulder: '#7a7a82', road: '#4b4d58', curb: ['#f1f1f6', '#5a5a66'], line: '#ffffff', slow: '#a9a39a', sky: ['#02030a', '#141c44'], ridge: ['#6c6c75', '#54545d'], stars: true, deco: ['🪨', '🛰️', '🌑', '☄️', '🚀'] },
-    mars: { bg: '#b3623e', shoulder: '#a05632', road: '#5b4338', curb: ['#ffb27a', '#5b2e1c'], line: '#ffe2c4', slow: '#c4784a', sky: ['#b77a52', '#f1cfa4'], ridge: ['#9d573a', '#7c4129'], deco: ['🪨', '🛸', '🔴', '⛰️', '🌋'] },
-    europa: { bg: '#d6e3ee', shoulder: '#c4d6e6', road: '#56667f', curb: ['#6fb7ff', '#ffffff'], line: '#eaf6ff', slow: '#9fc0dc', sky: ['#050a26', '#2b4676'], ridge: ['#a9bcd2', '#8aa1bb'], stars: true, deco: ['🧊', '❄️', '🪐', '⛰️', '🌌'] },
+    moon: { bg: '#8b8b92', shoulder: '#7a7a82', road: '#4b4d58', curb: ['#7ff7ff', '#10303c'], line: '#bff9ff', slow: '#a9a39a', sky: ['#01020a', '#101a44'], ridge: ['#6c6c75', '#54545d'], stars: true, planet: 'earth', deco: ['crater', 'crater', 'rock', 'rock', '🛰️', '📡'] },
+    mars: { bg: '#b3623e', shoulder: '#a05632', road: '#5b4338', curb: ['#ffd08a', '#6a280f'], line: '#ffe2c4', slow: '#c4784a', sky: ['#b77a52', '#f1cfa4'], ridge: ['#9d573a', '#7c4129'], planet: 'phobos', deco: ['crater', 'rock', 'rock', 'rock', '⛰️', '🛸'] },
+    europa: { bg: '#d6e3ee', shoulder: '#c4d6e6', road: '#56667f', curb: ['#a8e6ff', '#14305a'], line: '#eaf6ff', slow: '#9fc0dc', sky: ['#040824', '#27406e'], ridge: ['#a9bcd2', '#8aa1bb'], stars: true, planet: 'jupiter', deco: ['crater', 'ice', 'ice', 'ice', '🧊', '📡'] },
     space: { bg: '#0b0b2a', shoulder: '#15154a', road: '#46486a', curb: ['#9b59b6', '#ffffff'], line: '#7ff7ff', slow: '#2c2c5a', sky: ['#02020f', '#1b1b5a'], ridge: ['#2a2a78', '#1a1a52'], deco: ['⭐', '🪐', '🛰️', '☄️', '🌙'] },
   };
   // 이지: 넓은 길(w 170), 부드러운 모양 / 하드: 좁은 길(w 130), 급커브·꼬인 모양, 함정 더 많음
