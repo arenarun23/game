@@ -88,15 +88,24 @@
         return s;
       }
       const TRACKS = hard ? D.TRACKS_HARD : D.TRACKS_EASY, seedOf = (i) => (hard ? 100 : 0) + i + 1;
-      const isGroup = (i, g) => !!TRACKS[i].v3d === !!g, groupIdx = (g) => TRACKS.map((_, i) => i).filter((i) => isGroup(i, g));
-      let tab = TRACKS[sel.tr] && TRACKS[sel.tr].v3d ? 1 : 0; // 0 = 2D, 1 = 3D
+      const grpOf = (t) => (t.space ? 2 : t.v3d ? 1 : 0), isGroup = (i, g) => grpOf(TRACKS[i]) === g, groupIdx = (g) => TRACKS.map((_, i) => i).filter((i) => isGroup(i, g));
+      let tab = TRACKS[sel.tr] ? grpOf(TRACKS[sel.tr]) : 0; // 0 = 2D, 1 = 3D, 2 = 우주
+      const SPK = 'race:sp', spOpt = () => Object.assign({ storm: false, tire: false, tireStart: 'all' }, G.store.get(SPK, {})), spSet = (o) => G.store.set(SPK, Object.assign(spOpt(), o));
+      // 🚀 우주 코스 옵션(우주 탭에서만): 후반 날씨, 바퀴 고르기
+      function spaceOptions(redraw) {
+        const o = spOpt(), h = G.h, tog = (label, on, fn) => h('button', { class: 'tab sp', 'aria-pressed': String(on), onclick: () => { G.sfx.tap(); fn(); redraw(); } }, label + (on ? ' 켜짐' : ' 꺼짐'));
+        const tires = [['rock', '암반'], ['all', '겸용'], ['dust', '먼지']];
+        return h('div', { class: 'spopt' }, tog('🌪️ 후반 날씨', o.storm, () => spSet({ storm: !o.storm })), tog('🛞 바퀴 고르기', o.tire, () => spSet({ tire: !o.tire })),
+          ...(o.tire ? tires.map(([id, nm]) => h('button', { class: 'tab sp', 'aria-pressed': String(o.tireStart === id), onclick: () => { G.sfx.tap(); spSet({ tireStart: id }); redraw(); } }, nm)) : []));
+      }
       function showTracks() {
         const doneSet = new Set(G.store.get('race:done:' + (hard ? 'hard' : 'easy'), [])), idxs = groupIdx(tab);
         const cnt = (g) => groupIdx(g).filter((i) => doneSet.has(i)).length;
-        const tabs = G.h('div', { class: 'tabs' }, [[0, '🗺️ 2D'], [1, '🧊 3D']].map(([g, label]) =>
-          G.h('button', { class: 'tab', 'aria-pressed': String(g === tab), onclick: () => { G.sfx.tap(); tab = g; showTracks(); } }, `${label} (${cnt(g)}/${groupIdx(g).length})`)));
+        const tabs = G.h('div', { class: 'tabs' }, [[0, '🗺️ 2D'], [1, '🧊 3D'], [2, '🚀 우주']].map(([g, label]) =>
+          G.h('button', { class: 'tab', 'aria-pressed': String(g === tab), onclick: () => { G.sfx.tap(); tab = g; showTracks(); } }, innerWidth > innerHeight * 1.05 ? label : `${label} (${cnt(g)}/${groupIdx(g).length})`)));
+        const spExtra = tab === 2 ? spaceOptions(showTracks) : null, land3 = innerWidth > innerHeight * 1.05;
         pick(3, (hard ? '🔥 어려운 ' : kid ? '🐣 아주 쉬운 ' : '') + '경기장을 골라요', idxs.map((i) => { const t = TRACKS[i]; return { ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky', 'lemon', 'mint'][idxs.indexOf(i) % 10], ds: [br('▶ ' + t.shape), br(t.gim)] }; }), idxs.indexOf(sel.tr),
-          (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); startRace(); }, showCars, innerWidth > innerHeight * 1.05 ? null : tabs);
+          (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); startRace(); }, showCars, land3 ? spExtra : (spExtra ? G.h('div', {}, tabs, spExtra) : tabs));
         if (innerWidth > innerHeight * 1.05) { const sb = document.querySelector('.subbar'); if (sb) sb.append(tabs); }
       }
 
@@ -105,6 +114,10 @@
         clearTabs();
         const TD = TRACKS[sel.tr], T = D.buildTrack(TD, seedOf(sel.tr)), th = TD.theme, hw = T.hw, M = T.M, P = T.pts;
         const laps = hard ? 3 : kid ? 1 : 2, WALL = hw * (kid ? 1.9 : 1.45);
+        // 🚀 우주 코스: 중력(점프), 먼지·서리 구간, 옵션(후반 날씨·바퀴·피트)
+        const SP = TD.space, spo = SP ? spOpt() : null, GK = SP ? Math.pow(9.8 / SP.g, 0.3) : 1, stormOn = !!(SP && spo.storm), tireOn = !!(SP && spo.tire);
+        const TIRES = SP ? { rock: { n: '암반용', road: 1, dust: 0.72, grip: 3 }, all: { n: '겸용', road: 0.97, dust: 0.9, grip: 5.5 }, dust: { n: SP.soft, road: 0.93, dust: 1, grip: 7 } } : null;
+        let stormN = 0, stormFired = false, pitNext = null; // stormN: 0~1 도로가 덮인 정도
         const keys = { left: false, right: false }, rnd = Math.random;
 
         // 화면(HUD)
@@ -117,8 +130,9 @@
         hold(bL, 'left'); hold(bR, 'right');
         const knob = G.h('span', { class: 'knob' }), pad = G.h('div', { class: 'rpad', 'aria-label': '핸들 막대' }, G.h('span', { class: 'arr l' }, '◀'), G.h('span', { class: 'tick' }), G.h('span', { class: 'arr r' }, '▶'), knob);
         const chipA = G.h('button', { class: 'rchip' }), chipC = G.h('button', { class: 'rchip' }), chipH = G.h('button', { class: 'rchip' }, '❓ 사용법'), chipM = G.h('button', { class: 'rchip', 'aria-label': '음악 켜고 끄기' });
+        const chipG = G.h('div', { class: 'rchip static' }, SP ? `${SP.ico} 중력 ${SP.g}` : ''), chipT = G.h('button', { class: 'rchip' }), chipW = G.h('div', { class: 'rchip static warn', hidden: true });
         const bubL = G.h('div', { class: 'bub' }), bubR = G.h('div', { class: 'bub r' }, '⚡ 스킬 · 🎁 아이템은 여기!');
-        const wrap = G.h('div', { class: 'rwrap counting' }, cv, G.h('div', { class: 'rtop' }, G.h('div', { class: 'rleft' }, badge, G.h('div', { class: 'rchips' }, chipA, chipC, chipH, chipM)), mini), toastEl, countEl,
+        const wrap = G.h('div', { class: 'rwrap counting' }, cv, G.h('div', { class: 'rtop' }, G.h('div', { class: 'rleft' }, badge, G.h('div', { class: 'rchips' }, chipA, chipC, chipH, chipM, ...(SP ? [chipG] : []), ...(tireOn ? [chipT] : []), ...(stormOn ? [chipW] : []))), mini), toastEl, countEl,
           G.h('div', { class: 'rcoach' }, bubL, bubR), G.h('div', { class: 'rctl l' }, bL, bR, pad), G.h('div', { class: 'rctl r' }, bS1, bS2, bItem));
         root.replaceChildren(wrap);
         const ctx = cv.getContext('2d'), mctx = mini.getContext('2d');
@@ -134,9 +148,9 @@
         function mk(ci, cr, isPlayer, slot) {
           const ch = D.CHARS[ci], car = D.CARS[cr], idx = (M - 3 - Math.floor(slot / 2) * 4 + M) % M, c = P[idx], lat = (slot % 2 ? 0.45 : -0.45) * hw;
           const cs = isPlayer ? window.RaceReward.cos() : null;
-          return { ch, car, col: (cs && cs.color.c) || car.color, hat: cs && cs.hat.e, trail: cs && cs.trail.e, tr: [], trT: 0, isPlayer, plow: !!ch.mod.plow, plowCd: 0, hop: 0, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
+          return { ch, car, col: (cs && cs.color.c) || car.color, hat: cs && cs.hat.e, trail: cs && cs.trail.e, tr: [], trT: 0, isPlayer, tire: isPlayer && tireOn ? spo.tireStart : 'all', pitPhase: null, pitT: 0, airMax: 0, plow: !!ch.mod.plow, plowCd: 0, hop: 0, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
             offF: 0.45 + (car.st.off || 0) + (ch.mod.off || 0), iceImm: !!ch.mod.ice, x: c.x + c.nx * lat, y: c.y + c.ny * lat, h: Math.atan2(c.ty, c.tx), px: c.x + c.nx * lat, py: c.y + c.ny * lat, ph: Math.atan2(c.ty, c.tx), dx: 0, dy: 0, dh: 0, vx: 0, vy: 0, v: 0, idx, lap: 0, prog: idx, prevIdx: idx,
-            steerIn: 0, throttle: 1, air: 0, zair: 0, boost: 0, boostMul: 1.4, shield: 0, stun: 0, frozen: 0, spin: 0, item: null, cd: [3, 4], lane: (rnd() - 0.5) * 0.7, aiVar: 0.97 + rnd() * 0.06, aiT: rnd(), fin: null, off: false, stuck: 0, tire: 0 };
+            steerIn: 0, throttle: 1, air: 0, zair: 0, boost: 0, boostMul: 1.4, shield: 0, stun: 0, frozen: 0, spin: 0, item: null, cd: [3, 4], lane: (rnd() - 0.5) * 0.7, aiVar: 0.97 + rnd() * 0.06, aiT: rnd(), fin: null, off: false, stuck: 0 };
         }
 
         // 상태
@@ -198,8 +212,10 @@
         const onVis = () => { if (document.hidden && state === 'go') openPause(); }; // 다른 앱·탭으로 가면 자동으로 멈춤
         document.addEventListener('visibilitychange', onVis);
         const musicChip = () => { chipM.textContent = G.music.isOn() ? '🎵 음악' : '🔇 음악'; chipM.setAttribute('aria-pressed', String(G.music.isOn())); };
+        const refreshTire = () => { if (!tireOn) return; const cur = TIRES[me.tire].n; chipT.textContent = pitNext ? `🛞 ${cur} → ${TIRES[pitNext].n} (피트 예약)` : `🛞 ${cur} · 눌러서 피트 예약`; chipT.setAttribute('aria-pressed', String(!!pitNext)); };
+        chipT.addEventListener('click', () => { G.sfx.tap(); if (me.pitPhase) return; if (me.lap >= laps) { toast('마지막 바퀴에서는 피트에 못 들어가요', 1.6); return; } const others = Object.keys(TIRES).filter((k) => k !== me.tire), i = pitNext ? others.indexOf(pitNext) : -1; pitNext = i + 1 < others.length ? others[i + 1] : null; refreshTire(); toast(pitNext ? `🛞 피트 예약: 출발선 앞에서 ${TIRES[pitNext].n}로 바꿔요` : '🛞 피트 예약 취소', 1.8); });
         chipM.addEventListener('click', () => { G.sfx.tap(); G.music.setOn(!G.music.isOn()); musicChip(); toast(G.music.isOn() ? '🎵 음악 켜짐' : '🔇 음악 꺼짐', 1.2); });
-        musicChip();
+        musicChip(); refreshTire();
         // 밀어서: 막대 위 손가락 위치 = 핸들 세기
         const padCalc = (e) => { const r = pad.getBoundingClientRect(), u = ((e.clientX - r.left) / r.width - 0.5) * 2, v = clamp(u / 0.8, -1, 1); return Math.abs(v) < 0.07 ? 0 : v; };
         pad.addEventListener('pointerdown', (e) => { if (ctlMode !== 'slide') return; e.preventDefault(); pad.setPointerCapture(e.pointerId); padOn = true; padV = padCalc(e); });
@@ -258,7 +274,7 @@
               for (const o of racers) if (o !== r) { const dx = o.x - r.x, dy = o.y - r.y, d = Math.hypot(dx, dy); if (d < 460 && dx * Math.cos(r.h) + dy * Math.sin(r.h) > 0) hit(o, 'spin', 0.9); } break;
             case 'express': r.shield = Math.max(r.shield, 2.5); r.boost = Math.max(r.boost, 1.6); r.boostMul = 1.4; break;
             case 'pit': drop('pit', r, -40); break;
-            case 'hop': r.air = JUMP; r.hop = JUMP * 1.25; r.boost = Math.max(r.boost, 0.5); r.boostMul = 1.2; break; // 뛰어서 다른 차 위를 지나간다
+            case 'hop': r.air = r.airMax = JUMP * GK; r.hop = JUMP * GK * 1.25; r.boost = Math.max(r.boost, 0.5); r.boostMul = 1.2; break; // 뛰어서 다른 차 위를 지나간다
             case 'magnet': if (!r.item) r.item = randItem(r); else { r.boost = Math.max(r.boost, 0.9); } break;
           }
           r.cd[slot] = sk.cd; if (r.isPlayer) { G.sfx.ok(); toast(sk.e + ' ' + sk.n + '!'); } return true;
@@ -308,7 +324,7 @@
           r.plowCd = Math.max(0, r.plowCd - dt); r.hop = Math.max(0, r.hop - dt);
           r.boost = Math.max(0, r.boost - dt); r.shield = Math.max(0, r.shield - dt); r.stun = Math.max(0, r.stun - dt); r.frozen = Math.max(0, r.frozen - dt);
           for (let s = 0; s < 2; s++) r.cd[s] = Math.max(0, r.cd[s] - dt);
-          r.air = Math.max(0, r.air - dt); { const a = r.air > 0 ? 1 - r.air / JUMP : 0; r.zair = r.air > 0 ? 80 * 4 * a * (1 - a) : 0; }
+          r.air = Math.max(0, r.air - dt); { const a = r.air > 0 ? 1 - r.air / (r.airMax || JUMP) : 0; r.zair = r.air > 0 ? 80 * GK * 4 * a * (1 - a) : 0; }
           const steer = (r.stun > 0 || r.frozen > 0 ? 0 : r.steerIn) * (r.air > 0 ? 0.5 : 1);
           let surf = r.off ? r.offF : 1, grip = 7, turnK = 1;
           for (const z of T.haz) {
@@ -316,10 +332,21 @@
             if (z.type === 'boost') { if (r.boost < 0.9) { r.boost = 1.0; r.boostMul = 1.4; if (r.isPlayer) G.sfx.pop(); } }
             else if (z.type === 'slow') surf *= 0.5;
             else if (z.type === 'ice' && !r.iceImm) { grip = 1.1; turnK = 0.7; }
-            else if (z.type === 'jump' && r.air <= 0 && r.v > 90) { r.air = JUMP; dbg.jumps = (dbg.jumps || 0) + 1; if (r.isPlayer) G.sfx.pop(); }
+            else if (z.type === 'jump' && r.air <= 0 && r.v > 90) { r.air = r.airMax = JUMP * GK; dbg.jumps = (dbg.jumps || 0) + 1; if (r.isPlayer) G.sfx.pop(); }
+          }
+          if (SP && !(SP.frost && r.iceImm)) { // 먼지·모래·서리 구간: 바퀴에 따라 느려지고 미끄러진다(풀밭에 강한 캐릭터·차는 덜 느려짐)
+            const tr = TIRES[r.tire || 'all'], inDust = T.dust[((r.idx % M) + M) % M] || stormN > 0.5;
+            if (inDust) { surf *= Math.min(1, tr.dust + (r.offF - 0.45) * 0.6); grip = Math.min(grip, tr.grip); if (SP.frost) turnK *= 0.85; } else surf *= tr.road;
+          }
+          // 피트: 예약하면 출발선 앞에서 멈춰 바퀴를 바꾼다
+          if (r.isPlayer && tireOn && state === 'go') {
+            if (!r.pitPhase && pitNext && r.lap < laps) { const f = (((r.prog % M) + M) % M) / M; if (f >= 0.94 && f <= 0.985) { r.pitPhase = 'in'; toast('🛞 피트로 들어갑니다', 1.4); } }
+            if (r.pitPhase === 'in') { r.v *= 1 - Math.min(0.9, 2.6 * dt); if (r.v < 12) { r.pitPhase = 'stop'; r.pitT = 2.5; } }
+            else if (r.pitPhase === 'stop') { r.v = 0; r.pitT -= dt; toast(`🛞 바퀴 교체 중 ${Math.max(0, r.pitT).toFixed(1)}초`, 0.25); if (r.pitT <= 0) { r.tire = pitNext; pitNext = null; r.pitPhase = null; refreshTire(); toast(`🛞 ${TIRES[r.tire].n} 바퀴로 바꿨어요!`, 1.8); G.sfx.ok(); } }
           }
           let maxV = r.maxV * (r.boost > 0 ? r.boostMul * (r.ch.mod.boost || 1) : 1) * (r.isPlayer ? 1 : AI.mul * r.aiVar * (r.rb || 1)) * r.throttle * surf;
           if (T.v3d) maxV *= clamp(1 - T.slope[r.idx] * 1.0, 0.86, 1.1); // 오르막은 느리게, 내리막은 빠르게
+          if (r.pitPhase) maxV = 0;
           if (r.frozen > 0) maxV = 0; else if (r.stun > 0) maxV = Math.min(maxV, r.maxV * 0.3);
           if (r.v < maxV) r.v = Math.min(maxV, r.v + r.acc * dt * (r.boost > 0 ? 2.4 : 1)); else r.v = Math.max(maxV, r.v - (r.off ? 540 : 230) * dt);
           r.h += steer * r.turn * turnK * Math.min(1, r.v / 170) * dt;
@@ -401,7 +428,7 @@
         function draw() {
           const zoom = Math.max(H / 680, 0.5 * dpr);
           for (const r of racers) { r.dx = r.px + (r.x - r.px) * alpha; r.dy = r.py + (r.y - r.py) * alpha; r.dh = r.ph + angDiff(r.h, r.ph) * alpha; }
-          if (T.v3d) { Object.assign(env, { ctx, W, H, yaw: pcamH + angDiff(camH, pcamH) * alpha, t, alpha, lowQ, state }); window.Race3D.draw(env); return; }
+          if (T.v3d) { Object.assign(env, { ctx, W, H, yaw: pcamH + angDiff(camH, pcamH) * alpha, t, alpha, lowQ, state, stormN }); window.Race3D.draw(env); return; }
           const px = me.dx, py = me.dy, rot = Math.PI / 2 + pcamH + angDiff(camH, pcamH) * alpha;
           ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
           ctx.translate(W / 2, H * 0.72); ctx.scale(zoom, zoom); ctx.rotate(-rot); ctx.translate(-px, -py);
@@ -487,7 +514,7 @@
         toast('준비!', 1);
         function end() {
           if (over) return; over = true;
-          const k = rank(me), mk = hard ? 'hard' : kid ? 'kid' : 'easy', key = 'race:done:' + mk, g = TD.v3d ? 1 : 0, mine = groupIdx(g), n = mine.length, gname = g ? '3D' : '2D';
+          const k = rank(me), mk = hard ? 'hard' : kid ? 'kid' : 'easy', key = 'race:done:' + mk, g = grpOf(TD), mine = groupIdx(g), n = mine.length, gname = ['2D', '3D', '우주'][g];
           const done = new Set(G.store.get(key, [])); done.add(sel.tr); G.store.set(key, [...done]);
           const left = mine.filter((i) => !done.has(i)), doneCnt = n - left.length;
           const raceG = G.games.find((x) => x.id === 'race');
@@ -515,11 +542,12 @@
           for (const r of racers) { r.px = r.x; r.py = r.y; r.ph = r.h; }
           for (const o of objs) { o.px = o.x; o.py = o.y; }
           t += dt; pcamH = camH;
+          if (stormOn && state === 'go') { if (!stormFired && me.lap >= 2) { stormFired = true; toast('🌪️ ' + SP.storm.toast, 3.8); chipW.hidden = false; chipW.textContent = '🌪️ ' + SP.storm.chip; G.sfx.bad(); } if (stormFired) stormN = Math.min(1, stormN + dt / 4); }
           if (goClear > 0) { goClear -= dt; if (goClear <= 0) setTxt(countEl, ''); }
           if (state === 'count') {
             cnt -= dt; const n = Math.ceil(cnt);
             if (n !== lastN) { lastN = n; if (n >= 1 && n <= 3) { setTxt(countEl, String(n)); G.music.countdown(n); } }
-            if (cnt <= 0) { state = 'go'; setTxt(countEl, '출발!'); goClear = 0.8; wrap.classList.remove('counting'); tiltZero = null; G.music.countdown(0); G.music.play(TD.id, hard); }
+            if (cnt <= 0) { state = 'go'; setTxt(countEl, '출발!'); goClear = 0.8; wrap.classList.remove('counting'); tiltZero = null; G.music.countdown(0); G.music.play(TD.mus || TD.id, hard); }
           }
           else if (!over) {
             for (const r of racers) step(r, dt); stepObjs(dt); collide();

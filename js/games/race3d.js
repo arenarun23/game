@@ -81,6 +81,7 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const gr = ctx.createLinearGradient(0, 0, 0, Math.max(10, hy)); gr.addColorStop(0, th.sky[0]); gr.addColorStop(1, th.sky[1]);
     ctx.fillStyle = gr; ctx.fillRect(0, 0, W, Math.max(10, hy) + 1);
+    if (th.stars && hy > 8) { ctx.fillStyle = '#fff'; for (let i = 0; i < 70; i++) { const x = (((i * 733) % 997) / 997 * W * 1.6 - yaw * F * 0.18) % W, y = ((i * 389) % 991) / 991 * hy * 0.92, sz = 1 + (i % 3) * 0.7; ctx.globalAlpha = 0.45 + (i % 4) * 0.13; ctx.fillRect(x < 0 ? x + W : x, y, sz, sz); } ctx.globalAlpha = 1; } // 별
     ctx.fillStyle = mixHex(th.bg, fogc, 0.22); ctx.fillRect(0, hy, W, H - hy + 1);
     const sc = H / 640;
     for (let layer = 0; layer < 2; layer++) {
@@ -119,7 +120,7 @@
     // ── 그리기 (먼 것 → 가까운 것) ──
     const quad = (a, b, c, d, color, edge) => { ctx.fillStyle = color; const o = edge ? 1.2 : 0; ctx.beginPath(); ctx.moveTo(X[a], Y[a] + o); ctx.lineTo(X[b], Y[b] + o); ctx.lineTo(X[c], Y[c]); ctx.lineTo(X[d], Y[d]); ctx.closePath(); ctx.fill(); };
     const pc = (color) => tbl(color, fogc), cols = st.cols;
-    if (!cols.road) { cols.road = tbl(th.road, fogc); cols.road2 = tbl(mixHex(th.road, '#ffffff', 0.07), fogc); cols.sh = tbl(th.shoulder, fogc); cols.sh2 = tbl(mixHex(th.shoulder, '#000000', 0.07), fogc); cols.skirt = tbl(mixHex(th.bg, '#000000', 0.28), fogc); cols.c0 = tbl(th.curb[0], fogc); cols.c1 = tbl(th.curb[1], fogc); cols.line = tbl(th.line, fogc); }
+    if (!cols.road) { cols.road = tbl(th.road, fogc); cols.road2 = tbl(mixHex(th.road, '#ffffff', 0.07), fogc); cols.sh = tbl(th.shoulder, fogc); cols.sh2 = tbl(mixHex(th.shoulder, '#000000', 0.07), fogc); cols.skirt = tbl(mixHex(th.bg, '#000000', 0.28), fogc); cols.c0 = tbl(th.curb[0], fogc); cols.c1 = tbl(th.curb[1], fogc); cols.line = tbl(th.line, fogc); const dc = mixHex(th.road, th.slow, 0.85); cols.dust = tbl(dc, fogc); cols.dust2 = tbl(mixHex(dc, '#ffffff', 0.08), fogc); }
     ctx.lineJoin = 'round';
     for (const it of items) {
       if (it.kind === 0) {
@@ -128,7 +129,7 @@
         if (hgt[((ks[e] % M) + M) % M] - gz > 22) { quad(a + 0, a + 1, b + 1, b + 0, cols.skirt[L], true); quad(a + 8, a + 9, b + 9, b + 8, cols.skirt[L], true); } // 평평한 곳은 비탈 생략
         quad(a + 1, a + 8, b + 8, b + 1, (stripe ? cols.sh : cols.sh2)[L], true);
         quad(a + 2, a + 3, b + 3, b + 2, cc[L], true); quad(a + 6, a + 7, b + 7, b + 6, cc[L], true);
-        quad(a + 3, a + 6, b + 6, b + 3, (stripe ? cols.road : cols.road2)[L], true);
+        { const dm = T.space && (T.dust[((ks[e] % M) + M) % M] || E.stormN > 0.5); quad(a + 3, a + 6, b + 6, b + 3, (dm ? (stripe ? cols.dust : cols.dust2) : (stripe ? cols.road : cols.road2))[L], true); }
         if (st2) quad(a + 4, a + 5, b + 5, b + 4, cols.line[L], true);
         quad(a + 1, a + 10, b + 10, b + 1, cc[L], true); quad(a + 8, a + 11, b + 11, b + 8, cc[L], true);
         continue;
@@ -174,6 +175,7 @@
         else { ctx.save(); ctx.translate(it.sx, it.sy); ctx.scale(s, s); ctx.translate(0, -14); U.stamp(ctx, o.k === 'banana' ? '🍌' : o.k === 'trap' ? '🪤' : o.k === 'ice' ? '🧊' : '🎯', 34); ctx.restore(); }
       }
     }
+    if (E.stormN > 0 && T.space) { const c = rgb(th.slow); ctx.fillStyle = `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${0.2 * E.stormN})`; ctx.fillRect(0, 0, W, H); } // 후반 날씨: 먼지 안개
   }
   window.Race3D = { draw, charBack };
 })();

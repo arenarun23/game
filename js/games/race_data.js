@@ -54,6 +54,9 @@
     candy: { bg: '#ffc7e0', shoulder: '#ffb3d4', road: '#8e6bb8', curb: ['#ff6fb5', '#ffffff'], line: '#fff3fb', slow: '#c0392b', sky: ['#ffa6d5', '#ffe6f3'], ridge: ['#e58bc0', '#cf6fae'], deco: ['🍭', '🧁', '🍩', '🍬', '🍪'] },
     city: { bg: '#1f2a44', shoulder: '#2a3658', road: '#3b3f4f', curb: ['#ff4fa3', '#4fe3ff'], line: '#ffe94f', slow: '#1b1f2d', sky: ['#0b1030', '#3a4a8a'], ridge: ['#27335c', '#1a2346'], deco: ['🏢', '🏙️', '💡', '🌃', '🚦'] },
     lava: { bg: '#3a1a14', shoulder: '#552218', road: '#4a4a52', curb: ['#ff7a1a', '#222222'], line: '#ffd6a0', slow: '#ff5a1f', sky: ['#2a0a08', '#8a2c14'], ridge: ['#5a1d12', '#3d120b'], deco: ['🌋', '🔥', '🪨', '💀', '🦇'] },
+    moon: { bg: '#8b8b92', shoulder: '#7a7a82', road: '#4b4d58', curb: ['#f1f1f6', '#5a5a66'], line: '#ffffff', slow: '#a9a39a', sky: ['#02030a', '#141c44'], ridge: ['#6c6c75', '#54545d'], stars: true, deco: ['🪨', '🛰️', '🌑', '☄️', '🚀'] },
+    mars: { bg: '#b3623e', shoulder: '#a05632', road: '#5b4338', curb: ['#ffb27a', '#5b2e1c'], line: '#ffe2c4', slow: '#c4784a', sky: ['#b77a52', '#f1cfa4'], ridge: ['#9d573a', '#7c4129'], deco: ['🪨', '🛸', '🔴', '⛰️', '🌋'] },
+    europa: { bg: '#d6e3ee', shoulder: '#c4d6e6', road: '#56667f', curb: ['#6fb7ff', '#ffffff'], line: '#eaf6ff', slow: '#9fc0dc', sky: ['#050a26', '#2b4676'], ridge: ['#a9bcd2', '#8aa1bb'], stars: true, deco: ['🧊', '❄️', '🪐', '⛰️', '🌌'] },
     space: { bg: '#0b0b2a', shoulder: '#15154a', road: '#46486a', curb: ['#9b59b6', '#ffffff'], line: '#7ff7ff', slow: '#2c2c5a', sky: ['#02020f', '#1b1b5a'], ridge: ['#2a2a78', '#1a1a52'], deco: ['⭐', '🪐', '🛰️', '☄️', '🌙'] },
   };
   // 이지: 넓은 길(w 170), 부드러운 모양 / 하드: 좁은 길(w 130), 급커브·꼬인 모양, 함정 더 많음
@@ -128,6 +131,24 @@
     T3('city', '나비 능선', '🦋', '3D · 나비 능선', '날개를 따라 넘는 고갯길', BUTTERFLY, 130, 0.0, { boost: 7, slow: 3, ice: 0, jump: 3 }, 100, [[2, 70, 0.4], [4, 26, 1]]),
     T3('candy', '네잎 능선', '🍀', '3D · 네잎 클로버', '네 번 크게 돌아 넘어요', polar(1350, 4, 0.32, 56), 130, 0.0, { boost: 5, slow: 6, ice: 0, jump: 3 }, 100, [[2, 70, 0], [4, 28, 0.7]]),
   );
+
+  // 🚀 우주 코스: 행성마다 중력이 달라서 점프가 달라지고, 먼지·모래·서리 구간이 있다(옵션: 후반 날씨, 바퀴 고르기·피트)
+  const SPACE_PTS = {
+    moon: { p: [[0, 0], [70, 0], [135, 8], [178, 42], [184, 92], [158, 126], [112, 128], [78, 148], [82, 196], [126, 218], [168, 252], [156, 296], [104, 314], [44, 300], [-6, 262], [-48, 214], [-66, 158], [-92, 104], [-86, 46], [-52, 8]], h: [0, 0, 1, 4, 8, 11, 9, 5, 2, 0, 1, 5, 10, 14, 10, 5, 1, 0, 0, 0] },
+    mars: { p: [[0, 0], [80, -4], [150, 10], [200, 50], [210, 110], [185, 165], [135, 192], [105, 235], [110, 285], [160, 318], [225, 312], [262, 262], [300, 205], [310, 140], [290, 80], [260, 20], [230, -40], [160, -80], [80, -80], [10, -85], [-45, -65], [-65, -30], [-40, -5]], h: [0, 0, 2, 6, 10, 14, 15, 11, 7, 3, 2, 6, 10, 12, 8, 4, 2, 0, 0, 0, 0, 0, 0] },
+    europa: { p: [[0, 0], [76, 0], [144, 17], [187, 60], [196, 119], [170, 170], [119, 187], [76, 162], [60, 119], [26, 94], [-17, 119], [-34, 170], [-8, 221], [51, 246], [119, 255], [170, 280], [170, 332], [102, 348], [17, 332], [-60, 280], [-94, 204], [-102, 128], [-85, 60], [-51, 13]], h: [0, 0, 1, 3, 4, 3, 2, 2, 1, 0, 0, 1, 3, 4, 5, 4, 2, 1, 0, 0, 1, 0, 0, 0] },
+  };
+  const spacePts = (k, sx) => SPACE_PTS[k].p.map((q) => [q[0] * sx, q[1] * sx]), spaceH = (k, sy) => SPACE_PTS[k].h.map((v) => v * sy);
+  const mkSpace = (w) => [
+    Object.assign(T3('moon', '달 기지 서킷', '🌙', '3D · 달', '중력이 약해서 점프가 둥실 떠요', spacePts('moon', 7), w, 0.0, { boost: 5, slow: 0, ice: 0, jump: 2 }, 0, []),
+      { mus: 'space', space: { g: 1.62, dust: [[0.29, 0.37], [0.69, 0.77]], zone: '먼지 구간', soft: '먼지용', ico: '🌙', place: '고요의 바다', storm: { label: '후반 태양풍', toast: '태양풍이 강해졌어요! 먼지가 떠올라 도로를 덮어요', chip: '태양풍 · 도로가 먼지로 덮였어요' } }, hctl: spaceH('moon', 10) }),
+    Object.assign(T3('mars', '화성 협곡 서킷', '🔴', '3D · 화성', '붉은 모래 구간이 세 곳 있어요', spacePts('mars', 8), w, 0.0, { boost: 5, slow: 0, ice: 0, jump: 2 }, 0, []),
+      { mus: 'desert', space: { g: 3.71, dust: [[0.2, 0.28], [0.52, 0.6], [0.8, 0.86]], zone: '모래 구간', soft: '모래용', ico: '🔴', place: '마리너스 협곡', storm: { label: '후반 모래 폭풍', toast: '모래 폭풍이 불어와요! 붉은 모래가 도로를 덮어요', chip: '모래 폭풍 · 도로가 모래로 덮였어요' } }, hctl: spaceH('mars', 9) }),
+    Object.assign(T3('europa', '유로파 얼음 서킷', '🪐', '3D · 유로파', '서리 구간은 얼음처럼 미끄러워요', spacePts('europa', 7), w, 0.0, { boost: 5, slow: 0, ice: 0, jump: 2 }, 0, []),
+      { mus: 'snow', space: { g: 1.31, dust: [[0.16, 0.24], [0.47, 0.55], [0.74, 0.8]], zone: '서리 구간', soft: '서리용', ico: '🪐', place: '목성의 위성', frost: true, storm: { label: '후반 얼음 분출', toast: '얼음 분출이 솟아올랐어요! 서리가 도로를 덮어요', chip: '얼음 분출 · 도로가 서리로 덮였어요' } }, hctl: spaceH('europa', 12) }),
+  ];
+  TRACKS_EASY.push(...mkSpace(170));
+  TRACKS_HARD.push(...mkSpace(130));
   function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
   // 꼭짓점 → 부드러운 닫힌 곡선(모서리 깎기 반복) → 일정 간격(약 12)의 점
@@ -185,6 +206,12 @@
     // 높이: 길 한 바퀴를 0~1(u)로 보고 곡선을 얹는다. 평면 경기장은 모두 0.
     const hoff = Math.floor((def.s0 || 0) * M), hgt = new Array(M);
     for (let j = 0; j < M; j++) { const u = ((j + hoff) % M) / M; let h = def.h0 || 0; for (const [k, A, ph] of (def.hills || [])) h += A * Math.sin(Math.PI * 2 * k * u + ph); hgt[j] = h; }
+    if (def.hctl) { // 우주 코스: 꼭짓점마다 높이를 주고 부드럽게 잇는다(카트멀-롬)
+      const H = def.hctl, N = H.length, g = (i) => H[((i % N) + N) % N];
+      for (let j = 0; j < M; j++) { const t = (((j + hoff) % M) / M) * N, i = Math.floor(t), f = t - i, a = g(i - 1), b = g(i), c = g(i + 1), d = g(i + 2); hgt[j] = 0.5 * ((2 * b) + (-a + c) * f + (2 * a - 5 * b + 4 * c - d) * f * f + (-a + 3 * b - 3 * c + d) * f * f * f); }
+    }
+    const dust = new Uint8Array(M); // 먼지·모래·서리 구간(한 바퀴 0~1 중 어디인지)
+    if (def.space) for (let j = 0; j < M; j++) { const u = ((j + hoff) % M) / M; for (const [a, b] of def.space.dust) if (u >= a && u <= b) dust[j] = 1; }
     const slope = hgt.map((_, j) => (hgt[(j + 1) % M] - hgt[(j - 1 + M) % M]) / (2 * ds));
     const hw = def.w / 2, at = (j, lat) => { const c = pts[((j % M) + M) % M]; return { x: c.x + c.nx * lat, y: c.y + c.ny * lat, a: Math.atan2(c.ty, c.tx) }; };
 
@@ -214,7 +241,7 @@
     }
     let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
     for (const p of pts) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); }
-    return { def, M, ds, pts, hw, len: L, minR, relaxed, hgt, slope, v3d: !!def.v3d, boxes, haz, decos, bounds: { x0, x1, y0, y1 } };
+    return { def, M, ds, pts, hw, len: L, minR, relaxed, hgt, slope, dust, space: def.space || null, v3d: !!def.v3d, boxes, haz, decos, bounds: { x0, x1, y0, y1 } };
   }
 
   window.RaceData = { CHARS, CARS, TRACKS_EASY, TRACKS_HARD, buildTrack };

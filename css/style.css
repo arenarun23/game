@@ -384,3 +384,8 @@ html[data-game=race] .rbtn small{font-size:max(12px,clamp(.6rem,2.4vmin,.85rem))
 }
 
 .pickgrid.row.many{grid-auto-rows:6.4rem;grid-template-rows:none;gap:.5rem}
+/* 🚀 우주 옵션 줄 */
+.spopt{display:flex;flex-wrap:wrap;gap:.35rem;justify-content:center;align-items:center}
+.tab.sp{min-height:44px;padding:.15rem .7rem;white-space:nowrap;font-size:max(14px,.95rem)}
+.rchip.static{pointer-events:none}
+.rchip.warn{background:#ffe3b0;border-color:#ff9f1c;font-weight:700}
