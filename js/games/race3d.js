@@ -4,7 +4,8 @@
   'use strict';
   const G = window.G, TAU = Math.PI * 2;
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-  const DIST = 240, CAMH = 105, LEVELS = 12, FAR = 1900, NP = 12;
+  const VIEW = 1.5, DIST = 240 * VIEW, CAMH = 105 * VIEW, BACK = Math.round(8 * VIEW), LEVELS = 12,  // VIEW: 카메라를 내 차에서 떨어뜨리는 배율(1 = 예전, 1.5 = 더 멀리)
+   FAR = 1900, NP = 12;
 
   // ───── 색(안개): 멀수록 지평선 색에 섞는다. 단계별 문자열을 미리 만들어 둔다 ─────
   const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -72,7 +73,7 @@
     if (st.T !== T) { st.T = T; st.z = meH + CAMH; st.p = 0.16; st.gz = Math.min.apply(null, hgt) - 10; st.cols = {}; }
     const k = 1 - Math.exp(-(E.dt || 0.016) * 7);
     st.z += (meH + CAMH - st.z) * k;
-    const hLook = hgt[(idx + 24) % M], pT = clamp(Math.atan2(st.z - hLook, DIST + 290) + 0.03, 0.05, 0.6); st.p += (pT - st.p) * k;
+    const hLook = hgt[(idx + 24 + Math.round(4 * (VIEW - 1) * 2)) % M], pT = clamp(Math.atan2(st.z - hLook, DIST + 290) + 0.03, 0.05, 0.6); st.p += (pT - st.p) * k;
     Cx = me.dx - fx * DIST; Cy = me.dy - fy * DIST; Cz = st.z; cp = Math.cos(st.p); sp = Math.sin(st.p);
     F = Math.max(W * 0.8, H * 0.45); cxs = W / 2; cys = H * 0.54;
     const hy = cys - F * Math.tan(st.p), gz = st.gz;
@@ -92,8 +93,8 @@
     }
 
     // ── 길 표본 투영 (가까운 곳은 촘촘히, 먼 곳은 성기게) ──
-    const ks = [], lowQ = E.lowQ, reach = lowQ ? 100 : 128; let kk = idx - 8;
-    for (;;) { ks.push(kk); const rel = kk - (idx - 8); if (rel > reach) break; kk += rel < 24 ? 1 : rel < 60 ? 2 : 4; }
+    const ks = [], lowQ = E.lowQ, reach = lowQ ? 100 : 128; let kk = idx - BACK;
+    for (;;) { ks.push(kk); const rel = kk - (idx - BACK); if (rel > reach) break; kk += rel < 24 + BACK - 8 ? 1 : rel < 60 + BACK - 8 ? 2 : 4; }
     const dj = new Float32Array(NP), FIXJ = [0, 9, 10, 11], FIXF = [1, 8, 1, 8], n = ks.length, X = new Float32Array(n * NP), Y = new Float32Array(n * NP), ok = new Uint8Array(n), dep = new Float32Array(n);
     for (let e = 0; e < n; e++) {
       const m = ((ks[e] % M) + M) % M, c = P[m], h = hgt[m], skirt = S + Math.max(0, h - gz) * 0.9 + 50;
@@ -107,7 +108,7 @@
     // ── 그릴 것 목록: 길 조각 + 장식 + 상자 + 지대 + 차 + 던진 것 ──
     const items = [];
     for (let e = 0; e < n - 1; e++) if (ok[e] && ok[e + 1]) items.push({ d: (dep[e] + dep[e + 1]) / 2, kind: 0, e });
-    const rel = (i) => (((i - idx + 8) % M) + M) % M - 8, inWin = (i) => { const r = rel(i); return r >= -6 && r <= reach; };
+    const rel = (i) => (((i - idx + BACK) % M) + M) % M - BACK, inWin = (i) => { const r = rel(i); return r >= -(BACK - 2) && r <= reach; };
     const cut = lowQ ? 2 : 1;
     for (let i = 0; i < T.decos.length; i += cut) { const d = T.decos[i]; if (!inWin(d.idx)) continue; const c = P[d.idx], lat = Math.abs((d.x - c.x) * c.nx + (d.y - c.y) * c.ny), z = Math.max(gz, hgt[d.idx] - Math.max(0, lat - S) * 0.9); proj(d.x, d.y, z); if (_d > 10 && _sx > -300 && _sx < W + 300) items.push({ d: _d, kind: 1, sx: _sx, sy: _sy, o: d }); }
     for (let i = 0; i < T.boxes.length; i++) { if (E.boxT[i] > 0) continue; const b = T.boxes[i]; if (!inWin(b.idx)) continue; proj(b.x, b.y, hgt[b.idx] + 18); if (_d > 10) items.push({ d: _d - 22, dd: _d, kind: 2, sx: _sx, sy: _sy, i }); }
@@ -136,7 +137,7 @@
       }
       const dz = it.dd || it.d, L = lvlOf(dz), s = F / Math.max(dz, 1);
       if (it.kind === 1) { // 장식(나무·건물…): 땅에 선 그림
-        const o = it.o, sz = o.s * 1.25 * s, near = it.d < 440 ? Math.max(0, (it.d - 290) / 150) : 1; if (near <= 0.02) continue; // 카메라·내 차 가까이 온 장식은 그리지 않는다(내 차 위를 덮어 희미하게 보임) if (L > 5) ctx.globalAlpha = 0.5; else if (near < 1) ctx.globalAlpha = near; // 가까운 장식은 흐리게(시야 가림 방지) ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz); if (L > 5 || near < 1) ctx.globalAlpha = 1;
+        const o = it.o, sz = o.s * 1.25 * s, near = it.d < DIST + 200 ? Math.max(0, (it.d - (DIST + 50)) / 150) : 1; if (near <= 0.02) continue; // 카메라·내 차 가까이 온 장식은 그리지 않는다(내 차 위를 덮어 희미하게 보임) if (L > 5) ctx.globalAlpha = 0.5; else if (near < 1) ctx.globalAlpha = near; // 가까운 장식은 흐리게(시야 가림 방지) ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz); if (L > 5 || near < 1) ctx.globalAlpha = 1;
       } else if (it.kind === 2) { // 아이템 상자(빙글빙글)
         const w = 30 * s * (0.35 + 0.65 * Math.abs(Math.cos(E.t * 2.4 + it.i))), h = 30 * s; ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#c98a00'; ctx.lineWidth = Math.max(1, 2 * s);
         ctx.beginPath(); ctx.roundRect(it.sx - w / 2, it.sy - h / 2, w, h, 5 * s); ctx.fill(); ctx.stroke();
