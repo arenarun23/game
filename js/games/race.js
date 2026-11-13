@@ -46,7 +46,10 @@
     id: 'race', kid: true, name: '레이싱', desc: '캐릭터·차·경기장 고르기', icon: '🏁', cat: 'race', color: 'peach', variants: 1,
     start(root, { hard, kid }) {
       document.documentElement.dataset.game = 'race'; // 레이싱 동안 글자를 크게
-      let stopFn = null;
+      let stopFn = null, pickRedo = null, rzT = 0;
+      // 폰을 가로·세로로 돌리거나 창 크기가 바뀌면, 고르기 화면을 새 크기에 맞게 다시 만든다(처음 그릴 때의 배치가 남지 않게)
+      const onResize = () => { clearTimeout(rzT); rzT = setTimeout(() => { if (pickRedo && document.body.contains(root)) pickRedo(); }, 160); };
+      addEventListener('resize', onResize); addEventListener('orientationchange', onResize);
       const goFirst = () => G.start(G.games.find((x) => x.id === 'race')); // 그만두면 놀이터가 아니라 레이싱 첫 화면으로
       const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
@@ -64,9 +67,11 @@
         kids.push(G.h('div', { class: 'palette' }, onBack ? G.h('button', { class: 'btn alt', onclick: onBack }, '◀ 이전') : null,
           G.h('button', { class: 'btn alt', onclick: () => helpOverlay(root, D.CHARS[sel.ch], D.CARS[sel.car]) }, '❓ 사용법'),
           G.h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); showRewards(step === 1 ? showChars : step === 2 ? showCars : showTracks); } }, '🏅 내 보상')));
+        pickRedo = step === 1 ? showChars : step === 2 ? showCars : showTracks; // 화면을 돌리면 이 화면을 다시 그린다
         root.replaceChildren(...kids.filter(Boolean));
       }
       function showRewards(back) {
+        pickRedo = null;
         clearTabs();
         if (stopFn) { stopFn(); stopFn = null; }
         window.RaceReward.page(root, { carColor: D.CARS[sel.car].color, chEmoji: D.CHARS[sel.ch].e, onBack: back });
@@ -111,7 +116,7 @@
 
       // ───────── 경기 ─────────
       function startRace() {
-        clearTabs();
+        clearTabs(); pickRedo = null;
         document.documentElement.dataset.racing = '1'; // 달리는 동안 위쪽 모드 버튼 줄을 숨겨 화면을 넓힌다
         const TD = TRACKS[sel.tr], T = D.buildTrack(TD, seedOf(sel.tr)), th = TD.theme, hw = T.hw, M = T.M, P = T.pts;
         const laps = hard ? 3 : kid ? 1 : 2, WALL = hw * (kid ? 1.9 : 1.45);
@@ -588,7 +593,7 @@
       }
 
       if (pendingTrack !== null) { sel.tr = pendingTrack; pendingTrack = null; G.store.set('race:sel', sel); startRace(); } else showChars();
-      return () => { delete document.documentElement.dataset.game; if (stopFn) stopFn(); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} };
+      return () => { removeEventListener('resize', onResize); removeEventListener('orientationchange', onResize); clearTimeout(rzT); delete document.documentElement.dataset.game; if (stopFn) stopFn(); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} };
     },
   });
 })();
