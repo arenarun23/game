@@ -54,12 +54,12 @@
     candy: { bg: '#ffc7e0', shoulder: '#ffb3d4', road: '#8e6bb8', curb: ['#ff6fb5', '#ffffff'], line: '#fff3fb', slow: '#c0392b', sky: ['#ffa6d5', '#ffe6f3'], ridge: ['#e58bc0', '#cf6fae'], deco: ['🍭', '🧁', '🍩', '🍬', '🍪'] },
     city: { bg: '#1f2a44', shoulder: '#2a3658', road: '#3b3f4f', curb: ['#ff4fa3', '#4fe3ff'], line: '#ffe94f', slow: '#1b1f2d', sky: ['#0b1030', '#3a4a8a'], ridge: ['#27335c', '#1a2346'], deco: ['🏢', '🏙️', '💡', '🌃', '🚦'] },
     lava: { bg: '#3a1a14', shoulder: '#552218', road: '#4a4a52', curb: ['#ff7a1a', '#222222'], line: '#ffd6a0', slow: '#ff5a1f', sky: ['#2a0a08', '#8a2c14'], ridge: ['#5a1d12', '#3d120b'], deco: ['🌋', '🔥', '🪨', '💀', '🦇'] },
-    moon: { bg: '#8b8b92', shoulder: '#7a7a82', road: '#4b4d58', curb: ['#7ff7ff', '#10303c'], line: '#bff9ff', slow: '#a9a39a', sky: ['#01020a', '#101a44'], ridge: ['#6c6c75', '#54545d'], stars: true, planet: 'earth', deco: ['crater', 'crater', 'rock', 'rock', '🛰️', '📡'] },
-    mars: { bg: '#b3623e', shoulder: '#a05632', road: '#5b4338', curb: ['#ffd08a', '#6a280f'], line: '#ffe2c4', slow: '#c4784a', sky: ['#b77a52', '#f1cfa4'], ridge: ['#9d573a', '#7c4129'], planet: 'phobos', deco: ['crater', 'rock', 'rock', 'rock', '⛰️', '🛸'] },
-    europa: { bg: '#d6e3ee', shoulder: '#c4d6e6', road: '#56667f', curb: ['#a8e6ff', '#14305a'], line: '#eaf6ff', slow: '#9fc0dc', sky: ['#040824', '#27406e'], ridge: ['#a9bcd2', '#8aa1bb'], stars: true, planet: 'jupiter', deco: ['crater', 'ice', 'ice', 'ice', '🧊', '📡'] },
-    titan: { bg: '#b5782c', shoulder: '#a26a22', road: '#4b3a2c', curb: ['#ffc15a', '#3a2008'], line: '#ffe3b0', slow: '#6a8a7a', sky: ['#4a2c0c', '#e0a35a'], ridge: ['#9a6224', '#7a4a18'], planet: 'saturn', deco: ['lake', 'lake', 'rock', 'crater', '📡'] },
-    io: { bg: '#cdb83a', shoulder: '#b8a42e', road: '#54432a', curb: ['#ff6a2e', '#2c0c04'], line: '#ffe08a', slow: '#8a7a2a', sky: ['#14070a', '#7e2c12'], ridge: ['#8a6a18', '#5a4410'], stars: true, planet: 'jupiter', deco: ['vent', 'vent', 'rock', 'crater', 'rock'] },
-    ceres: { bg: '#6f6962', shoulder: '#5f5a54', road: '#3d3f46', curb: ['#86ffa3', '#0a2a14'], line: '#dffff0', slow: '#cfd8d2', sky: ['#000104', '#0b0f22'], ridge: ['#565049', '#403b36'], stars: true, planet: 'belt', deco: ['rock', 'rock', 'crater', 'crater', '☄️', '🛰️'] },
+    moon: { bg: '#7f7d79', shoulder: '#706e6a', road: '#2a2b30', curb: ['#e9e9e9', '#9b9b9b'], line: '#f4f4f4', slow: '#9a968f', sky: ['#000000', '#05060c'], ridge: ['#6b6964', '#55534f'], stars: true, planet: 'earth', sun: { az: 0.9, el: 0.2 }, fogK: 0.1, deco: ['crater', 'crater', 'rock', 'rock', 'pebble', 'pebble', 'pebble', 'dish', 'lander', 'hab', 'solar', 'mast'] },
+    mars: { bg: '#a05835', shoulder: '#8f4c2c', road: '#34302f', curb: ['#ece3d8', '#a09488'], line: '#f3ebe0', slow: '#b87a52', sky: ['#7a5a48', '#dcae84'], ridge: ['#8e4f33', '#6f3b26'], planet: 'phobos', sun: { az: 2.3, el: 0.45 }, fogK: 1.0, deco: ['crater', 'rock', 'rock', 'rock', 'pebble', 'pebble', 'pebble', 'dish', 'hab', 'solar', 'mast', 'lander'] },
+    europa: { bg: '#c9d4dc', shoulder: '#b7c4cf', road: '#394353', curb: ['#e4edf5', '#a5b8c9'], line: '#f2f8ff', slow: '#9fbbd3', sky: ['#000000', '#0a1226'], ridge: ['#a3b4c6', '#8497ad'], stars: true, planet: 'jupiter', sun: { az: -0.6, el: 0.14 }, fogK: 0.12, deco: ['crater', 'ice', 'ice', 'ice', 'pebble', 'pebble', 'dish', 'hab', 'solar', 'mast', 'lander'] },
+    titan: { bg: '#8a5a24', shoulder: '#794c1c', road: '#39302a', curb: ['#e7d9bf', '#a08e6e'], line: '#f1e4cb', slow: '#566f66', sky: ['#5c3a12', '#cf9446'], ridge: ['#7b4d1d', '#5d3913'], planet: 'saturn', fogK: 1.5, deco: ['lake', 'lake', 'rock', 'rock', 'pebble', 'pebble', 'crater', 'dish', 'hab', 'mast', 'solar'] },
+    io: { bg: '#b5a030', shoulder: '#a08c26', road: '#2e2a22', curb: ['#efe6c0', '#9c8f5a'], line: '#f5ecc8', slow: '#8a7a2a', sky: ['#000000', '#12060a'], ridge: ['#7e6414', '#58440e'], stars: true, planet: 'jupiter', sun: { az: 1.8, el: 0.3 }, fogK: 0.25, deco: ['vent', 'vent', 'rock', 'rock', 'crater', 'pebble', 'pebble', 'pebble', 'dish', 'hab', 'mast', 'solar'] },
+    ceres: { bg: '#5f5c58', shoulder: '#524f4b', road: '#2d2f35', curb: ['#e5e8e6', '#8c918e'], line: '#f0f3f1', slow: '#cfd8d2', sky: ['#000000', '#03040a'], ridge: ['#4c4944', '#3a3834'], stars: true, planet: 'belt', sun: { az: -1.4, el: 0.2 }, fogK: 0.08, deco: ['rock', 'rock', 'rock', 'crater', 'crater', 'pebble', 'pebble', 'pebble', 'dish', 'lander', 'hab', 'solar', 'mast'] },
     space: { bg: '#0b0b2a', shoulder: '#15154a', road: '#46486a', curb: ['#9b59b6', '#ffffff'], line: '#7ff7ff', slow: '#2c2c5a', sky: ['#02020f', '#1b1b5a'], ridge: ['#2a2a78', '#1a1a52'], deco: ['⭐', '🪐', '🛰️', '☄️', '🌙'] },
   };
   // 이지: 넓은 길(w 170), 부드러운 모양 / 하드: 좁은 길(w 130), 급커브·꼬인 모양, 함정 더 많음
@@ -250,7 +250,7 @@
     }
     // 길가 장식
     const decos = [], sub = pts.filter((_, i) => i % 3 === 0);
-    for (let tries = 0; decos.length < 260 && tries < 2500; tries++) {
+    for (let tries = 0; decos.length < (def.space ? 420 : 260) && tries < 3500; tries++) {
       const j = Math.floor(rnd() * M), side = rnd() < 0.5 ? -1 : 1, p = at(j, side * hw * (2.5 + rnd() * 2.4));
       let ok = true, bd = 1e18, bi = 0; for (let q = 0; q < sub.length; q++) { const c = sub[q], dx = c.x - p.x, dy = c.y - p.y, d2 = dx * dx + dy * dy; if (d2 < (hw * 2.3) * (hw * 2.3)) { ok = false; break; } if (d2 < bd) { bd = d2; bi = q * 3; } }
       if (ok) decos.push({ x: p.x, y: p.y, idx: bi % M, e: def.theme.deco[Math.floor(rnd() * def.theme.deco.length)], s: 44 + rnd() * 34 });

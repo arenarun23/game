@@ -149,7 +149,7 @@
         function mk(ci, cr, isPlayer, slot) {
           const ch = D.CHARS[ci], car = D.CARS[cr], idx = (M - 3 - Math.floor(slot / 2) * 4 + M) % M, c = P[idx], lat = (slot % 2 ? 0.45 : -0.45) * hw;
           const cs = isPlayer ? window.RaceReward.cos() : null;
-          return { ch, car, col: (cs && cs.color.c) || car.color, hat: cs && cs.hat.e, trail: cs && cs.trail.e, tr: [], trT: 0, isPlayer, tire: isPlayer && tireOn ? spo.tireStart : 'all', pitPhase: null, pitT: 0, airMax: 0, plow: !!ch.mod.plow, plowCd: 0, hop: 0, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
+          return { ch, car, col: (cs && cs.color.c) || car.color, hat: cs && cs.hat.e, trail: cs && cs.trail.e, tr: [], trT: 0, dust: [], dT: 0, isPlayer, tire: isPlayer && tireOn ? spo.tireStart : 'all', pitPhase: null, pitT: 0, airMax: 0, plow: !!ch.mod.plow, plowCd: 0, hop: 0, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
             offF: 0.45 + (car.st.off || 0) + (ch.mod.off || 0), iceImm: !!ch.mod.ice, x: c.x + c.nx * lat, y: c.y + c.ny * lat, h: Math.atan2(c.ty, c.tx), px: c.x + c.nx * lat, py: c.y + c.ny * lat, ph: Math.atan2(c.ty, c.tx), dx: 0, dy: 0, dh: 0, vx: 0, vy: 0, v: 0, idx, lap: 0, prog: idx, prevIdx: idx,
             steerIn: 0, throttle: 1, air: 0, zair: 0, boost: 0, boostMul: 1.4, shield: 0, stun: 0, frozen: 0, spin: 0, slots: [null, null, null, null], get item() { return this.slots.find(Boolean) || null; }, cd: [3, 4], lane: (rnd() - 0.5) * 0.7, aiVar: 0.97 + rnd() * 0.06, aiT: rnd(), fin: null, off: false, stuck: 0 };
         }
@@ -327,6 +327,10 @@
           if (r.trail && state === 'go') { r.trT -= dt; if (r.trT <= 0 && r.v > 60) { r.trT = 0.07; r.trI = (r.trI || 0) + 1; r.tr.push({ x: r.x - Math.cos(r.h) * 22, y: r.y - Math.sin(r.h) * 22, h: hOf(r) - r.zair, t: 0, e: r.trail[r.trI % r.trail.length] }); } }
           for (let i = r.tr.length - 1; i >= 0; i--) { r.tr[i].t += dt; if (r.tr[i].t > 0.6) r.tr.splice(i, 1); }
           r.plowCd = Math.max(0, r.plowCd - dt); r.hop = Math.max(0, r.hop - dt);
+          if (SP && state === 'go') { // 먼지 꼬리: 땅에 닿아 달릴 때만, 중력이 약하면 오래 떠 있는다
+            r.dT = (r.dT || 0) - dt; if (r.dT <= 0 && r.v > 110 && r.air <= 0 && r.dust.length < 26) { r.dT = 0.05; r.dust.push({ x: r.x - Math.cos(r.h) * 22 + (rnd() - 0.5) * 16, y: r.y - Math.sin(r.h) * 22 + (rnd() - 0.5) * 16, h: hOf(r) - r.zair, t: 0, life: 0.7 * GK }); }
+            for (let i = r.dust.length - 1; i >= 0; i--) { r.dust[i].t += dt; if (r.dust[i].t > r.dust[i].life) r.dust.splice(i, 1); }
+          }
           r.boost = Math.max(0, r.boost - dt); r.shield = Math.max(0, r.shield - dt); r.stun = Math.max(0, r.stun - dt); r.frozen = Math.max(0, r.frozen - dt);
           for (let s = 0; s < 2; s++) r.cd[s] = Math.max(0, r.cd[s] - dt);
           r.air = Math.max(0, r.air - dt); { const a = r.air > 0 ? 1 - r.air / (r.airMax || JUMP) : 0; r.zair = r.air > 0 ? 80 * GK * 4 * a * (1 - a) : 0; }

@@ -12,7 +12,8 @@
   const hex = (c) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
   const mixHex = (a, b, t) => { const x = rgb(a), y = rgb(b); return hex(x.map((v, i) => v + (y[i] - v) * t)); };
   const tables = new Map();
-  function tbl(color, fogc) { const key = color + fogc; let t = tables.get(key); if (!t) { t = []; for (let i = 0; i < LEVELS; i++) t.push(mixHex(color, fogc, Math.pow(i / (LEVELS - 1), 1.5) * 0.62)); tables.set(key, t); } return t; }
+  let FOGK = 1; // 안개 세기(공기 없는 달·유로파는 거의 0, 타이탄은 짙게)
+  function tbl(color, fogc) { const key = color + fogc + FOGK; let t = tables.get(key); if (!t) { t = []; for (let i = 0; i < LEVELS; i++) t.push(mixHex(color, fogc, Math.min(0.95, Math.pow(i / (LEVELS - 1), 1.5) * 0.62 * FOGK))); tables.set(key, t); } return t; }
 
   // ───── 카메라 투영 (장면마다 갱신) ─────
   let Cx = 0, Cy = 0, Cz = 0, fx = 1, fy = 0, rx = 0, ry = 1, cp = 1, sp = 0, F = 800, cxs = 0, cys = 0;
@@ -64,6 +65,37 @@
   const st = { T: null };
   function hOfTrack(T, i0, f) { const M = T.M; return T.hgt[i0] + (T.hgt[(i0 + 1) % M] - T.hgt[i0]) * f; }
 
+  // 🚀 우주 구조물(이모지 대신 직접 그림): 햇빛 방향(side)과 밝기(B)에 맞춰 밝은 면·어두운 면·그림자를 그린다
+  function drawProp(ctx, kind, X, Y, u, o) {
+    const { side, B, t } = o, mb = (h) => mixHex(h, '#000000', 1 - B), lit = mb('#d8dce1'), mid = mb('#9097a0'), dk = mb('#555b63'), gold = mb('#c9a24a'), blue = mb('#243f7d');
+    const poly = (pts, c) => { ctx.fillStyle = c; ctx.beginPath(); pts.forEach(([a, b], i) => (i ? ctx.lineTo(X + a * u, Y + b * u) : ctx.moveTo(X + a * u, Y + b * u))); ctx.closePath(); ctx.fill(); };
+    const ell = (cx, cy, rx, ry, c, rot) => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(X + cx * u, Y + cy * u, rx * u, ry * u, rot || 0, 0, TAU); ctx.fill(); };
+    ell(-side * 0.35, 0.02, 0.8, 0.13, 'rgba(0,0,0,.34)'); // 땅 그림자(햇빛 반대쪽으로 길게)
+    if (kind === 'pebble') { ell(0, -0.04, 0.2, 0.12, mb('#6f6c66')); ell(side * 0.05, -0.08, 0.1, 0.06, mb('#9a968f')); return; }
+    if (kind === 'dish') { // 전파 안테나: 받침대 + 기둥 + 접시 + 수신기 팔
+      poly([[-0.14, 0], [-0.1, -0.1], [0.1, -0.1], [0.14, 0]], dk); poly([[-0.04, -0.1], [0.04, -0.1], [0.03, -0.62], [-0.03, -0.62]], mid);
+      ell(0, -0.7, 0.46, 0.36, dk, -0.35); ell(-side * 0.02, -0.72, 0.42, 0.32, lit, -0.35); ell(side * 0.05, -0.7, 0.22, 0.17, mid, -0.35);
+      ctx.strokeStyle = mid; ctx.lineWidth = Math.max(1, u * 0.025); ctx.beginPath(); ctx.moveTo(X, Y - 0.7 * u); ctx.lineTo(X + 0.12 * u, Y - 1.05 * u); ctx.stroke(); ell(0.12, -1.06, 0.035, 0.035, '#d44');
+    } else if (kind === 'lander') { // 착륙선: 금빛 몸통 + 다리 4개 + 엔진
+      ctx.strokeStyle = dk; ctx.lineWidth = Math.max(1.2, u * 0.03); for (const dx of [-0.52, -0.3, 0.3, 0.52]) { ctx.beginPath(); ctx.moveTo(X + dx * 0.55 * u, Y - 0.42 * u); ctx.lineTo(X + dx * u, Y); ctx.stroke(); ell(dx, 0, 0.08, 0.03, mid); }
+      poly([[-0.1, -0.3], [0.1, -0.3], [0.17, -0.18], [-0.17, -0.18]], dk);
+      poly([[-0.3, -0.42], [0.3, -0.42], [0.36, -0.72], [0.18, -0.9], [-0.18, -0.9], [-0.36, -0.72]], gold); poly([[side * 0.02, -0.42], [side * 0.3, -0.42], [side * 0.36, -0.72], [side * 0.18, -0.9], [side * 0.02, -0.9]], mb('#e8c765'));
+      poly([[-0.2, -0.9], [0.2, -0.9], [0.14, -1.0], [-0.14, -1.0]], lit); ell(0.05, -0.62, 0.07, 0.07, dk);
+    } else if (kind === 'hab') { // 거주 모듈: 원통 + 둥근 끝 + 창문 + 방열판
+      poly([[-0.62, -0.46], [0.62, -0.46], [0.62, 0], [-0.62, 0]], mid); poly([[-0.62, -0.46], [0.62, -0.46], [0.62, -0.3], [-0.62, -0.3]], lit);
+      ell(-0.62, -0.23, 0.1, 0.23, dk); ell(0.62, -0.23, 0.1, 0.23, mid);
+      for (let k = -2; k <= 2; k++) poly([[k * 0.2 - 0.05, -0.28], [k * 0.2 + 0.05, -0.28], [k * 0.2 + 0.05, -0.18], [k * 0.2 - 0.05, -0.18]], mb('#1c2a44'));
+      poly([[-0.4, -0.46], [-0.4, -0.78], [-0.18, -0.78], [-0.18, -0.46]], blue); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1; ctx.strokeRect(X - 0.4 * u, Y - 0.78 * u, 0.22 * u, 0.32 * u);
+    } else if (kind === 'solar') { // 태양전지판
+      poly([[-0.025, 0], [0.025, 0], [0.025, -0.5], [-0.025, -0.5]], dk);
+      for (const [dx, w] of [[-0.62, 0.5], [0.12, 0.5]]) { poly([[dx, -0.5], [dx + w, -0.5], [dx + w + 0.04, -0.95], [dx + 0.04, -0.95]], blue); ctx.strokeStyle = 'rgba(190,210,255,.5)'; ctx.lineWidth = 1; ctx.beginPath(); for (let k = 1; k < 4; k++) { ctx.moveTo(X + (dx + w * k / 4) * u, Y - 0.5 * u); ctx.lineTo(X + (dx + w * k / 4 + 0.04) * u, Y - 0.95 * u); } ctx.moveTo(X + (dx + 0.02) * u, Y - 0.72 * u); ctx.lineTo(X + (dx + w + 0.02) * u, Y - 0.72 * u); ctx.stroke(); }
+    } else if (kind === 'mast') { // 통신탑 + 깜박이는 붉은 불
+      poly([[-0.02, 0], [0.02, 0], [0.012, -1.3], [-0.012, -1.3]], mid); poly([[-0.1, 0], [0.1, 0], [0.04, -0.2], [-0.04, -0.2]], dk);
+      for (const yy of [-0.5, -0.85]) { ctx.strokeStyle = mid; ctx.lineWidth = Math.max(1, u * 0.02); ctx.beginPath(); ctx.moveTo(X - 0.16 * u, Y + yy * u); ctx.lineTo(X + 0.16 * u, Y + yy * u); ctx.stroke(); }
+      if (Math.sin(t * 3) > 0) { ell(0, -1.32, 0.05, 0.05, '#ff3b30'); ctx.fillStyle = 'rgba(255,60,50,.25)'; ctx.beginPath(); ctx.arc(X, Y - 1.32 * u, 0.16 * u, 0, TAU); ctx.fill(); }
+    }
+  }
+
   // 🚀 하늘의 큰 천체: 달에서 본 지구, 화성의 작은 위성, 유로파에서 본 목성
   function drawPlanet(ctx, kind, W, hy, F, yaw, H) {
     const wrap = (x) => ((x % (W * 1.5)) + W * 1.5) % (W * 1.5) - W * 0.25;
@@ -99,6 +131,7 @@
 
   function draw(E) {
     const { ctx, W, H, T, th, me, racers } = E, M = T.M, P = T.pts, hgt = T.hgt, hw = T.hw, ds = T.ds, U = G.raceUtil;
+    FOGK = th.fogK == null ? 1 : th.fogK;
     const S = (E.wall || hw * 1.5) + 26, Cc = hw + 10, BAR = 26, fogc = th.sky[1]; // 벽은 차 몸통 폭만큼 바깥에 세운다
     // ── 카메라 ──
     const yaw = E.yaw; fx = Math.cos(yaw); fy = Math.sin(yaw); rx = -fy; ry = fx;
@@ -117,8 +150,19 @@
     ctx.fillStyle = gr; ctx.fillRect(0, 0, W, Math.max(10, hy) + 1);
     if (th.stars && hy > 8) { ctx.fillStyle = '#fff'; for (let i = 0; i < 70; i++) { const x = (((i * 733) % 997) / 997 * W * 1.6 - yaw * F * 0.18) % W, y = ((i * 389) % 991) / 991 * hy * 0.92, sz = 1 + (i % 3) * 0.7; ctx.globalAlpha = 0.45 + (i % 4) * 0.13; ctx.fillRect(x < 0 ? x + W : x, y, sz, sz); } ctx.globalAlpha = 1; } // 별
     const SPC = !!T.space, craterRim = mixHex(th.bg, '#000000', 0.18), craterIn = mixHex(th.bg, '#000000', 0.38), rockCol = mixHex(th.ridge[1], '#000000', 0.2), rockHi = mixHex(th.ridge[0], '#ffffff', 0.25), iceCol = '#bfe6ff'; // 🚀 우주 코스는 하늘·산·벽·차 유리를 따로 꾸민다
+    // 햇빛: 방향(왼쪽/오른쪽, 앞/뒤)에 따라 바위·구조물의 밝은 면과 그림자가 달라진다
+    const dustRGB = SPC ? (() => { const c = rgb(mixHex(th.bg, th.slow, 0.5)); return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},`; })() : '';
+    let sunR = 0, sunF = -0.6, sunX = 0, sunY = 0; if (SPC && th.sun) { sunX = Math.cos(th.sun.az); sunY = Math.sin(th.sun.az); sunF = sunX * fx + sunY * fy; sunR = sunX * rx + sunY * ry; }
+    const propSt = { side: sunR >= 0 ? 1 : -1, B: SPC ? clamp(0.64 + 0.36 * -sunF, 0.45, 1) : 1, t: E.t || 0 };
+    if (SPC && th.stars && hy > 30) { ctx.save(); ctx.translate(W * 0.55 - yaw * F * 0.07, hy * 0.45); ctx.rotate(-0.45); const mw = ctx.createLinearGradient(0, -hy * 0.2, 0, hy * 0.2); mw.addColorStop(0, 'rgba(190,200,255,0)'); mw.addColorStop(0.5, 'rgba(205,212,255,.10)'); mw.addColorStop(1, 'rgba(190,200,255,0)'); ctx.fillStyle = mw; ctx.fillRect(-W * 1.2, -hy * 0.2, W * 2.4, hy * 0.4); ctx.restore(); }
+    if (SPC && th.sun && sunF > 0.15 && hy > 20) { // 태양(눈부심)
+      const da = Math.atan2(sunR, sunF), gx = cxs + F * Math.tan(clamp(da, -1.3, 1.3)), gy = hy - F * Math.tan(th.sun.el) / Math.max(0.35, Math.cos(da));
+      if (gy < hy) { const rg = Math.min(W, H) * 0.42, g2 = ctx.createRadialGradient(gx, gy, 0, gx, gy, rg); g2.addColorStop(0, 'rgba(255,250,235,.95)'); g2.addColorStop(0.08, 'rgba(255,244,215,.55)'); g2.addColorStop(0.35, 'rgba(255,230,190,.12)'); g2.addColorStop(1, 'rgba(255,230,190,0)'); ctx.fillStyle = g2; ctx.fillRect(gx - rg, gy - rg, 2 * rg, 2 * rg);
+        ctx.fillStyle = '#fffdf2'; ctx.beginPath(); ctx.arc(gx, gy, Math.min(W, H) * 0.022, 0, TAU); ctx.fill();
+        for (const [t2, r2, a2] of [[0.35, 0.03, 0.16], [0.7, 0.05, 0.1], [1.15, 0.025, 0.14]]) { const fx2 = gx + (cxs - gx) * t2, fy2 = gy + (cys - gy) * t2; ctx.fillStyle = `rgba(255,235,200,${a2})`; ctx.beginPath(); ctx.arc(fx2, fy2, Math.min(W, H) * r2, 0, TAU); ctx.fill(); } }
+    }
     if (SPC && th.planet && hy > 20) drawPlanet(ctx, th.planet, W, hy, F, yaw, H);
-    ctx.fillStyle = mixHex(th.bg, fogc, 0.22); ctx.fillRect(0, hy, W, H - hy + 1);
+    ctx.fillStyle = mixHex(th.bg, fogc, Math.min(0.9, 0.22 * FOGK)); ctx.fillRect(0, hy, W, H - hy + 1);
     const sc = H / 640;
     for (let layer = 0; layer < 2; layer++) {
       const ox = -yaw * F * (0.5 + 0.35 * layer), amp = (34 + layer * 16) * sc, base = hy + 1;
@@ -150,13 +194,14 @@
     for (const z of T.haz) { if (!inWin(z.idx)) continue; proj(z.x, z.y, hgt[z.idx]); if (_d > 10) items.push({ d: _d - (z.type === 'boost' || z.type === 'jump' ? 42 : z.r + 6), dd: _d, kind: 3, z }); }
     for (const r of racers) { const hz = E.hOf(r) - r.zair; proj(r.dx, r.dy, hz); if (_d > 10) items.push({ d: _d - 30, dd: _d, kind: 4, r, sx: _sx, sy: _sy, hz }); }
     for (const p of me.tr || []) { proj(p.x, p.y, p.h + 10); if (_d > 10) items.push({ d: _d - 6, dd: _d, kind: 6, p, sx: _sx, sy: _sy }); }
+    if (SPC) for (const r of racers) for (const p of r.dust || []) { proj(p.x, p.y, p.h + 6 + p.t * 40); if (_d > 10) items.push({ d: _d - 3, dd: _d, kind: 7, p, sx: _sx, sy: _sy }); }
     for (const o of E.objs) { const ix = o.px === undefined ? o.x : o.px + (o.x - o.px) * E.alpha, iy = o.py === undefined ? o.y : o.py + (o.y - o.py) * E.alpha; let bi = me.idx, bd = 1e18; for (let q = -20; q <= 150; q++) { const m = (idx + q + M) % M, c = P[m], dd = (c.x - ix) ** 2 + (c.y - iy) ** 2; if (dd < bd) { bd = dd; bi = m; } } proj(ix, iy, hgt[bi] + 8); if (_d > 10) items.push({ d: _d - 16, dd: _d, kind: 5, o, sx: _sx, sy: _sy, gz: hgt[bi] }); }
     items.sort((a, b) => b.d - a.d);
 
     // ── 그리기 (먼 것 → 가까운 것) ──
     const quad = (a, b, c, d, color, edge) => { ctx.fillStyle = color; const o = edge ? 1.2 : 0; ctx.beginPath(); ctx.moveTo(X[a], Y[a] + o); ctx.lineTo(X[b], Y[b] + o); ctx.lineTo(X[c], Y[c]); ctx.lineTo(X[d], Y[d]); ctx.closePath(); ctx.fill(); };
     const pc = (color) => tbl(color, fogc), cols = st.cols;
-    if (!cols.road) { cols.road = tbl(th.road, fogc); cols.road2 = tbl(mixHex(th.road, '#ffffff', 0.07), fogc); cols.sh = tbl(th.shoulder, fogc); cols.sh2 = tbl(mixHex(th.shoulder, '#000000', 0.07), fogc); cols.skirt = tbl(mixHex(th.bg, '#000000', 0.28), fogc); cols.c0 = tbl(th.curb[0], fogc); cols.c1 = tbl(th.curb[1], fogc); cols.line = tbl(th.line, fogc); const dc = mixHex(th.road, th.slow, 0.85); cols.dust = tbl(dc, fogc); cols.dust2 = tbl(mixHex(dc, '#ffffff', 0.08), fogc); }
+    if (!cols.road) { cols.road = tbl(th.road, fogc); cols.road2 = tbl(mixHex(th.road, '#ffffff', 0.07), fogc); cols.sh = tbl(th.shoulder, fogc); cols.sh2 = tbl(mixHex(th.shoulder, '#000000', 0.07), fogc); cols.skirt = tbl(mixHex(th.bg, '#000000', 0.28), fogc); cols.c0 = tbl(th.curb[0], fogc); cols.c1 = tbl(th.curb[1], fogc); cols.line = tbl(th.line, fogc); const dc = mixHex(th.road, th.slow, 0.85); cols.rail0 = tbl(mixHex('#8d949c', '#000000', clamp(0.5 - propSt.B * 0.5, 0, 0.5)), fogc); cols.rail1 = tbl(mixHex('#656b73', '#000000', clamp(0.5 - propSt.B * 0.5, 0, 0.5)), fogc); cols.dust = tbl(dc, fogc); cols.dust2 = tbl(mixHex(dc, '#ffffff', 0.08), fogc); }
     ctx.lineJoin = 'round';
     for (const it of items) {
       if (it.kind === 0) {
@@ -167,9 +212,8 @@
         quad(a + 2, a + 3, b + 3, b + 2, cc[L], true); quad(a + 6, a + 7, b + 7, b + 6, cc[L], true);
         { const dm = T.space && (T.dust[((ks[e] % M) + M) % M] || E.stormN > 0.5); quad(a + 3, a + 6, b + 6, b + 3, (dm ? (stripe ? cols.dust : cols.dust2) : (stripe ? cols.road : cols.road2))[L], true); }
         if (st2) quad(a + 4, a + 5, b + 5, b + 4, cols.line[L], true);
-        if (SPC) ctx.globalAlpha = 0.5; // 우주: 벽이 반투명한 빛의 울타리
-        quad(a + 1, a + 10, b + 10, b + 1, cc[L], true); quad(a + 8, a + 11, b + 11, b + 8, cc[L], true);
-        if (SPC) ctx.globalAlpha = 1;
+        { const wc = SPC ? (stripe ? cols.rail0 : cols.rail1)[L] : cc[L]; // 우주: 금속 가드레일(밝고 어두운 마디)
+          quad(a + 1, a + 10, b + 10, b + 1, wc, true); quad(a + 8, a + 11, b + 11, b + 8, wc, true); }
         continue;
       }
       const dz = it.dd || it.d, L = lvlOf(dz), s = F / Math.max(dz, 1);
@@ -177,26 +221,31 @@
         const o = it.o, sz = o.s * 1.25 * s, near = it.d < DIST + 200 ? Math.max(0, (it.d - (DIST + 50)) / 150) : 1;
         if (near <= 0.02) continue; // 카메라·내 차 가까이 온 장식은 그리지 않는다(내 차 위를 덮어 희미하게 보임)
         const fade = L > 5 ? 0.5 : near; if (fade < 1) ctx.globalAlpha = fade;
-        if (o.e === 'crater') { // 🚀 우주: 땅에 눌린 크레이터(타원 두 겹)
+        if (o.e === 'crater') { // 🚀 크레이터: 밝은 테두리 + 햇빛 쪽 안쪽 그림자
           const rr = o.s * 1.4; let okc = true; const ring = [], inner = [];
-          for (let k2 = 0; k2 < 12; k2++) { const an = k2 / 12 * TAU, ca = Math.cos(an), sa = Math.sin(an); proj(o.x + ca * rr, o.y + sa * rr, it.z); if (_d < 8) { okc = false; break; } ring.push(_sx, _sy); proj(o.x + ca * rr * 0.72 + rr * 0.1, o.y + sa * rr * 0.72, it.z); inner.push(_sx, _sy); }
+          for (let k2 = 0; k2 < 12; k2++) { const an = k2 / 12 * TAU, ca = Math.cos(an), sa = Math.sin(an); proj(o.x + ca * rr, o.y + sa * rr, it.z); if (_d < 8) { okc = false; break; } ring.push(_sx, _sy); proj(o.x + ca * rr * 0.74 + sunX * rr * 0.16, o.y + sa * rr * 0.74 + sunY * rr * 0.16, it.z); inner.push(_sx, _sy); }
           if (okc) { ctx.fillStyle = craterRim; ctx.beginPath(); for (let k2 = 0; k2 < 12; k2++) ctx.lineTo(ring[k2 * 2], ring[k2 * 2 + 1]); ctx.closePath(); ctx.fill(); ctx.fillStyle = craterIn; ctx.beginPath(); for (let k2 = 0; k2 < 12; k2++) ctx.lineTo(inner[k2 * 2], inner[k2 * 2 + 1]); ctx.closePath(); ctx.fill(); }
-        } else if (o.e === 'lake') { // 타이탄: 메탄 호수(땅 위 납작한 타원, 반짝임)
+        } else if (o.e === 'lake') { // 타이탄: 메탄 호수(어둡고 반짝이는 표면)
           const rr = o.s * 1.6; let okc = true; const ring = [];
           for (let k2 = 0; k2 < 12; k2++) { const an = k2 / 12 * TAU; proj(o.x + Math.cos(an) * rr, o.y + Math.sin(an) * rr * 0.8, it.z); if (_d < 8) { okc = false; break; } ring.push(_sx, _sy); }
-          if (okc) { ctx.fillStyle = '#2f4a45'; ctx.beginPath(); for (let k2 = 0; k2 < 12; k2++) ctx.lineTo(ring[k2 * 2], ring[k2 * 2 + 1]); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(255,225,170,.45)'; ctx.lineWidth = Math.max(1, 2 * s); ctx.stroke(); }
+          if (okc) { ctx.fillStyle = '#26332f'; ctx.beginPath(); for (let k2 = 0; k2 < 12; k2++) ctx.lineTo(ring[k2 * 2], ring[k2 * 2 + 1]); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(255,215,160,.35)'; ctx.lineWidth = Math.max(1, 2 * s); ctx.stroke(); }
         } else if (o.e === 'vent') { // 이오: 화산 분출구와 연기
           const w2 = sz * 0.9, h2 = sz * 0.7, X0 = it.sx, Y0 = it.sy;
-          ctx.fillStyle = '#4a3418'; ctx.beginPath(); ctx.moveTo(X0 - w2 * 0.55, Y0); ctx.lineTo(X0 - w2 * 0.14, Y0 - h2); ctx.lineTo(X0 + w2 * 0.14, Y0 - h2); ctx.lineTo(X0 + w2 * 0.55, Y0); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(X0 - propSt.side * w2 * 0.4, Y0 + 2, w2 * 0.7, w2 * 0.12, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = mixHex('#4a3418', '#000000', 1 - propSt.B); ctx.beginPath(); ctx.moveTo(X0 - w2 * 0.55, Y0); ctx.lineTo(X0 - w2 * 0.14, Y0 - h2); ctx.lineTo(X0 + w2 * 0.14, Y0 - h2); ctx.lineTo(X0 + w2 * 0.55, Y0); ctx.closePath(); ctx.fill();
           ctx.fillStyle = '#ff7a2a'; ctx.beginPath(); ctx.ellipse(X0, Y0 - h2, w2 * 0.14, h2 * 0.1, 0, 0, TAU); ctx.fill();
-          for (let k2 = 0; k2 < 4; k2++) { ctx.fillStyle = `rgba(${230 - k2 * 20},${190 - k2 * 25},${90},${0.55 - k2 * 0.1})`; ctx.beginPath(); ctx.arc(X0 + Math.sin(E.t * 1.2 + k2) * w2 * 0.12, Y0 - h2 - (k2 + 0.5) * h2 * 0.45, w2 * (0.16 + k2 * 0.07), 0, TAU); ctx.fill(); }
-        } else if (o.e === 'rock') { // 우주: 모난 바위
-          const w2 = sz * 0.95, h2 = sz * 0.75, X0 = it.sx, Y0 = it.sy, pts = [[-0.5, 0], [-0.45, -0.4], [-0.18, -0.8], [0.12, -0.62], [0.34, -1], [0.5, -0.35], [0.46, 0]];
+          for (let k2 = 0; k2 < 4; k2++) { ctx.fillStyle = `rgba(${200 - k2 * 20},${185 - k2 * 22},${120},${0.5 - k2 * 0.1})`; ctx.beginPath(); ctx.arc(X0 + Math.sin(E.t * 1.2 + k2) * w2 * 0.12, Y0 - h2 - (k2 + 0.5) * h2 * 0.45, w2 * (0.16 + k2 * 0.07), 0, TAU); ctx.fill(); }
+        } else if (o.e === 'rock') { // 우주: 모난 바위(햇빛 쪽이 밝고 반대쪽은 어둡다) + 그림자
+          const w2 = sz * 0.95, h2 = sz * 0.75, X0 = it.sx, Y0 = it.sy, sd = propSt.side, pts = [[-0.5, 0], [-0.45, -0.4], [-0.18, -0.8], [0.12, -0.62], [0.34, -1], [0.5, -0.35], [0.46, 0]];
+          ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.beginPath(); ctx.ellipse(X0 - sd * w2 * 0.45, Y0 + 2, w2 * 0.8, w2 * 0.12, 0, 0, TAU); ctx.fill();
           ctx.fillStyle = rockCol; ctx.beginPath(); pts.forEach(([a2, b2], k2) => (k2 ? ctx.lineTo(X0 + a2 * w2, Y0 + b2 * h2) : ctx.moveTo(X0 + a2 * w2, Y0 + b2 * h2))); ctx.closePath(); ctx.fill();
-          ctx.fillStyle = rockHi; ctx.beginPath(); ctx.moveTo(X0 - 0.45 * w2, Y0 - 0.4 * h2); ctx.lineTo(X0 - 0.18 * w2, Y0 - 0.8 * h2); ctx.lineTo(X0 + 0.02 * w2, Y0 - 0.3 * h2); ctx.closePath(); ctx.fill();
-        } else if (o.e === 'ice') { // 우주(유로파): 얼음 기둥
-          const w2 = sz * 0.9, h2 = sz * 1.1, X0 = it.sx, Y0 = it.sy;
-          for (const [dx2, hh, ww] of [[-0.28, 0.7, 0.26], [0, 1, 0.3], [0.3, 0.6, 0.24]]) { ctx.fillStyle = iceCol; ctx.beginPath(); ctx.moveTo(X0 + (dx2 - ww / 2) * w2, Y0); ctx.lineTo(X0 + dx2 * w2, Y0 - hh * h2); ctx.lineTo(X0 + (dx2 + ww / 2) * w2, Y0); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.moveTo(X0 + dx2 * w2, Y0 - hh * h2); ctx.lineTo(X0 + (dx2 + ww / 2) * w2, Y0); ctx.lineTo(X0 + dx2 * w2, Y0); ctx.closePath(); ctx.fill(); }
+          ctx.fillStyle = rockHi; ctx.beginPath(); ctx.moveTo(X0 + sd * 0.46 * w2, Y0); ctx.lineTo(X0 + sd * 0.45 * w2, Y0 - 0.4 * h2); ctx.lineTo(X0 + sd * 0.18 * w2, Y0 - 0.8 * h2); ctx.lineTo(X0 - sd * 0.02 * w2, Y0 - 0.3 * h2); ctx.lineTo(X0 + sd * 0.08 * w2, Y0); ctx.closePath(); ctx.fill();
+        } else if (o.e === 'ice') { // 유로파: 얼음 기둥
+          const w2 = sz * 0.9, h2 = sz * 1.1, X0 = it.sx, Y0 = it.sy, sd = propSt.side;
+          ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(X0 - sd * w2 * 0.4, Y0 + 2, w2 * 0.7, w2 * 0.1, 0, 0, TAU); ctx.fill();
+          for (const [dx2, hh, ww] of [[-0.28, 0.7, 0.26], [0, 1, 0.3], [0.3, 0.6, 0.24]]) { ctx.fillStyle = mixHex('#bfe0f4', '#000000', 1 - propSt.B); ctx.beginPath(); ctx.moveTo(X0 + (dx2 - ww / 2) * w2, Y0); ctx.lineTo(X0 + dx2 * w2, Y0 - hh * h2); ctx.lineTo(X0 + (dx2 + ww / 2) * w2, Y0); ctx.closePath(); ctx.fill(); ctx.fillStyle = `rgba(255,255,255,${0.35 + 0.2 * propSt.B})`; ctx.beginPath(); ctx.moveTo(X0 + dx2 * w2, Y0 - hh * h2); ctx.lineTo(X0 + (dx2 + sd * ww / 2) * w2, Y0); ctx.lineTo(X0 + dx2 * w2, Y0); ctx.closePath(); ctx.fill(); }
+        } else if (o.e === 'pebble' || o.e === 'dish' || o.e === 'lander' || o.e === 'hab' || o.e === 'solar' || o.e === 'mast') {
+          drawProp(ctx, o.e, it.sx, it.sy, sz * (o.e === 'pebble' ? 0.55 : o.e === 'hab' ? 1.05 : 0.9), propSt);
         } else ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz);
         if (fade < 1) ctx.globalAlpha = 1;
       } else if (it.kind === 2) { // 아이템 상자(빙글빙글)
@@ -214,13 +263,15 @@
         ctx.fillStyle = pc(base)[L]; ctx.beginPath(); poly.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath(); ctx.fill();
         if (z.type === 'boost' || z.type === 'jump') { ctx.strokeStyle = z.type === 'jump' ? '#fff3c4' : '#ffffff'; ctx.lineWidth = Math.max(1.5, 4 * s); ctx.lineCap = 'round';
           for (const o of z.type === 'jump' ? [-18, 0, 18] : [-12, 10]) { const a1 = q(o, -18, 0), a2 = q(o + 14, 0, 0), a3 = q(o, 18, 0); ctx.beginPath(); ctx.moveTo(a1[0], a1[1]); ctx.lineTo(a2[0], a2[1]); ctx.lineTo(a3[0], a3[1]); ctx.stroke(); } }
+      } else if (it.kind === 7) { // 🚀 바퀴가 일으키는 먼지(중력이 약할수록 오래 떠 있다)
+        const p = it.p, k3 = p.t / p.life, rad = (12 + 46 * k3) * s; ctx.fillStyle = dustRGB + (0.34 * (1 - k3) ** 1.3).toFixed(3) + ')'; ctx.beginPath(); ctx.ellipse(it.sx, it.sy - rad * 0.4, rad, rad * 0.62, 0, 0, TAU); ctx.fill();
       } else if (it.kind === 6) { // 내 차 꼬리 효과
         const p = it.p, sz = 26 * s * (1 - 0.4 * p.t / 0.6); ctx.globalAlpha = 1 - p.t / 0.6; ctx.drawImage(U.emo(p.e), it.sx - sz / 2, it.sy - sz * 0.6, sz, sz); ctx.globalAlpha = 1;
       } else if (it.kind === 4) { // 차 (10% 크게)
         const s = F / Math.max(dz, 1) * 1.1;
         const r = it.r, rel2 = Math.atan2(Math.sin(r.dh - yaw), Math.cos(r.dh - yaw)), front = Math.abs(rel2) > 2.1, spr = kartSprite(r.car, front, r.col);
         const w = 56 * s * (1 + 0.5 * Math.abs(Math.sin(rel2))), h = 40 * s, lift = r.zair * s * 0.9;
-        ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.beginPath(); ctx.ellipse(it.sx, it.sy, 30 * s, 9 * s, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = SPC ? 'rgba(0,0,0,.5)' : 'rgba(0,0,0,.32)'; ctx.beginPath(); ctx.ellipse(it.sx - (SPC ? propSt.side * 9 * s : 0), it.sy, 30 * s, 9 * s, 0, 0, TAU); ctx.fill();
         ctx.save(); ctx.translate(it.sx, it.sy - lift); if (r.stun > 0) ctx.rotate(Math.sin(r.spin * 1.5) * 0.45);
         if (r.boost > 0) { ctx.fillStyle = '#ff9f1c'; ctx.beginPath(); ctx.moveTo(-7 * s, -4 * s); ctx.lineTo(0, 22 * s * (0.7 + Math.random() * 0.5)); ctx.lineTo(7 * s, -4 * s); ctx.fill(); }
         ctx.drawImage(spr, -w / 2, -h * 1.02, w, h);
@@ -246,6 +297,7 @@
         else { ctx.save(); ctx.translate(it.sx, it.sy); ctx.scale(s, s); ctx.translate(0, -14); U.stamp(ctx, o.k === 'banana' ? '🍌' : o.k === 'trap' ? '🪤' : o.k === 'ice' ? '🧊' : '🎯', 34); ctx.restore(); }
       }
     }
+    if (SPC) { const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.78); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.38)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H); } // 렌즈 가장자리 어둡게
     if (E.stormN > 0 && T.space) { const c = rgb(th.slow); ctx.fillStyle = `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${0.2 * E.stormN})`; ctx.fillRect(0, 0, W, H); } // 후반 날씨: 먼지 안개
   }
   window.Race3D = { draw, charBack };
