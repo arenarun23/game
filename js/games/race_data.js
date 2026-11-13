@@ -231,9 +231,9 @@
     const slope = hgt.map((_, j) => (hgt[(j + 1) % M] - hgt[(j - 1 + M) % M]) / (2 * ds));
     const hw = def.w / 2, at = (j, lat) => { const c = pts[((j % M) + M) % M]; return { x: c.x + c.nx * lat, y: c.y + c.ny * lat, a: Math.atan2(c.ty, c.tx) }; };
 
-    // 아이템 상자: 8곳에 3개씩
+    // 아이템 카드: 8곳에 4개씩(한 줄에 4개)
     const boxes = [];
-    for (let g = 0; g < 8; g++) for (const f of [-0.5, 0, 0.5]) { const j = Math.floor((g + 0.5) / 8 * M), p = at(j, f * hw); boxes.push({ x: p.x, y: p.y, idx: j % M }); }
+    for (let g = 0; g < 8; g++) for (const f of [-0.66, -0.22, 0.22, 0.66]) { const j = Math.floor((g + 0.5) / 8 * M), p = at(j, f * hw); boxes.push({ x: p.x, y: p.y, idx: j % M }); }
     // 함정 지대: 부스트 패드 / 느려지는 곳 / 얼음
     const RAD = { boost: 36, slow: 46, ice: 56, jump: 44 }, haz = [];
     for (const type of ['boost', 'slow', 'ice', 'jump']) {

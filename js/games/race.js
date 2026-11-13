@@ -33,7 +33,7 @@
       row('◀▶', '버튼 · 키보드', '◀ ▶ 버튼, 또는 키보드 ← → (A D)'),
       row('🧭', '도우미', '길을 알아서 따라가 줘요. 위쪽 🧭 버튼으로 켜고 꺼요'),
       G.h('h4', {}, '🎁 아이템 사용법'), row('❓', '노란 상자에 닿으면', '아이템을 하나 받아요'),
-      row('👆', '맨 오른쪽 아이템 버튼을 눌러요', '키보드는 Space'),
+      row('🃏', '오른쪽 카드 칸 4개', '카드를 최대 4장 모아요. 쓰고 싶은 칸을 눌러요 (키보드 1~4, Space는 첫 카드)'),
       row(ITEMS.boost.e, ITEMS.boost.n, ITEMS.boost.d), row(ITEMS.shield.e, ITEMS.shield.n, ITEMS.shield.d), row(ITEMS.banana.e, ITEMS.banana.n, ITEMS.banana.d), row(ITEMS.missile.e, ITEMS.missile.n, ITEMS.missile.d),
       G.h('h4', {}, '⚡ 내 스킬 (쿨타임이 끝나면 또 써요)'),
       row(ch.skill.e, `${ch.e} ${ch.skill.n}`, `${ch.skill.d} — 왼쪽 버튼 (Z)`), row(car.skill.e, `${car.e} ${car.skill.n}`, `${car.skill.d} — 가운데 버튼 (X)`),
@@ -112,6 +112,7 @@
       // ───────── 경기 ─────────
       function startRace() {
         clearTabs();
+        document.documentElement.dataset.racing = '1'; // 달리는 동안 위쪽 모드 버튼 줄을 숨겨 화면을 넓힌다
         const TD = TRACKS[sel.tr], T = D.buildTrack(TD, seedOf(sel.tr)), th = TD.theme, hw = T.hw, M = T.M, P = T.pts;
         const laps = hard ? 3 : kid ? 1 : 2, WALL = hw * (kid ? 1.9 : 1.45);
         // 🚀 우주 코스: 중력(점프), 먼지·서리 구간, 옵션(후반 날씨·바퀴·피트)
@@ -125,15 +126,15 @@
         const badge = G.h('div', { class: 'rbadge' }), toastEl = G.h('div', { class: 'rtoast' }), countEl = G.h('div', { class: 'rcount' });
         const bL = G.h('button', { class: 'rbtn dir', 'aria-label': '왼쪽' }, '◀'), bR = G.h('button', { class: 'rbtn dir', 'aria-label': '오른쪽' }, '▶');
         const mkBtn = (label, fn) => { const cd = G.h('span', { class: 'cd' }), b = G.h('button', { class: 'rbtn act' }, G.h('span', { class: 'em' }, ''), G.h('small', {}, label), cd); b.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); }); b._cd = cd; b._em = b.firstChild; return b; };
-        const bItem = mkBtn('아이템', () => useItem(me)), bS1 = mkBtn('', () => useSkill(me, 0)), bS2 = mkBtn('', () => useSkill(me, 1));
+        const cardEls = [0, 1, 2, 3].map((i) => { const b = G.h('button', { class: 'rcard', 'aria-label': `카드 ${i + 1}번 칸` }, G.h('span', { class: 'cem' }, '·'), G.h('small', {}, String(i + 1))); b.addEventListener('pointerdown', (e) => { e.preventDefault(); useItem(me, i); }); return b; }), bS1 = mkBtn('', () => useSkill(me, 0)), bS2 = mkBtn('', () => useSkill(me, 1));
         const hold = (el, k) => { const on = (e) => { e.preventDefault(); keys[k] = true; el.classList.add('on'); }, off = () => { keys[k] = false; el.classList.remove('on'); }; el.addEventListener('pointerdown', on); ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => el.addEventListener(t, off)); };
         hold(bL, 'left'); hold(bR, 'right');
         const knob = G.h('span', { class: 'knob' }), pad = G.h('div', { class: 'rpad', 'aria-label': '핸들 막대' }, G.h('span', { class: 'arr l' }, '◀'), G.h('span', { class: 'tick' }), G.h('span', { class: 'arr r' }, '▶'), knob);
         const chipA = G.h('button', { class: 'rchip' }), chipC = G.h('button', { class: 'rchip' }), chipH = G.h('button', { class: 'rchip' }, '❓ 사용법'), chipM = G.h('button', { class: 'rchip', 'aria-label': '음악 켜고 끄기' });
         const chipG = G.h('div', { class: 'rchip static' }, SP ? `${SP.ico} 중력 ${SP.g}` : ''), chipT = G.h('button', { class: 'rchip' }), chipW = G.h('div', { class: 'rchip static warn', hidden: true });
-        const bubL = G.h('div', { class: 'bub' }), bubR = G.h('div', { class: 'bub r' }, '⚡ 스킬 · 🎁 아이템은 여기!');
+        const bubL = G.h('div', { class: 'bub' }), bubR = G.h('div', { class: 'bub r' }, '⚡ 스킬 · 🃏 카드 4칸은 여기!');
         const wrap = G.h('div', { class: 'rwrap counting' }, cv, G.h('div', { class: 'rtop' }, G.h('div', { class: 'rleft' }, badge, G.h('div', { class: 'rchips' }, chipA, chipC, chipH, chipM, ...(SP ? [chipG] : []), ...(tireOn ? [chipT] : []), ...(stormOn ? [chipW] : []))), mini), toastEl, countEl,
-          G.h('div', { class: 'rcoach' }, bubL, bubR), G.h('div', { class: 'rctl l' }, bL, bR, pad), G.h('div', { class: 'rctl r' }, bS1, bS2, bItem));
+          G.h('div', { class: 'rcoach' }, bubL, bubR), G.h('div', { class: 'rctl l' }, bL, bR, pad), G.h('div', { class: 'rctl r' }, G.h('div', { class: 'rcards', 'aria-label': '아이템 카드 4칸' }, ...cardEls), bS1, bS2));
         root.replaceChildren(wrap);
         const ctx = cv.getContext('2d'), mctx = mini.getContext('2d');
         let W = 0, H = 0, dpr = 1, q = 1;
@@ -150,7 +151,7 @@
           const cs = isPlayer ? window.RaceReward.cos() : null;
           return { ch, car, col: (cs && cs.color.c) || car.color, hat: cs && cs.hat.e, trail: cs && cs.trail.e, tr: [], trT: 0, isPlayer, tire: isPlayer && tireOn ? spo.tireStart : 'all', pitPhase: null, pitT: 0, airMax: 0, plow: !!ch.mod.plow, plowCd: 0, hop: 0, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
             offF: 0.45 + (car.st.off || 0) + (ch.mod.off || 0), iceImm: !!ch.mod.ice, x: c.x + c.nx * lat, y: c.y + c.ny * lat, h: Math.atan2(c.ty, c.tx), px: c.x + c.nx * lat, py: c.y + c.ny * lat, ph: Math.atan2(c.ty, c.tx), dx: 0, dy: 0, dh: 0, vx: 0, vy: 0, v: 0, idx, lap: 0, prog: idx, prevIdx: idx,
-            steerIn: 0, throttle: 1, air: 0, zair: 0, boost: 0, boostMul: 1.4, shield: 0, stun: 0, frozen: 0, spin: 0, item: null, cd: [3, 4], lane: (rnd() - 0.5) * 0.7, aiVar: 0.97 + rnd() * 0.06, aiT: rnd(), fin: null, off: false, stuck: 0 };
+            steerIn: 0, throttle: 1, air: 0, zair: 0, boost: 0, boostMul: 1.4, shield: 0, stun: 0, frozen: 0, spin: 0, slots: [null, null, null, null], get item() { return this.slots.find(Boolean) || null; }, cd: [3, 4], lane: (rnd() - 0.5) * 0.7, aiVar: 0.97 + rnd() * 0.06, aiT: rnd(), fin: null, off: false, stuck: 0 };
         }
 
         // 상태
@@ -209,6 +210,8 @@
         }
         bPause.addEventListener('click', () => (pauseBox ? closePause() : openPause()));
         if (topRight) topRight.insertBefore(bPause, topRight.firstChild);
+        const bFull = G.h('button', { class: 'round rfull', 'aria-label': '전체 화면' }, '⛶'); // 전체 화면(지원하는 브라우저만): 주소창이 사라져 더 크게 보인다
+        if (document.fullscreenEnabled && topRight) { bFull.addEventListener('click', () => { G.sfx.tap(); try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (e) {} }); topRight.insertBefore(bFull, topRight.firstChild); }
         const onVis = () => { if (document.hidden && state === 'go') openPause(); }; // 다른 앱·탭으로 가면 자동으로 멈춤
         document.addEventListener('visibilitychange', onVis);
         const musicChip = () => { chipM.textContent = G.music.isOn() ? '🎵 음악' : '🔇 음악'; chipM.setAttribute('aria-pressed', String(G.music.isOn())); };
@@ -249,9 +252,11 @@
         }
         const drop = (kind, r, back) => objs.push({ k: kind, x: r.x + Math.cos(r.h) * back, y: r.y + Math.sin(r.h) * back, life: kind === 'oil' ? 14 : kind === 'pit' ? 5 : 18, owner: r, grace: kind === 'pit' ? 0.4 : 0.6, r: kind === 'oil' ? 40 : kind === 'pit' ? 46 : 24, fell: kind === 'pit' ? new Set() : null });
         function shoot(kind, r, sp, life, tgt) { objs.push({ k: kind, x: r.x + Math.cos(r.h) * 34, y: r.y + Math.sin(r.h) * 34, h: r.h, sp, life, owner: r, grace: 0.25, r: 22, tgt }); }
-        function useItem(r) {
-          if (state !== 'go' || !r.item || r.fin != null) return;
-          const it = r.item; r.item = null;
+        const hasFree = (r) => r.slots.includes(null), give = (r, it) => { const i = r.slots.indexOf(null); if (i < 0) return false; r.slots[i] = it; return true; };
+        function useItem(r, slot) { // 카드 칸 4개: 칸 번호를 주면 그 칸, 안 주면 첫 번째 카드
+          if (state !== 'go' || r.fin != null) return;
+          const idx = slot == null ? r.slots.findIndex(Boolean) : slot, it = r.slots[idx];
+          if (!it) return; r.slots[idx] = null;
           if (it === 'boost') { r.boost = Math.max(r.boost, 1.6); r.boostMul = 1.45; }
           else if (it === 'shield') r.shield = 3;
           else if (it === 'banana') drop('banana', r, -34);
@@ -275,7 +280,7 @@
             case 'express': r.shield = Math.max(r.shield, 2.5); r.boost = Math.max(r.boost, 1.6); r.boostMul = 1.4; break;
             case 'pit': drop('pit', r, -40); break;
             case 'hop': r.air = r.airMax = JUMP * GK; r.hop = JUMP * GK * 1.25; r.boost = Math.max(r.boost, 0.5); r.boostMul = 1.2; break; // 뛰어서 다른 차 위를 지나간다
-            case 'magnet': if (!r.item) r.item = randItem(r); else { r.boost = Math.max(r.boost, 0.9); } break;
+            case 'magnet': if (!give(r, randItem(r))) r.boost = Math.max(r.boost, 0.9); break;
           }
           r.cd[slot] = sk.cd; if (r.isPlayer) { G.sfx.ok(); toast(sk.e + ' ' + sk.n + '!'); } return true;
         }
@@ -297,11 +302,11 @@
           r.aiT -= dt; if (r.aiT > 0) return; r.aiT = 0.45 + rnd() * 0.3;
           const near = (maxD, ahead) => racers.some((o) => { if (o === r) return false; const dx = o.x - r.x, dy = o.y - r.y, d = Math.hypot(dx, dy), fw = (dx * Math.cos(r.h) + dy * Math.sin(r.h)) > 0; return d < maxD && (ahead === undefined || ahead === fw); });
           const p = hard ? 0.7 : kid ? 0.12 : 0.4;
-          if (r.item && rnd() < p) { if (r.item === 'missile') { if (near(600, true)) useItem(r); } else if (r.item === 'banana') { if (near(260, false)) useItem(r); } else if (curve < 0.3) useItem(r); }
+          if (rnd() < p) for (let i = 0; i < r.slots.length; i++) { const it = r.slots[i]; if (!it) continue; if (it === 'missile' ? near(600, true) : it === 'banana' ? near(260, false) : curve < 0.3) { useItem(r, i); break; } }
           for (const s of [0, 1]) { if (r.cd[s] > 0 || rnd() > p * 0.6) continue; const id = (s === 0 ? r.ch : r.car).skill.id;
             if ((id === 'dash' || id === 'turbo' || id === 'express') && curve < 0.25) useSkill(r, s); else if (id === 'roar' && near(420, true)) useSkill(r, s); else if (id === 'shield' && near(180)) useSkill(r, s);
             else if ((id === 'trap' || id === 'oil' || id === 'pit') && near(260, false)) useSkill(r, s); else if (id === 'hop' && near(200, true)) useSkill(r, s); else if (id === 'ice' && near(450, true)) useSkill(r, s);
-            else if (id === 'wave' && near(170)) useSkill(r, s); else if (id === 'magnet' && !r.item) useSkill(r, s); }
+            else if (id === 'wave' && near(170)) useSkill(r, s); else if (id === 'magnet' && hasFree(r)) useSkill(r, s); }
         }
 
         // 한 대의 움직임
@@ -362,7 +367,7 @@
             r.v *= 0.975; r.h += angDiff(Math.atan2(c.ty, c.tx), r.h) * Math.min(1, 6 * dt);
           }
           // 박스 줍기
-          for (let i = 0; i < T.boxes.length; i++) { if (boxT[i] > 0) continue; const b = T.boxes[i]; if ((b.x - r.x) ** 2 + (b.y - r.y) ** 2 < 900) { boxT[i] = 4; if (!r.item && r.fin == null) { r.item = randItem(r); if (r.isPlayer) { G.sfx.ok(); const n = G.store.get('race:tips', 0); if (n < 3) { G.store.set('race:tips', n + 1); toast(`${ITEMS[r.item].e} ${ITEMS[r.item].n}! ${ITEMS[r.item].d} — 맨 오른쪽 아이템 버튼을 눌러요`, 3); } else toast(`${ITEMS[r.item].e} ${ITEMS[r.item].n}!`, 1.2); } } } }
+          for (let i = 0; i < T.boxes.length; i++) { if (boxT[i] > 0) continue; const b = T.boxes[i]; if ((b.x - r.x) ** 2 + (b.y - r.y) ** 2 < 900) { if (!hasFree(r) || r.fin != null) { if (r.isPlayer && t - (r.fullT || -9) > 2) { r.fullT = t; toast('🃏 카드 칸이 가득 찼어요! 카드를 써요', 1.4); } continue; } boxT[i] = 4; const it = randItem(r); give(r, it); if (r.isPlayer) { G.sfx.ok(); const n = G.store.get('race:tips', 0); if (n < 3) { G.store.set('race:tips', n + 1); toast(`${ITEMS[it].e} ${ITEMS[it].n}! ${ITEMS[it].d} — 오른쪽 카드 칸을 눌러요`, 3); } else toast(`${ITEMS[it].e} ${ITEMS[it].n}!`, 1.2); } } }
           // 멈춰서 꼼짝 못하면 길 위로 되돌리기
           if (state === 'go' && r.v < 25 && r.stun <= 0 && r.frozen <= 0) r.stuck += dt; else r.stuck = 0;
           if (r.stuck > 2.2) { dbg.respawns++;  const c = P[r.idx]; r.x = c.x; r.y = c.y; r.h = Math.atan2(c.ty, c.tx); r.vx = r.vy = r.v = 0; r.stuck = 0; r.prevIdx = r.idx; }
@@ -503,12 +508,12 @@
           toastT -= dt; if (toastT <= 0) setTxt(toastEl, '');
           const k = rank(me), lap = clamp(me.lap, 1, laps);
           setTxt(badge, `🏁 ${k}등 / 4  ·  🔁 ${lap}/${laps}`);
-          setTxt(bItem._em, me.item ? ITEMS[me.item].e : '·'); setTxt(bItem.querySelector('small'), me.item ? '눌러요!' : '아이템'); bItem.classList.toggle('ready', !!me.item);
+          cardEls.forEach((el, i) => { const it = me.slots[i]; setTxt(el.firstChild, it ? ITEMS[it].e : '·'); el.classList.toggle('ready', !!it); });
           [[bS1, me.ch.skill, 0], [bS2, me.car.skill, 1]].forEach(([b, sk, i]) => { if (b._sk !== sk) { b._sk = sk; b._em.textContent = sk.e; b.querySelector('small').textContent = sk.tag || sk.n; } const h = (me.cd[i] > 0 ? Math.round(me.cd[i] / sk.cd * 100) : 0) + '%'; if (b._h !== h) { b._h = h; b._cd.style.height = h; } });
         }
 
         // 반복
-        const kd = (e) => { const k = e.key; if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = true; else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = true; else if (k === ' ') useItem(me); else if (k === 'p' || k === 'P' || k === 'Escape') { if (pauseBox) closePause(); else openPause(); } else if (k === 'z' || k === 'Z') useSkill(me, 0); else if (k === 'x' || k === 'X') useSkill(me, 1); else return; e.preventDefault(); };
+        const kd = (e) => { const k = e.key; if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = true; else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = true; else if (k === ' ') useItem(me); else if (k >= '1' && k <= '4') useItem(me, +k - 1); else if (k === 'p' || k === 'P' || k === 'Escape') { if (pauseBox) closePause(); else openPause(); } else if (k === 'z' || k === 'Z') useSkill(me, 0); else if (k === 'x' || k === 'X') useSkill(me, 1); else return; e.preventDefault(); };
         const ku = (e) => { const k = e.key; if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = false; else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false; };
         addEventListener('keydown', kd); addEventListener('keyup', ku);
         toast('준비!', 1);
@@ -575,11 +580,11 @@
           }
         }
         raf = requestAnimationFrame(frame);
-        stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); stopTilt(); G.music.stop(); G.music.release('help'); G.music.release('pause'); bPause.remove(); document.removeEventListener('visibilitychange', onVis); document.querySelectorAll('.rhelp').forEach((e) => e.remove()); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
+        stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); stopTilt(); G.music.stop(); G.music.release('help'); G.music.release('pause'); bPause.remove(); bFull.remove(); delete document.documentElement.dataset.racing; document.removeEventListener('visibilitychange', onVis); document.querySelectorAll('.rhelp').forEach((e) => e.remove()); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
       }
 
       if (pendingTrack !== null) { sel.tr = pendingTrack; pendingTrack = null; G.store.set('race:sel', sel); startRace(); } else showChars();
-      return () => { delete document.documentElement.dataset.game; if (stopFn) stopFn(); };
+      return () => { delete document.documentElement.dataset.game; if (stopFn) stopFn(); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} };
     },
   });
 })();
