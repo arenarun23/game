@@ -304,7 +304,7 @@
         function aiThink(r, dt) {
           const g = guide(r, r.lane), curve = g.curve;
           r.steerIn = g.steer; r.throttle = clamp(1 - curve * 0.55, 0.62, 1);
-          const gap = r.prog - me.prog; let rb = 1; if (!r.isPlayer) { if (gap < -50) rb = 1.06; else if (gap > 60) rb = 0.94; } r.rb = rb;
+          const gap = r.prog - me.prog; let rb = 1; if (!r.isPlayer) { if (gap < -50) rb = 1.06; else if (gap > 60) rb = 0.94; if (!hard && gap < 0) { const gpx = -gap * T.ds; rb = Math.max(rb, 1 + clamp((gpx - 220) / 280, 0, 1) * (kid ? 0.85 : 0.5)); } if (!hard && gap > 0) rb = Math.min(rb, 1 - clamp((gap * T.ds - 300) / 400, 0, 1) * (kid ? 0.45 : 0.25)); } r.rb = rb;
           r.aiT -= dt; if (r.aiT > 0) return; r.aiT = 0.45 + rnd() * 0.3;
           const near = (maxD, ahead) => racers.some((o) => { if (o === r) return false; const dx = o.x - r.x, dy = o.y - r.y, d = Math.hypot(dx, dy), fw = (dx * Math.cos(r.h) + dy * Math.sin(r.h)) > 0; return d < maxD && (ahead === undefined || ahead === fw); });
           const p = hard ? 0.7 : kid ? 0.12 : 0.4;
@@ -441,7 +441,7 @@
         const runs = [], ord = racers.slice();
         let alpha = 0, pcamH = camH, lowQ = false;
         function draw() {
-          const zoom = Math.max(H / 680, 0.5 * dpr);
+          const zoom = Math.max(H / 680, 0.5 * dpr) * (W > H * 1.05 ? 1.3 : 1); // 가로 화면은 30% 확대(폰 가로에서 차가 작아 보이던 문제)
           for (const r of racers) { r.dx = r.px + (r.x - r.px) * alpha; r.dy = r.py + (r.y - r.py) * alpha; r.dh = r.ph + angDiff(r.h, r.ph) * alpha; }
           if (T.v3d) { Object.assign(env, { ctx, W, H, yaw: pcamH + angDiff(camH, pcamH) * alpha, t, alpha, lowQ, state, stormN }); window.Race3D.draw(env); return; }
           const px = me.dx, py = me.dy, rot = Math.PI / 2 + pcamH + angDiff(camH, pcamH) * alpha;
@@ -501,11 +501,11 @@
             if (r.boost > 0) { ctx.save(); ctx.rotate(r.dh); ctx.fillStyle = '#ff9f1c'; ctx.beginPath(); ctx.moveTo(-24, -9); ctx.lineTo(-24 - 18 - rnd() * 10, 0); ctx.lineTo(-24, 9); ctx.fill(); ctx.restore(); }
             ctx.save(); ctx.rotate(r.dh + r.spin); ctx.drawImage(kartSpr(r.car, r.col), -30, -20, 60, 40); ctx.restore();
             ctx.save(); ctx.rotate(rot); stamp(ctx, r.ch.e, 26); if (r.hat) { ctx.translate(0, -15); stamp(ctx, r.hat, 17); }
-            if (r.isPlayer) { const bob = Math.sin(t * 7) * 3; ctx.fillStyle = '#ffe14d'; ctx.strokeStyle = '#222'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(-11, -50 + bob); ctx.lineTo(11, -50 + bob); ctx.lineTo(0, -34 + bob); ctx.closePath(); ctx.stroke(); ctx.fill(); }
             if (r.shield > 0) { ctx.strokeStyle = 'rgba(80,220,255,.9)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 30 + Math.sin(t * 10) * 2, 0, TAU); ctx.stroke(); }
             if (r.frozen > 0) { ctx.globalAlpha = 0.85; stamp(ctx, '🧊', 44); ctx.globalAlpha = 1; }
             ctx.restore(); ctx.restore();
           }
+          { const k = 1.5 * (1 + me.zair / 220); ctx.save(); ctx.translate(me.dx, me.dy); ctx.rotate(rot); ctx.scale(k, k); const bob = Math.sin(t * 7) * 3; ctx.fillStyle = '#ffe14d'; ctx.strokeStyle = '#222'; ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(-11, -50 + bob); ctx.lineTo(11, -50 + bob); ctx.lineTo(0, -34 + bob); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.restore(); } // 내 화살표: 다른 차에 가려지지 않게 맨 위에 그린다
           for (const f of fx) if (f.k === 'ring') { ctx.strokeStyle = `rgba(255,255,255,${1 - f.t / f.life})`; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(f.x, f.y, 20 + (f.t / f.life) * 220, 0, TAU); ctx.stroke(); }
         }
         const mb = T.bounds, mw = mb.x1 - mb.x0, mh = mb.y1 - mb.y0, ms = Math.min(100 / mw, 100 / mh), mx = (x) => 60 + (x - (mb.x0 + mb.x1) / 2) * ms, my = (y) => 60 + (y - (mb.y0 + mb.y1) / 2) * ms;
