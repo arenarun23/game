@@ -1,4 +1,4 @@
-// 레이싱 데이터: 캐릭터 6, 차 6, 경기장 8 + 트랙 만들기
+// 레이싱 데이터: 캐릭터 8, 차 8, 경기장 8 + 트랙 만들기
 (function () {
   'use strict';
   const TAU = Math.PI * 2;
@@ -11,6 +11,8 @@
     { id: 'peng', n: '펭구', e: '🐧', color: 'sky', trait: '얼음길에서도 안 미끄러워요', skill: { id: 'ice', tag: '얼음', n: '얼음 발사', e: '🧊', d: '맞은 차가 꽁꽁 얼어요', cd: 10 }, mod: { acc: 1, max: 1.04, turn: 1, mass: 1, off: 0, ice: 1 } },
     { id: 'leo', n: '레오', e: '🦁', color: 'lemon', trait: '부스트가 더 세게 나가요', skill: { id: 'roar', tag: '포효', n: '사자 포효', e: '📣', d: '앞에 있는 차들이 놀라서 빙글 돌아요', cd: 11 }, mod: { acc: 0.95, max: 1.02, turn: 0.95, mass: 1.15, off: 0, boost: 1.18 } },
     { id: 'eleph', n: '코코', e: '🐘', color: 'sky', trait: '앞 차를 밀치며 돌파해요', skill: { id: 'pit', tag: '구멍', n: '땅 구멍', e: '🕳️', d: '뒤에 구멍을 잠시 만들어 빠뜨려요', cd: 12 }, mod: { acc: 0.9, max: 1, turn: 0.85, mass: 1.6, off: 0.1, plow: true } },
+    { id: 'chee', n: '치타', e: '🐆', color: 'lemon', trait: '엄청 빨라요', skill: { id: 'sprint', tag: '질주', n: '번개 질주', e: '⚡', d: '잠깐 번개처럼 달려요', cd: 9 }, mod: { acc: 1.1, max: 1.07, turn: 0.95, mass: 0.8, off: 0 } },
+    { id: 'tiger', n: '호랑이', e: '🐯', color: 'orange', trait: '힘이 세고 안 흔들려요', skill: { id: 'claw', tag: '발톱', n: '발톱 할퀴기', e: '🐾', d: '앞에 있는 가까운 차를 할퀴어 빙글 돌려요', cd: 10 }, mod: { acc: 1, max: 1.03, turn: 1, mass: 1.3, off: 0.08 } },
   ];
 
   // 차: 능력치(st) + 전용 스킬. bars = 화면에 보여 줄 별점(속도·가속·핸들·튼튼)
@@ -21,6 +23,8 @@
     { id: 'van', n: '든든이', e: '🚐', color: '#f1c40f', ui: 'lemon', trait: '출발이 빨라요', skill: { id: 'magnet', tag: '뽑기', n: '아이템 뽑기', e: '🎁', d: '아이템을 바로 받아요', cd: 11 }, st: { speed: 0.95, acc: 1.18, turn: 1, mass: 1.1, off: 0.05 }, bars: [2, 5, 3, 3] },
     { id: 'bus', n: '빵빵이', e: '🚌', color: '#ff8a3d', ui: 'peach', trait: '아주 커서 부딪치면 상대가 튕겨 나가요', skill: { id: 'express', tag: '급행', n: '급행 출발', e: '🚍', d: '방패를 쓰고 쌩 달려요', cd: 13 }, st: { speed: 0.93, acc: 0.82, turn: 0.82, mass: 1.8, off: 0.1 }, bars: [2, 2, 2, 5] },
     { id: 'hop', n: '폴짝이', e: '🚕', color: '#1abc9c', ui: 'mint', trait: '점프해서 앞 차를 넘어가요', skill: { id: 'hop', tag: '점프', n: '점프 추월', e: '🦘', d: '폴짝 뛰어 다른 차 위를 넘어가요', cd: 9 }, st: { speed: 1.0, acc: 1.05, turn: 1.05, mass: 0.85, off: 0 }, bars: [3, 4, 4, 1] },
+    { id: 'cop', n: '순찰이', e: '🚓', color: '#5b6fe0', ui: 'sky', trait: '핸들이 좋고 든든해요', skill: { id: 'siren', tag: '사이렌', n: '사이렌', e: '🚨', d: '바로 뒤 차들이 놀라서 빙글 돌아요', cd: 11 }, st: { speed: 1.0, acc: 1.0, turn: 1.12, mass: 1.15, off: 0.05 }, bars: [3, 3, 4, 3] },
+    { id: 'fire', n: '소방이', e: '🚒', color: '#b5281c', ui: 'peach', trait: '튼튼하고 힘이 좋아요', skill: { id: 'splash', tag: '물대포', n: '물대포', e: '💦', d: '앞에 있는 차들을 물로 밀어 느리게 해요', cd: 12 }, st: { speed: 0.98, acc: 0.95, turn: 0.92, mass: 1.35, off: 0.12 }, bars: [3, 2, 3, 4] },
   ];
 
   // ───────── 경기장 ─────────
