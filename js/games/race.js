@@ -108,17 +108,18 @@
         pickRedo = null;
         clearTabs();
         if (stopFn) { stopFn(); stopFn = null; }
-        window.RaceReward.page(root, { carColor: D.CARS[sel.car].color, chEmoji: D.CHARS[sel.ch].e, onBack: back });
+        G.navPush(back);
+        window.RaceReward.page(root, { carColor: D.CARS[sel.car].color, chEmoji: D.CHARS[sel.ch].e, onBack: () => G.navBack(back) });
       }
       const clearTabs = () => { const o = document.querySelector('.subbar .tabs'); if (o) o.remove(); }; // 가로 화면에선 2D/3D 탭을 위 모드 줄로 옮겨 둔다
       const br = (t, cls) => G.h('span', { class: 'ln' + (cls ? ' ' + cls : '') }, t);
       function showChars() {
         pick(1, '캐릭터를 골라요', D.CHARS.map((c) => ({ ic: c.e, nm: c.n, color: c.color, ds: [br('⭐ ' + c.trait), br(`${c.skill.e} 스킬: ${c.skill.n}`), br(c.skill.d, 'sd')] })), sel.ch,
-          (i) => { sel.ch = i; showCars(); }, null);
+          (i) => { sel.ch = i; G.navPush(showChars); showCars(); }, null);
       }
       function showCars() {
         pick(2, '차를 골라요', D.CARS.map((c) => ({ ic: c.e, nm: c.n, color: c.ui, ds: [br('⭐ ' + c.trait), br(`${c.skill.e} 스킬: ${c.skill.n}`), br(`속도 ★${c.bars[0]}  가속 ★${c.bars[1]}`, 'st'), br(`핸들 ★${c.bars[2]}  튼튼 ★${c.bars[3]}`, 'st'), br(c.skill.d, 'sd')] })), sel.car,
-          (i) => { sel.car = i; showTracks(); }, showChars);
+          (i) => { sel.car = i; G.navPush(showCars); showTracks(); }, () => G.navBack(showChars));
       }
       function thumb(def, seed) {
         const T = D.buildTrack(def, seed), b = T.bounds, w = b.x1 - b.x0, h = b.y1 - b.y0, pad = 160;
@@ -144,7 +145,7 @@
           G.h('button', { class: 'tab', 'aria-pressed': String(g === tab), onclick: () => { G.sfx.tap(); tab = g; showTracks(); } }, innerWidth > innerHeight * 1.05 ? label : [label + ' ', G.h('span', { class: 'cnt' }, `(${cnt(g)}/${groupIdx(g).length})`)])));
         const spExtra = tab === 2 ? spaceOptions(showTracks) : null, land3 = innerWidth > innerHeight * 1.05;
         pick(3, (hard ? '🔥 어려운 ' : kid ? '🐣 아주 쉬운 ' : '') + `경기장을 골라요 · ${hard ? 3 : kid ? 1 : 2}바퀴`, idxs.map((i) => { const t = TRACKS[i]; return { ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky', 'lemon', 'mint'][idxs.indexOf(i) % 10], ds: [br('▶ ' + t.shape), br(t.gim)] }; }), idxs.indexOf(sel.tr),
-          (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); startRace(); }, showCars, land3 ? spExtra : (spExtra ? G.h('div', {}, tabs, spExtra) : tabs));
+          (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); G.navPush(showTracks); startRace(); }, () => G.navBack(showCars), land3 ? spExtra : (spExtra ? G.h('div', {}, tabs, spExtra) : tabs));
         if (innerWidth > innerHeight * 1.05) { const sb = document.querySelector('.subbar'); if (sb) sb.append(tabs); }
       }
 
@@ -637,7 +638,7 @@
         stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); stopTilt(); G.music.stop(); G.music.release('help'); G.music.release('pause'); bPause.remove(); bFull.remove(); delete document.documentElement.dataset.racing; document.removeEventListener('visibilitychange', onVis); document.querySelectorAll('.rhelp').forEach((e) => e.remove()); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
       }
 
-      if (pendingTrack !== null) { sel.tr = pendingTrack; pendingTrack = null; G.store.set('race:sel', sel); startRace(); } else showChars();
+      if (pendingTrack !== null) { sel.tr = pendingTrack; pendingTrack = null; G.store.set('race:sel', sel); G.navPush(showTracks); startRace(); } else showChars();
       return () => { removeEventListener('resize', onResize); removeEventListener('orientationchange', onResize); clearTimeout(rzT); delete document.documentElement.dataset.game; if (stopFn) stopFn(); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} };
     },
   });

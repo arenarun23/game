@@ -90,17 +90,53 @@
   const stage = () => G.$('#stage');
   function cleanup() { if (stop) { try { stop(); } catch (e) {} stop = null; } if ('speechSynthesis' in window) try { speechSynthesis.cancel(); } catch (e) {} }
 
-  // 새로고침해도 이 서비스에 머물도록, 지금 보는 게임을 주소(#게임이름)에 기억한다. 기록을 늘리지 않아 '뒤로'는 그대로 허브로 간다.
-  const remember = (id) => { try { history.replaceState(null, '', id ? '#' + id : location.pathname + location.search); } catch (e) {} };
-  G.home = () => {
+  // 새로고침해도 이 서비스에 머물도록, 지금 보는 게임을 주소(#게임이름)에 기억한다.
+  const remember = (id) => { try { history.replaceState(history.state, '', id ? '#' + id : location.pathname + location.search); } catch (e) {} };
+
+  // ───── '뒤로' 가기(폰 뒤로 키·브라우저 뒤로) ─────
+  // 놀이터 목록 → 게임 → (게임 안의 단계들) 순서로 기록을 쌓아서, 뒤로 가면 한 단계씩만 돌아가고 놀이터 목록에서 한 번 더 누르면 허브로 나간다.
+  // depth: 이 서비스가 쌓은 기록 수(게임 1 + 게임 안 단계들). steps: 게임 안 단계마다 '뒤로 갔을 때 보여 줄 화면' 함수.
+  let depth = 0, gameEntry = false, ignorePop = null; const steps = [];
+  const pushEntry = () => { try { history.pushState({ aiedu: ++depth }, '', location.href); } catch (e) { depth--; return false; } return true; };
+  // 게임 안에서 다음 단계로 갈 때 부른다. onBack = 뒤로 가기를 눌렀을 때 보여 줄 화면
+  G.navPush = (onBack) => { if (!gameEntry) return; if (pushEntry()) steps.push(onBack); };
+  // 화면 안의 '이전' 버튼이 부른다. 쌓인 단계가 있으면 기록을 한 칸 되돌려서 뒤로 키와 똑같이 움직인다.
+  G.navBack = (fallback) => { if (steps.length) history.back(); else if (fallback) fallback(); };
+  // 기록을 n칸 조용히 되돌린 뒤 then 을 부른다(되돌릴 칸이 없으면 바로)
+  function unwind(n, then) {
+    if (n <= 0) { then(); return; }
+    let done = false; const fin = () => { if (done) return; done = true; if (ignorePop === fin) ignorePop = null; then(); };
+    ignorePop = fin; try { history.go(-n); } catch (e) { fin(); return; }
+    setTimeout(fin, 500);
+  }
+  addEventListener('popstate', () => {
+    if (ignorePop) { const f = ignorePop; ignorePop = null; f(); return; }
+    const nd = (history.state && history.state.aiedu) || 0;
+    if (nd > depth) { try { history.back(); } catch (e) {} return; }   // 앞으로 가기는 쓰지 않는다
+    depth = nd;
+    let f = null; while (steps.length > Math.max(nd - 1, 0)) f = steps.pop();
+    if (nd >= 1 && gameEntry) { if (f) try { f(); } catch (e) {} return; }
+    gameEntry = false; steps.length = 0; G.route();
+  });
+  const showHome = () => {
     cleanup(); current = null; remember(null);
     document.body.dataset.view = 'home';
     G.$('#title').textContent = '놀이터';
     renderHome(G.store.get('cat', 'all'));
   };
+  G.home = () => {
+    if (!gameEntry && depth === 0) { showHome(); return; }
+    const n = depth; gameEntry = false; steps.length = 0; depth = 0;
+    cleanup(); unwind(n, showHome);
+  };
 
   G.start = (g, forceV) => {
-    cleanup(); current = g; remember(g.id);
+    if (gameEntry && steps.length) { const n = steps.length; steps.length = 0; depth -= n; cleanup(); unwind(n, () => run(g, forceV)); return; } // 게임 안에서 다시 시작: 게임 안 단계 기록은 걷어 낸다
+    run(g, forceV);
+  };
+  function run(g, forceV) {
+    cleanup(); current = g;
+    if (!gameEntry && depth === 0) { try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); history.pushState({ aiedu: 1 }, '', '#' + g.id); depth = 1; gameEntry = true; } catch (e) { remember(g.id); } } else { if (depth === 0) gameEntry = false; remember(g.id); }
     window.aieduLog && aieduLog('start', g.id);   // 이용 기록(익명, 게임 이름만)
     document.body.dataset.view = 'game';
     G.$('#title').textContent = g.name;
@@ -113,7 +149,7 @@
     stage().replaceChildren(...(g.noSub ? [root] : [sub, root]));
     const n = g.variants || 1, v = forceV != null ? forceV : G.nextVariant(g.id, n);
     stop = g.start(root, { hard: G.hard, kid: kidOn, v, n }) || null;
-  };
+  }
 
   // 결과 창: { stars:1~3, text }
   G.win = ({ stars = 1, text = '', ask = null, bonus: bonusIn } = {}) => {
