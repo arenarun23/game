@@ -13,6 +13,8 @@
   // 이모지·차는 한 번만 그려 두고 이미지로 찍는다(회전해도 비용이 일정). 글자를 매 프레임 회전해 그리면 글자 캐시가 계속 빗나가서 끊긴다.
   const spr = new Map();
   function sprite(key, w, h, fn) { let c = spr.get(key); if (!c) { c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); spr.set(key, c); } return c; }
+  let startBag = [], lastStart = -1;
+  function nextStart() { if (!startBag.length) { startBag = G.shuffle([0, 1, 2, 3]); if (startBag[startBag.length - 1] === lastStart) startBag.unshift(startBag.pop()); } return (lastStart = startBag.pop()); }
   const emo = (e) => sprite(e, 96, 96, (g, w) => { g.font = Math.round(w * 0.79) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, w / 2, w * 0.53); });
   const stamp = (c, e, fontPx) => { const sz = 96 * fontPx / 76; c.drawImage(emo(e), -sz / 2, -sz / 2, sz, sz); };
   G.raceUtil = { sprite, emo, stamp };
@@ -148,7 +150,7 @@
 
         // 선수
         const order4 = (() => { const others = G.shuffle(D.CHARS.map((_, i) => i).filter((i) => i !== sel.ch)).slice(0, 3), cars = G.shuffle(D.CARS.map((_, i) => i)); return [sel.ch, ...others].map((c, i) => [c, i === 0 ? sel.car : cars[i]]); })();
-        const slots = G.shuffle([0, 1, 2, 3]);
+        const mySlot = nextStart(), slots = [mySlot, ...G.shuffle([0, 1, 2, 3].filter((x) => x !== mySlot))]; // 내 출발 칸(1~4번): 가방에서 뽑아 4판에 한 번씩 골고루, 같은 칸이 연달아 나오지 않게
         const racers = order4.map(([ci, cr], i) => mk(ci, cr, i === 0, slots[i]));
         const me = racers[0];
         function mk(ci, cr, isPlayer, slot) {
