@@ -119,7 +119,7 @@
         clearTabs(); pickRedo = null;
         document.documentElement.dataset.racing = '1'; // 달리는 동안 위쪽 모드 버튼 줄을 숨겨 화면을 넓힌다
         const TD = TRACKS[sel.tr], T = D.buildTrack(TD, seedOf(sel.tr)), th = TD.theme, hw = T.hw, M = T.M, P = T.pts;
-        const laps = hard ? 3 : kid ? 1 : 2, WALL = hw * (kid ? 1.9 : 1.45);
+        const laps = hard ? 3 : kid ? 1 : 2, WALL = hw * (kid ? 1.55 : hard ? 1.45 : 1.3); // 쉬운 모드일수록 길 밖으로 덜 나가게 벽을 길 가까이에 세운다
         // 🚀 우주 코스: 중력(점프), 먼지·서리 구간, 옵션(후반 날씨·바퀴·피트)
         const SP = TD.space, spo = SP ? spOpt() : null, GK = SP ? Math.min(2.4, Math.pow(9.8 / SP.g, 0.3)) : 1, stormOn = !!(SP && spo.storm), tireOn = !!(SP && spo.tire);
         const TIRES = SP ? { rock: { n: '암반용', road: 1, dust: 0.72, grip: 3 }, all: { n: '겸용', road: 0.97, dust: 0.9, grip: 5.5 }, dust: { n: SP.soft, road: 0.93, dust: 1, grip: 7 } } : null;
@@ -170,7 +170,8 @@
         const needPerm = typeof window.DeviceOrientationEvent !== 'undefined' && typeof window.DeviceOrientationEvent.requestPermission === 'function';
         let ctlMode = G.store.get('race:ctl', coarse ? 'slide' : 'buttons'), assistOn = kid ? true : G.store.get('race:assist', coarse);
         if (ctlMode === 'tilt' && needPerm) ctlMode = 'slide';
-        let padV = 0, padOn = false, tiltV = 0, tiltZero = null, tiltGot = false, tiltTimer = 0, inputV = 0, paused = false;
+        const SL = hard ? { k: 1, p: 1, rate: 60 } : kid ? { k: 0.5, p: 1.7, rate: 5 } : { k: 0.72, p: 1.4, rate: 8 }; // 밀어서 조종: 쉬울수록 핸들이 덜 꺾이고(k) 가운데 근처가 더 둔하고(p) 천천히 따라온다(rate)
+        let padS = 0, padV = 0, padOn = false, tiltV = 0, tiltZero = null, tiltGot = false, tiltTimer = 0, inputV = 0, paused = false;
         const refreshChips = () => {
           wrap.dataset.ctl = ctlMode; chipA.textContent = '🧭 도우미 ' + (assistOn ? '켜짐' : '꺼짐'); chipA.setAttribute('aria-pressed', String(assistOn)); chipC.textContent = LABEL[ctlMode];
           bubL.textContent = ctlMode === 'slide' ? '👆 이 막대를 좌우로 밀어요' : ctlMode === 'tilt' ? '📱 폰을 기울여요 (지금 자세가 기준)' : '◀ ▶ 로 방향을 정해요';
@@ -230,10 +231,10 @@
         pad.addEventListener('pointermove', (e) => { if (padOn) padV = padCalc(e); });
         ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((t) => pad.addEventListener(t, () => { padOn = false; padV = 0; }));
         // 내 조종 = 키보드/버튼/막대/기울기 + (도우미가 켜져 있으면) 길 안내를 섞는다
-        function playerControl(r) {
+        function playerControl(r, dt) {
           let u = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-          if (ctlMode === 'slide') u += padV; else if (ctlMode === 'tilt') u += tiltV;
-          u = clamp(u, -1, 1); inputV = u; r.throttle = 1; let st = u;
+          if (ctlMode === 'slide') { padS += (padV - padS) * (1 - Math.exp(-SL.rate * (dt || 0.016))); u += Math.sign(padS) * Math.pow(Math.abs(padS), SL.p) * SL.k; } else if (ctlMode === 'tilt') u += tiltV;
+          u = clamp(u, -1, 1); inputV = ctlMode === 'slide' ? padS : u; r.throttle = 1; let st = u;
           if (assistOn && r.fin == null) { const edge = clamp((Math.abs(r.off_lat || 0) - hw * 0.55) / (hw * 0.9), 0, 1), k = (hard ? 0.4 : kid ? 0.9 : 0.65) + (1 - (hard ? 0.4 : kid ? 0.9 : 0.65)) * edge, g = guide(r, 0); st = clamp(u + g.steer * k * (1 - Math.min(1, Math.abs(u)) * (1 - edge)), -1, 1); r.throttle = clamp(1 - g.curve * 0.45 * k, 0.62, 1); } // 가장자리로 갈수록 도우미가 세짐
           r.steerIn = st;
         }
@@ -326,7 +327,7 @@
         }
         function step(r, dt) {
           if (r.isPlayer && dbg.steer != null) { r.steerIn = dbg.steer; r.throttle = 1; }
-          else if (r.isPlayer && !dbg.auto) playerControl(r);
+          else if (r.isPlayer && !dbg.auto) playerControl(r, dt);
           else aiThink(r, dt);
           if (r.fin != null) { r.steerIn = clamp(r.steerIn, -1, 1); r.throttle = 0.6; }
           if (r.trail && state === 'go') { r.trT -= dt; if (r.trT <= 0 && r.v > 60) { r.trT = 0.07; r.trI = (r.trI || 0) + 1; r.tr.push({ x: r.x - Math.cos(r.h) * 22, y: r.y - Math.sin(r.h) * 22, h: hOf(r) - r.zair, t: 0, e: r.trail[r.trI % r.trail.length] }); } }
