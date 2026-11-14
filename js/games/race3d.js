@@ -42,6 +42,8 @@
       else if (car.id === 'bus') { g.fillStyle = 'rgba(255,255,255,.7)'; for (let i = -22; i < 20; i += 11) g.fillRect(i, -32, 8, 8); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-25, -12, 50, 3); }
       else if (car.id === 'hop') { g.fillStyle = '#fff'; g.fillRect(-10, -40, 20, 6); g.fillStyle = 'rgba(0,0,0,.28)'; for (let i = -24; i < 24; i += 8) g.fillRect(i, -12, 4, 4); }
       else if (car.id === 'van') { g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-23, -32, 46, 3); }
+      else if (car.id === 'cop') { g.fillStyle = '#fff'; g.fillRect(-25, -14, 50, 4); g.fillStyle = '#ff3b3b'; g.fillRect(-11, -39, 10, 6); g.fillStyle = '#3b8bff'; g.fillRect(1, -39, 10, 6); }
+      else if (car.id === 'fire') { g.fillStyle = '#ffd24a'; g.fillRect(-25, -14, 50, 4); g.fillStyle = '#eee'; for (let i = -22; i < 22; i += 7) g.fillRect(i, -40, 3, 7); g.fillRect(-23, -38, 46, 2); }
     });
   }
 
@@ -56,6 +58,8 @@
       else if (ch.id === 'yeo') { tri([[17, 44], [26, 4], [47, 32]], '#f08a2c'); tri([[79, 44], [70, 4], [49, 32]], '#f08a2c'); tri([[22, 20], [26, 4], [37, 22]], '#4a2a14'); tri([[74, 20], [70, 4], [59, 22]], '#4a2a14'); head('#f4952f'); tri([[19, 64], [28, 86], [42, 74]], '#fff4e6'); tri([[77, 64], [68, 86], [54, 74]], '#fff4e6'); }
       else if (ch.id === 'eleph') { ell(14, 52, 17, 26, 0.2, '#8d9bb0'); ell(82, 52, 17, 26, -0.2, '#8d9bb0'); ell(14, 52, 9, 17, 0.2, '#c79aa8'); ell(82, 52, 9, 17, -0.2, '#c79aa8'); head('#a3b0c4'); ell(48, 86, 12, 8, 0, '#8d9bb0'); }
       else if (ch.id === 'leo') { g.fillStyle = '#b8742c'; g.beginPath(); g.arc(48, 56, 38, 0, TAU); g.fill(); g.fillStyle = '#8a5120'; for (let a = 0; a < 12; a++) { g.beginPath(); g.arc(48 + Math.cos(a / 12 * TAU) * 34, 56 + Math.sin(a / 12 * TAU) * 34, 8, 0, TAU); g.fill(); } ell(24, 28, 9, 9, 0, '#e2a24f'); ell(72, 28, 9, 9, 0, '#e2a24f'); head('#e8b35e'); ell(48, 84, 14, 7, 0, '#d79a45'); }
+      else if (ch.id === 'chee') { ell(27, 34, 11, 11, 0, '#e3b04b'); ell(69, 34, 11, 11, 0, '#e3b04b'); ell(27, 35, 5, 5, 0, '#2a2118'); ell(69, 35, 5, 5, 0, '#2a2118'); head('#ecbc55'); g.fillStyle = '#3a2c1c'; for (const [x, y] of [[34, 48], [48, 42], [62, 48], [38, 62], [58, 62], [48, 70], [30, 70], [66, 70]]) { g.beginPath(); g.arc(x, y, 4, 0, TAU); g.fill(); } ell(48, 86, 14, 7, 0, '#e3b04b'); }
+      else if (ch.id === 'tiger') { ell(27, 33, 12, 12, 0, '#f08a2c'); ell(69, 33, 12, 12, 0, '#f08a2c'); ell(27, 34, 6, 6, 0, '#2a1a10'); ell(69, 34, 6, 6, 0, '#2a1a10'); head('#f4952f'); g.fillStyle = '#2a1a10'; for (const [x, y, w] of [[48, 36, 5], [34, 44, 4], [62, 44, 4], [26, 58, 4], [70, 58, 4], [34, 72, 4], [62, 72, 4]]) g.fillRect(x - w / 2, y, w, 10); ell(48, 86, 15, 7, 0, '#f08a2c'); }
       else { ell(15, 70, 7, 15, 0.45, '#232733'); ell(81, 70, 7, 15, -0.45, '#232733'); head('#2d3240'); ell(48, 86, 15, 7, 0, '#232733'); }
       g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.ellipse(38, 46, 12, 8, -0.6, 0, TAU); g.fill();
       g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 2; g.beginPath(); g.arc(48, 58, 29, 0, TAU); g.stroke();

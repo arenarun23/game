@@ -416,10 +416,10 @@ html[data-game=race] .rbtn small{font-size:max(12px,clamp(.6rem,2.4vmin,.85rem))
   html[data-game=race] .hint{margin:.1rem 0 .3rem;font-size:max(14.5px,1.02rem)}
   html[data-game=race] #stage{padding:0 .5rem .5rem}
   /* 카드는 남는 높이를 나눠 갖고(넘칠 때만 스크롤), 오른쪽 끝이 잘리지 않게 여백 */
-  html[data-game=race] .pickgrid.row.many{height:100%;min-height:0;grid-auto-rows:minmax(3.7rem,1fr);gap:.35rem}
+  html[data-game=race] .pickgrid.row.many{height:100%;min-height:0;grid-auto-rows:minmax(3.3rem,1fr);gap:.2rem}
   html[data-game=race] .fitbox:has(.pickgrid.many){scrollbar-width:none}
   html[data-game=race] .fitbox:has(.pickgrid.many)::-webkit-scrollbar{display:none}
-  html[data-game=race] .pickgrid.row .card.pk{min-width:0;padding:.2rem .5rem}
+  html[data-game=race] .pickgrid.row .card.pk{min-width:0;padding:.05rem .5rem}
   html[data-game=race] .pickgrid.row .pk .ds{overflow-wrap:anywhere}
   html[data-game=race] .pickgrid.row .card.pk{grid-template-columns:26% 1fr}
   html[data-game=race] .pickgrid.row .pk .ds{font-size:max(13px,.84rem);line-height:1.15}

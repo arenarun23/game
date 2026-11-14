@@ -276,6 +276,13 @@
           if (state !== 'go' || r.cd[slot] > 0 || r.fin != null) return false;
           switch (sk.id) {
             case 'dash': r.boost = Math.max(r.boost, 1.3); r.boostMul = 1.55; break;
+            case 'sprint': r.boost = Math.max(r.boost, 1.7); r.boostMul = 1.65; break;
+            case 'claw': { let tg = null, bd = 1e9; for (const o of racers) if (o !== r && o.fin == null) { const dx = o.x - r.x, dy = o.y - r.y, d = Math.hypot(dx, dy); if (dx * Math.cos(r.h) + dy * Math.sin(r.h) > 0 && d < 380 && d < bd) { bd = d; tg = o; } }
+              fx.push({ k: 'ring', x: r.x, y: r.y, t: 0, life: 0.35 }); if (tg) hit(tg, 'spin', 1.1); r.boost = Math.max(r.boost, 0.6); r.boostMul = 1.25; } break;
+            case 'siren': fx.push({ k: 'ring', x: r.x, y: r.y, t: 0, life: 0.5 });
+              for (const o of racers) if (o !== r) { const dx = o.x - r.x, dy = o.y - r.y, d = Math.hypot(dx, dy); if (d < 320 && dx * Math.cos(r.h) + dy * Math.sin(r.h) < 0) hit(o, 'spin', 0.9); } break;
+            case 'splash': fx.push({ k: 'ring', x: r.x, y: r.y, t: 0, life: 0.5 });
+              for (const o of racers) if (o !== r) { const dx = o.x - r.x, dy = o.y - r.y, d = Math.hypot(dx, dy); if (d < 420 && dx * Math.cos(r.h) + dy * Math.sin(r.h) > 0 && hit(o, 'spin', 0.5)) { o.vx *= 0.4; o.vy *= 0.4; } } break;
             case 'turbo': r.boost = Math.max(r.boost, 2.2); r.boostMul = 1.5; break;
             case 'shield': r.shield = 3; break;
             case 'trap': drop('trap', r, -34); break;
@@ -312,7 +319,7 @@
           const p = hard ? 0.7 : kid ? 0.12 : 0.4;
           if (rnd() < p) for (let i = 0; i < r.slots.length; i++) { const it = r.slots[i]; if (!it) continue; if (it === 'missile' ? near(600, true) : it === 'banana' ? near(260, false) : curve < 0.3) { useItem(r, i); break; } }
           for (const s of [0, 1]) { if (r.cd[s] > 0 || rnd() > p * 0.6) continue; const id = (s === 0 ? r.ch : r.car).skill.id;
-            if ((id === 'dash' || id === 'turbo' || id === 'express') && curve < 0.25) useSkill(r, s); else if (id === 'roar' && near(420, true)) useSkill(r, s); else if (id === 'shield' && near(180)) useSkill(r, s);
+            if ((id === 'dash' || id === 'turbo' || id === 'express' || id === 'sprint') && curve < 0.25) useSkill(r, s); else if ((id === 'claw' || id === 'splash') && near(id === 'claw' ? 340 : 380, true)) useSkill(r, s); else if (id === 'siren' && near(300, false)) useSkill(r, s); else if (id === 'roar' && near(420, true)) useSkill(r, s); else if (id === 'shield' && near(180)) useSkill(r, s);
             else if ((id === 'trap' || id === 'oil' || id === 'pit') && near(260, false)) useSkill(r, s); else if (id === 'hop' && near(200, true)) useSkill(r, s); else if (id === 'ice' && near(450, true)) useSkill(r, s);
             else if (id === 'wave' && near(170)) useSkill(r, s); else if (id === 'magnet' && hasFree(r)) useSkill(r, s); }
         }
@@ -437,6 +444,8 @@
           else if (car.id === 'slide') { c.fillStyle = 'rgba(0,0,0,.28)'; c.fillRect(-24, -12, 14, 24); }
           else if (car.id === 'hop') { c.fillStyle = '#fff'; c.fillRect(-4, -5, 8, 10); c.fillStyle = 'rgba(0,0,0,.28)'; for (let i = -22; i < 20; i += 8) c.fillRect(i, -14, 4, 4); }
           else if (car.id === 'bus') { c.fillStyle = 'rgba(255,255,255,.55)'; for (let i = -20; i < 18; i += 10) c.fillRect(i, -10, 7, 20); }
+          else if (car.id === 'cop') { c.fillStyle = '#fff'; c.fillRect(-24, -14, 8, 28); c.fillStyle = '#ff3b3b'; c.fillRect(-4, -9, 8, 8); c.fillStyle = '#3b8bff'; c.fillRect(-4, 1, 8, 8); }
+          else if (car.id === 'fire') { c.fillStyle = '#ffd24a'; c.fillRect(-23, -2, 38, 4); c.fillStyle = '#eee'; for (let i = -22; i < 12; i += 6) c.fillRect(i, -9, 2, 18); }
           else { c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(-22, -2, 10, 4); }
         }
         const kartSpr = (car, col) => sprite('kart:' + car.id + col, 120, 80, (g) => { g.scale(2, 2); g.translate(30, 20); carShape(g, car, col); });
