@@ -152,7 +152,7 @@
         const racers = order4.map(([ci, cr], i) => mk(ci, cr, i === 0, slots[i]));
         const me = racers[0];
         function mk(ci, cr, isPlayer, slot) {
-          const ch = D.CHARS[ci], car = D.CARS[cr], idx = (M - 3 - Math.floor(slot / 2) * 4 + M) % M, c = P[idx], lat = (slot % 2 ? 0.45 : -0.45) * hw;
+          const ch = D.CHARS[ci], car = D.CARS[cr], idx = (M - 3 - Math.floor(slot / 2) * 7 - (slot % 2) * 2 + M) % M, c = P[idx], lat = (slot % 2 ? 0.45 : -0.45) * hw;
           const cs = isPlayer ? window.RaceReward.cos() : null;
           return { ch, car, col: (cs && cs.color.c) || car.color, hat: cs && cs.hat.e, trail: cs && cs.trail.e, tr: [], trT: 0, dust: [], dT: 0, isPlayer, tire: isPlayer && tireOn ? spo.tireStart : 'all', pitPhase: null, pitT: 0, airMax: 0, plow: !!ch.mod.plow, plowCd: 0, hop: 0, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
             offF: 0.45 + (car.st.off || 0) + (ch.mod.off || 0), iceImm: !!ch.mod.ice, x: c.x + c.nx * lat, y: c.y + c.ny * lat, h: Math.atan2(c.ty, c.tx), px: c.x + c.nx * lat, py: c.y + c.ny * lat, ph: Math.atan2(c.ty, c.tx), dx: 0, dy: 0, dh: 0, vx: 0, vy: 0, v: 0, idx, lap: 0, prog: idx, prevIdx: idx,
