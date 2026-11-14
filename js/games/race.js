@@ -58,8 +58,8 @@
         if (stopFn) { stopFn(); stopFn = null; }
         clearTabs();
         const land = innerWidth > innerHeight * 1.05, n = items.length;
-        const c = land ? (n <= 4 ? n : n <= 10 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 && step < 3 ? 3 : 2), r = Math.ceil(n / c);
-        const rowMode = !land && step <= 2, many = !land && (step === 3 ? n > 8 : n > 5); // 폰 세로에서 경기장이 8개를 넘으면 2열로 두고 아래로 넘겨 본다 // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
+        const c = land ? (n <= 4 ? n : n <= 10 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 ? 3 : 2), r = Math.ceil(n / c);
+        const rowMode = !land && step <= 2, many = !land && (step === 3 ? n > 12 : n > 5); // 폰 세로에서 경기장이 8개를 넘으면 2열로 두고 아래로 넘겨 본다 // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
         const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : '') + (many ? ' many' : ''), style: rowMode ? `--c:1;--r:${n}` : `--c:${c};--r:${r}` }, items.map((it, i) =>
           G.h('button', { class: 'card pk c-' + it.color + (typeof it.ic === 'string' ? '' : ' trk'), 'aria-pressed': String(i === cur), onclick: () => { G.sfx.tap(); onPick(i); } },
             G.h('span', { class: 'ic' }, it.ic), G.h('span', Object.assign({ class: 'nm' }, typeof it.ic === 'string' ? { 'data-e': it.ic } : {}), it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
@@ -107,7 +107,7 @@
         const doneSet = new Set(G.store.get('race:done:' + (hard ? 'hard' : 'easy'), [])), idxs = groupIdx(tab);
         const cnt = (g) => groupIdx(g).filter((i) => doneSet.has(i)).length;
         const tabs = G.h('div', { class: 'tabs' }, [[0, '🗺️ 2D'], [1, '🧊 3D'], [2, '🚀 우주']].map(([g, label]) =>
-          G.h('button', { class: 'tab', 'aria-pressed': String(g === tab), onclick: () => { G.sfx.tap(); tab = g; showTracks(); } }, innerWidth > innerHeight * 1.05 ? label : `${label} (${cnt(g)}/${groupIdx(g).length})`)));
+          G.h('button', { class: 'tab', 'aria-pressed': String(g === tab), onclick: () => { G.sfx.tap(); tab = g; showTracks(); } }, innerWidth > innerHeight * 1.05 ? label : [label + ' ', G.h('span', { class: 'cnt' }, `(${cnt(g)}/${groupIdx(g).length})`)])));
         const spExtra = tab === 2 ? spaceOptions(showTracks) : null, land3 = innerWidth > innerHeight * 1.05;
         pick(3, (hard ? '🔥 어려운 ' : kid ? '🐣 아주 쉬운 ' : '') + `경기장을 골라요 · ${hard ? 3 : kid ? 1 : 2}바퀴`, idxs.map((i) => { const t = TRACKS[i]; return { ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky', 'lemon', 'mint'][idxs.indexOf(i) % 10], ds: [br('▶ ' + t.shape), br(t.gim)] }; }), idxs.indexOf(sel.tr),
           (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); startRace(); }, showCars, land3 ? spExtra : (spExtra ? G.h('div', {}, tabs, spExtra) : tabs));
