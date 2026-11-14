@@ -496,11 +496,12 @@
           for (let i = 1; i < ord.length; i++) { const v = ord[i]; let j = i - 1; while (j >= 0 && ord[j].dy > v.dy) { ord[j + 1] = ord[j]; j--; } ord[j + 1] = v; }
           for (const p of me.tr) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(rot); ctx.globalAlpha = 1 - p.t / 0.6; stamp(ctx, p.e, 20 * (1 - 0.4 * p.t / 0.6)); ctx.restore(); }
           for (const r of ord) {
-            ctx.save(); ctx.translate(r.dx, r.dy); { const k = 1.1 * (1 + r.zair / 220); ctx.scale(k, k); } // 차를 10% 크게(점프 땐 더 크게)
+            ctx.save(); ctx.translate(r.dx, r.dy); { const k = (r.isPlayer ? 1.5 : 1.32) * (1 + r.zair / 220); ctx.scale(k, k); } // 차를 크게(내 차는 더 크게, 점프 땐 더 크게)
+            if (r.isPlayer) { ctx.save(); const pu = 0.5 + 0.5 * Math.sin(t * 6); ctx.shadowColor = 'rgba(255,225,77,.95)'; ctx.shadowBlur = 14; ctx.strokeStyle = 'rgba(255,225,77,' + (0.75 + 0.25 * pu) + ')'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.ellipse(0, 3, 40 + pu * 3, 27 + pu * 2, 0, 0, TAU); ctx.stroke(); ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,225,77,.22)'; ctx.fill(); ctx.restore(); } // 내 차: 노란 빛 고리
             if (r.boost > 0) { ctx.save(); ctx.rotate(r.dh); ctx.fillStyle = '#ff9f1c'; ctx.beginPath(); ctx.moveTo(-24, -9); ctx.lineTo(-24 - 18 - rnd() * 10, 0); ctx.lineTo(-24, 9); ctx.fill(); ctx.restore(); }
             ctx.save(); ctx.rotate(r.dh + r.spin); ctx.drawImage(kartSpr(r.car, r.col), -30, -20, 60, 40); ctx.restore();
             ctx.save(); ctx.rotate(rot); stamp(ctx, r.ch.e, 26); if (r.hat) { ctx.translate(0, -15); stamp(ctx, r.hat, 17); }
-            if (r.isPlayer) { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-8, -40); ctx.lineTo(8, -40); ctx.lineTo(0, -28); ctx.closePath(); ctx.stroke(); ctx.fill(); }
+            if (r.isPlayer) { const bob = Math.sin(t * 7) * 3; ctx.fillStyle = '#ffe14d'; ctx.strokeStyle = '#222'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(-11, -50 + bob); ctx.lineTo(11, -50 + bob); ctx.lineTo(0, -34 + bob); ctx.closePath(); ctx.stroke(); ctx.fill(); }
             if (r.shield > 0) { ctx.strokeStyle = 'rgba(80,220,255,.9)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 30 + Math.sin(t * 10) * 2, 0, TAU); ctx.stroke(); }
             if (r.frozen > 0) { ctx.globalAlpha = 0.85; stamp(ctx, '🧊', 44); ctx.globalAlpha = 1; }
             ctx.restore(); ctx.restore();
