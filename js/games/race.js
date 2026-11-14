@@ -13,8 +13,9 @@
   // 이모지·차는 한 번만 그려 두고 이미지로 찍는다(회전해도 비용이 일정). 글자를 매 프레임 회전해 그리면 글자 캐시가 계속 빗나가서 끊긴다.
   const spr = new Map();
   function sprite(key, w, h, fn) { let c = spr.get(key); if (!c) { c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); spr.set(key, c); } return c; }
+  const NR = 6; // 한 경기에 달리는 선수 수(나 + 컴퓨터 5)
   let startBag = [], lastStart = -1;
-  function nextStart() { if (!startBag.length) { startBag = G.shuffle([0, 1, 2, 3]); if (startBag[startBag.length - 1] === lastStart) startBag.unshift(startBag.pop()); } return (lastStart = startBag.pop()); }
+  function nextStart() { if (!startBag.length) { startBag = G.shuffle([...Array(NR).keys()]); if (startBag[startBag.length - 1] === lastStart) startBag.unshift(startBag.pop()); } return (lastStart = startBag.pop()); }
   const emo = (e) => sprite(e, 96, 96, (g, w) => { g.font = Math.round(w * 0.79) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, w / 2, w * 0.53); });
   const stamp = (c, e, fontPx) => { const sz = 96 * fontPx / 76; c.drawImage(emo(e), -sz / 2, -sz / 2, sz, sz); };
   G.raceUtil = { sprite, emo, stamp };
@@ -149,12 +150,12 @@
         fit(); const ro = new ResizeObserver(fit); ro.observe(wrap);
 
         // 선수
-        const order4 = (() => { const others = G.shuffle(D.CHARS.map((_, i) => i).filter((i) => i !== sel.ch)).slice(0, 3), cars = G.shuffle(D.CARS.map((_, i) => i)); return [sel.ch, ...others].map((c, i) => [c, i === 0 ? sel.car : cars[i]]); })();
-        const mySlot = nextStart(), slots = [mySlot, ...G.shuffle([0, 1, 2, 3].filter((x) => x !== mySlot))]; // 내 출발 칸(1~4번): 가방에서 뽑아 4판에 한 번씩 골고루, 같은 칸이 연달아 나오지 않게
-        const racers = order4.map(([ci, cr], i) => mk(ci, cr, i === 0, slots[i]));
+        const orderN = (() => { const others = G.shuffle(D.CHARS.map((_, i) => i).filter((i) => i !== sel.ch)).slice(0, NR - 1), cars = G.shuffle(D.CARS.map((_, i) => i)); return [sel.ch, ...others].map((c, i) => [c, i === 0 ? sel.car : cars[i]]); })();
+        const mySlot = nextStart(), slots = [mySlot, ...G.shuffle([...Array(NR).keys()].filter((x) => x !== mySlot))]; // 내 출발 칸(1~6번): 가방에서 뽑아 6판에 한 번씩 골고루, 같은 칸이 연달아 나오지 않게
+        const racers = orderN.map(([ci, cr], i) => mk(ci, cr, i === 0, slots[i]));
         const me = racers[0];
         function mk(ci, cr, isPlayer, slot) {
-          const ch = D.CHARS[ci], car = D.CARS[cr], idx = (M - 3 - Math.floor(slot / 2) * 7 - (slot % 2) * 2 + M) % M, c = P[idx], lat = (slot % 2 ? 0.45 : -0.45) * hw;
+          const ch = D.CHARS[ci], car = D.CARS[cr], idx = (M - 3 - Math.floor(slot / 2) * 6 - (slot % 2) * 2 + M) % M, c = P[idx], lat = (slot % 2 ? 0.45 : -0.45) * hw;
           const cs = isPlayer ? window.RaceReward.cos() : null;
           return { ch, car, col: (cs && cs.color.c) || car.color, hat: cs && cs.hat.e, trail: cs && cs.trail.e, tr: [], trT: 0, dust: [], dT: 0, isPlayer, tire: isPlayer && tireOn ? spo.tireStart : 'all', pitPhase: null, pitT: 0, airMax: 0, plow: !!ch.mod.plow, plowCd: 0, hop: 0, maxV: BASE_V * car.st.speed * ch.mod.max, acc: BASE_ACC * car.st.acc * ch.mod.acc, turn: BASE_TURN * car.st.turn * ch.mod.turn, mass: car.st.mass * ch.mod.mass,
             offF: 0.45 + (car.st.off || 0) + (ch.mod.off || 0), iceImm: !!ch.mod.ice, x: c.x + c.nx * lat, y: c.y + c.ny * lat, h: Math.atan2(c.ty, c.tx), px: c.x + c.nx * lat, py: c.y + c.ny * lat, ph: Math.atan2(c.ty, c.tx), dx: 0, dy: 0, dh: 0, vx: 0, vy: 0, v: 0, idx, lap: 0, prog: idx, prevIdx: idx,
@@ -251,7 +252,7 @@
         const hOf = (r) => { if (!T.v3d) return 0; const pm = ((r.prog % M) + M) % M, i0 = Math.floor(pm); return T.hgt[i0] + (T.hgt[(i0 + 1) % M] - T.hgt[i0]) * (pm - i0) + r.zair; };
         const env = { wall: WALL, ctx: null, W: 0, H: 0, T, th, racers, objs, boxT, me, hOf, yaw: 0, t: 0, alpha: 0, dt: 0.016, lowQ: false };
         // 아이템·스킬
-        const randItem = (r) => { const k = rank(r), pool = k >= 3 ? ['boost', 'boost', 'missile', 'shield', 'banana'] : k === 2 ? ['boost', 'missile', 'shield', 'banana'] : ['shield', 'banana', 'banana', 'boost']; return G.pick(pool); };
+        const randItem = (r) => { const k = rank(r), pool = k >= 4 ? ['boost', 'boost', 'missile', 'shield', 'banana'] : k >= 2 ? ['boost', 'missile', 'shield', 'banana'] : ['shield', 'banana', 'banana', 'boost']; return G.pick(pool); };
         function hit(r, kind, dur) {
           if (r.fin != null) return false;
           if (r.shield > 0) { r.shield = 0; if (r.isPlayer) toast('🛡️ 막았어요!'); return false; }
@@ -452,13 +453,13 @@
         const runs = [], ord = racers.slice();
         let alpha = 0, pcamH = camH, lowQ = false;
         function draw() {
-          const zoom = Math.max(H / 680, 0.5 * dpr) * (W > H * 1.05 ? 1.3 : 1); // 가로 화면은 30% 확대(폰 가로에서 차가 작아 보이던 문제)
+          const zoom = Math.max(H / 680, 0.5 * dpr) * (W > H * 1.05 ? 1.3 : 1); const camY = W > H * 1.05 ? 0.66 : 0.72; // 가로 화면은 내 차를 조금 위로 올려 출발 때 뒷줄 차도 보이게 // 가로 화면은 30% 확대(폰 가로에서 차가 작아 보이던 문제)
           for (const r of racers) { r.dx = r.px + (r.x - r.px) * alpha; r.dy = r.py + (r.y - r.py) * alpha; r.dh = r.ph + angDiff(r.h, r.ph) * alpha; }
           if (T.v3d) { Object.assign(env, { ctx, W, H, yaw: pcamH + angDiff(camH, pcamH) * alpha, t, alpha, lowQ, state, stormN }); window.Race3D.draw(env); return; }
           const px = me.dx, py = me.dy, rot = Math.PI / 2 + pcamH + angDiff(camH, pcamH) * alpha;
           ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
-          ctx.translate(W / 2, H * 0.72); ctx.scale(zoom, zoom); ctx.rotate(-rot); ctx.translate(-px, -py);
-          const rad = Math.hypot(W / 2, H * 0.72) / zoom + hw * 1.8, rad2 = rad * rad;
+          ctx.translate(W / 2, H * camY); ctx.scale(zoom, zoom); ctx.rotate(-rot); ctx.translate(-px, -py);
+          const rad = Math.hypot(W / 2, H * camY) / zoom + hw * 1.8, rad2 = rad * rad;
           // 도로: 화면에 보이는 구간만 긋는다
           runs.length = 0; let cur = null;
           for (let k = 0; k < M; k++) { const c = P[k]; if ((c.x - px) * (c.x - px) + (c.y - py) * (c.y - py) < rad2) { if (!cur) { cur = { s: k, n: 0 }; runs.push(cur); } cur.n++; } else cur = null; }
@@ -529,7 +530,7 @@
         function hud(dt) {
           toastT -= dt; if (toastT <= 0) setTxt(toastEl, '');
           const k = rank(me), lap = clamp(me.lap, 1, laps);
-          setTxt(badge, `🏁 ${k}등 / 4  ·  🔁 ${lap}/${laps}`);
+          setTxt(badge, `🏁 ${k}등 / ${NR}  ·  🔁 ${lap}/${laps}`);
           cardEls.forEach((el, i) => { const it = me.slots[i]; setTxt(el.firstChild, it ? ITEMS[it].e : '·'); el.classList.toggle('ready', !!it); });
           [[bS1, me.ch.skill, 0], [bS2, me.car.skill, 1]].forEach(([b, sk, i]) => { if (b._sk !== sk) { b._sk = sk; b._em.textContent = sk.e; b.querySelector('small').textContent = sk.tag || sk.n; } const h = (me.cd[i] > 0 ? Math.round(me.cd[i] / sk.cd * 100) : 0) + '%'; if (b._h !== h) { b._h = h; b._cd.style.height = h; } });
         }
