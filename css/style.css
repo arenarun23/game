@@ -432,3 +432,10 @@ html[data-game=race] .rbtn small{font-size:max(12px,clamp(.6rem,2.4vmin,.85rem))
   html[data-game=race] .palette .btn{padding-left:.7rem;padding-right:.7rem;white-space:nowrap}
   @media (max-width:340px){html[data-game=race] .tab .cnt{display:none}}
 }
+
+/* 치타·코끼리 얼굴 그림(이모지 대신): 글자 크기에 맞춰 보이게, 카드에서는 작은 칸에서도 숨기지 않는다 */
+.faceimg{width:1.1em;height:1.1em;display:inline-block;vertical-align:-.2em;pointer-events:none;user-select:none}
+.pk .ic.face{display:block!important}
+.pk .ic.face .faceimg{display:block;margin:0 auto;width:1em;height:1em;vertical-align:baseline}
+.rwch .faceimg{display:block;width:1.05em;height:1.05em;vertical-align:baseline}
+.hrow b .faceimg{width:1.15em;height:1.15em}

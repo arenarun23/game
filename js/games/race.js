@@ -16,9 +16,33 @@
   const NR = 6; // 한 경기에 달리는 선수 수(나 + 컴퓨터 5)
   let startBag = [], lastStart = -1;
   function nextStart() { if (!startBag.length) { startBag = G.shuffle([...Array(NR).keys()]); if (startBag[startBag.length - 1] === lastStart) startBag.unshift(startBag.pop()); } return (lastStart = startBag.pop()); }
-  const emo = (e) => sprite(e, 96, 96, (g, w) => { g.font = Math.round(w * 0.79) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, w / 2, w * 0.53); });
+  // 치타·코끼리는 이모지가 온몸이라(다른 친구는 얼굴) 얼굴만 직접 그린다. 이모지 글자(🐆 🐘)를 이 그림으로 바꿔 찍는다.
+  const circ = (g, x, y, r, col) => { g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); };
+  const ellp = (g, x, y, rx, ry, col, rot) => { g.fillStyle = col; g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, TAU); g.fill(); };
+  const FACES = {
+    '🐆': (g) => { // 치타: 노란 얼굴 + 검은 점 + 눈물 줄무늬
+      circ(g, 19, 25, 11, '#d99a2b'); circ(g, 77, 25, 11, '#d99a2b'); circ(g, 19, 26, 5.5, '#3a2c1c'); circ(g, 77, 26, 5.5, '#3a2c1c');
+      circ(g, 48, 54, 38, '#f2c14e'); ellp(g, 48, 68, 20, 15, '#fff1c9');
+      g.fillStyle = '#3a2c1c'; for (const [x, y] of [[48, 22], [36, 25], [60, 25], [24, 40], [72, 40], [20, 56], [76, 56], [28, 74], [68, 74]]) { g.beginPath(); g.arc(x, y, 3.3, 0, TAU); g.fill(); }
+      g.strokeStyle = '#3a2c1c'; g.lineWidth = 3.2; g.lineCap = 'round'; g.beginPath(); g.moveTo(31, 50); g.quadraticCurveTo(28, 62, 34, 70); g.moveTo(65, 50); g.quadraticCurveTo(68, 62, 62, 70); g.stroke();
+      circ(g, 34, 46, 5.2, '#fff'); circ(g, 62, 46, 5.2, '#fff'); circ(g, 35, 47, 3.2, '#222'); circ(g, 61, 47, 3.2, '#222');
+      g.fillStyle = '#3a2c1c'; g.beginPath(); g.moveTo(42, 58); g.lineTo(54, 58); g.lineTo(48, 66); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(48, 66); g.lineTo(48, 70); g.moveTo(48, 70); g.quadraticCurveTo(42, 77, 37, 73); g.moveTo(48, 70); g.quadraticCurveTo(54, 77, 59, 73); g.lineWidth = 2.6; g.strokeStyle = '#3a2c1c'; g.stroke();
+    },
+    '🐘': (g) => { // 코끼리: 큰 귀 + 회색 얼굴 + 코 + 작은 엄니
+      ellp(g, 12, 50, 14, 24, '#8d9bb0', 0.15); ellp(g, 84, 50, 14, 24, '#8d9bb0', -0.15); ellp(g, 13, 51, 7.5, 16, '#d7a3b1', 0.15); ellp(g, 83, 51, 7.5, 16, '#d7a3b1', -0.15);
+      circ(g, 48, 46, 33, '#a6b3c7');
+      g.fillStyle = '#a6b3c7'; g.beginPath(); g.moveTo(37, 56); g.quadraticCurveTo(35, 84, 44, 90); g.quadraticCurveTo(52, 94, 58, 86); g.quadraticCurveTo(61, 80, 57, 76); g.lineTo(60, 56); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(80,95,120,.45)'; g.lineWidth = 2.2; g.lineCap = 'round'; for (const y of [66, 74, 82]) { g.beginPath(); g.moveTo(41, y); g.quadraticCurveTo(48, y + 3, 57, y); g.stroke(); }
+      g.fillStyle = '#fffdf2'; g.beginPath(); g.moveTo(32, 62); g.quadraticCurveTo(24, 72, 28, 80); g.quadraticCurveTo(33, 74, 38, 66); g.closePath(); g.fill(); g.beginPath(); g.moveTo(64, 62); g.quadraticCurveTo(72, 72, 68, 80); g.quadraticCurveTo(63, 74, 58, 66); g.closePath(); g.fill();
+      circ(g, 36, 40, 5.4, '#fff'); circ(g, 60, 40, 5.4, '#fff'); circ(g, 37, 41, 3.3, '#222'); circ(g, 59, 41, 3.3, '#222');
+      ellp(g, 28, 54, 5, 3, 'rgba(255,140,160,.45)'); ellp(g, 68, 54, 5, 3, 'rgba(255,140,160,.45)');
+    },
+  };
+  const emo = (e) => sprite(e, 96, 96, (g, w) => { if (FACES[e]) { FACES[e](g); return; } g.font = Math.round(w * 0.79) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, w / 2, w * 0.53); });
+  const faceImg = (e, cls) => { if (!FACES[e]) return null; const im = new Image(); im.src = emo(e).toDataURL('image/png'); im.alt = ''; im.className = 'faceimg' + (cls ? ' ' + cls : ''); im.draggable = false; return im; };
   const stamp = (c, e, fontPx) => { const sz = 96 * fontPx / 76; c.drawImage(emo(e), -sz / 2, -sz / 2, sz, sz); };
-  G.raceUtil = { sprite, emo, stamp };
+  G.raceUtil = { sprite, emo, stamp, faces: FACES, faceImg };
 
   let pendingTrack = null; // 질문에서 '네'를 눌러 모드를 바꿨을 때, 고르기를 건너뛰고 바로 시작할 경기장
   const saved = G.store.get('race:sel', {});
@@ -26,7 +50,7 @@
 
   // 사용법 화면 (고르기 화면과 경기 중 모두에서 연다)
   function helpOverlay(root, ch, car, onClose) {
-    const row = (ic, t, d) => G.h('div', { class: 'hrow' }, G.h('span', { class: 'hic' }, ic), G.h('span', { class: 'htx' }, G.h('b', {}, t), ' ', d));
+    const row = (ic, t, d) => G.h('div', { class: 'hrow' }, G.h('span', { class: 'hic' }, ic), G.h('span', { class: 'htx' }, G.h('b', {}, ...[].concat(t)), ' ', d));
     const close = () => { box.remove(); if (onClose) onClose(); };
     const box = G.h('div', { class: 'rhelp' }, G.h('div', { class: 'hbox' },
       G.h('h3', {}, '🏁 레이싱 사용법'),
@@ -39,7 +63,7 @@
       row('🃏', '오른쪽 카드 칸 4개', '카드를 최대 4장 모아요. 쓰고 싶은 칸을 눌러요 (키보드 1~4, Space는 첫 카드)'),
       row(ITEMS.boost.e, ITEMS.boost.n, ITEMS.boost.d), row(ITEMS.shield.e, ITEMS.shield.n, ITEMS.shield.d), row(ITEMS.banana.e, ITEMS.banana.n, ITEMS.banana.d), row(ITEMS.missile.e, ITEMS.missile.n, ITEMS.missile.d),
       G.h('h4', {}, '⚡ 내 스킬 (쿨타임이 끝나면 또 써요)'),
-      row(ch.skill.e, `${ch.e} ${ch.skill.n}`, `${ch.skill.d} — 왼쪽 버튼 (Z)`), row(car.skill.e, `${car.e} ${car.skill.n}`, `${car.skill.d} — 가운데 버튼 (X)`),
+      row(ch.skill.e, [faceImg(ch.e, 'inl') || ch.e, ' ' + ch.skill.n], `${ch.skill.d} — 왼쪽 버튼 (Z)`), row(car.skill.e, `${car.e} ${car.skill.n}`, `${car.skill.d} — 가운데 버튼 (X)`),
       G.h('h4', {}, '🛣️ 길 위의 표지'), row('⏩', '파란 화살표', '밟으면 쌩 빨라져요'), row('🟤', '진흙 · 물 · 용암', '느려져요'), row('🧊', '얼음판', '미끄러워요'),
       G.h('button', { class: 'btn', onclick: close }, '알겠어요!')));
     root.append(box); return box;
@@ -65,7 +89,7 @@
         const rowMode = !land && step <= 2, many = !land && (step === 3 ? n > 12 : n > 5); // 폰 세로에서 경기장이 8개를 넘으면 2열로 두고 아래로 넘겨 본다 // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
         const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : '') + (many ? ' many' : ''), style: rowMode ? `--c:1;--r:${n}` : `--c:${c};--r:${r}` }, items.map((it, i) =>
           G.h('button', { class: 'card pk c-' + it.color + (typeof it.ic === 'string' ? '' : ' trk'), 'aria-pressed': String(i === cur), onclick: () => { G.sfx.tap(); onPick(i); } },
-            G.h('span', { class: 'ic' }, it.ic), G.h('span', Object.assign({ class: 'nm' }, typeof it.ic === 'string' ? { 'data-e': it.ic } : {}), it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
+            G.h('span', { class: 'ic' + (typeof it.ic === 'string' && FACES[it.ic] ? ' face' : '') }, typeof it.ic === 'string' && FACES[it.ic] ? faceImg(it.ic) : it.ic), G.h('span', Object.assign({ class: 'nm' }, typeof it.ic === 'string' && !FACES[it.ic] ? { 'data-e': it.ic } : {}), it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
         const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), extra || null, G.h('div', { class: 'fitbox' }, grid)];
         kids.push(G.h('div', { class: 'palette' }, onBack ? G.h('button', { class: 'btn alt', onclick: onBack }, '◀ 이전') : null,
           G.h('button', { class: 'btn alt', onclick: () => helpOverlay(root, D.CHARS[sel.ch], D.CARS[sel.car]) }, '❓ 사용법'),
