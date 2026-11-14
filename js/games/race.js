@@ -29,6 +29,13 @@
       g.fillStyle = '#3a2c1c'; g.beginPath(); g.moveTo(42, 58); g.lineTo(54, 58); g.lineTo(48, 66); g.closePath(); g.fill();
       g.beginPath(); g.moveTo(48, 66); g.lineTo(48, 70); g.moveTo(48, 70); g.quadraticCurveTo(42, 77, 37, 73); g.moveTo(48, 70); g.quadraticCurveTo(54, 77, 59, 73); g.lineWidth = 2.6; g.strokeStyle = '#3a2c1c'; g.stroke();
     },
+    '🐧': (g) => { // 펭구: 검은 머리 + 하얀 얼굴 + 주황 부리 + 볼
+      circ(g, 48, 50, 38, '#2d3446'); g.fillStyle = '#fff'; g.beginPath(); g.ellipse(36, 50, 17, 22, 0.12, 0, TAU); g.ellipse(60, 50, 17, 22, -0.12, 0, TAU); g.ellipse(48, 62, 20, 17, 0, 0, TAU); g.fill();
+      circ(g, 35, 44, 5.6, '#fff'); circ(g, 61, 44, 5.6, '#fff'); circ(g, 36, 45, 3.5, '#111'); circ(g, 60, 45, 3.5, '#111'); circ(g, 37.2, 43.6, 1.2, '#fff'); circ(g, 61.2, 43.6, 1.2, '#fff');
+      g.fillStyle = '#ff9a1f'; g.beginPath(); g.moveTo(38, 56); g.quadraticCurveTo(48, 50, 58, 56); g.quadraticCurveTo(54, 70, 48, 72); g.quadraticCurveTo(42, 70, 38, 56); g.closePath(); g.fill();
+      g.strokeStyle = '#d97a0a'; g.lineWidth = 2; g.lineCap = 'round'; g.beginPath(); g.moveTo(41, 61); g.quadraticCurveTo(48, 64, 55, 61); g.stroke();
+      ellp(g, 26, 58, 5, 3.2, 'rgba(255,130,150,.5)'); ellp(g, 70, 58, 5, 3.2, 'rgba(255,130,150,.5)');
+    },
     '🐘': (g) => { // 코끼리: 큰 귀 + 회색 얼굴 + 코 + 작은 엄니
       ellp(g, 12, 50, 14, 24, '#8d9bb0', 0.15); ellp(g, 84, 50, 14, 24, '#8d9bb0', -0.15); ellp(g, 13, 51, 7.5, 16, '#d7a3b1', 0.15); ellp(g, 83, 51, 7.5, 16, '#d7a3b1', -0.15);
       circ(g, 48, 46, 33, '#a6b3c7');
