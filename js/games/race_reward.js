@@ -44,7 +44,7 @@
     g.fillStyle = '#222'; g.beginPath(); g.roundRect(cx - 80, cy + 30, 36, 24, 6); g.roundRect(cx + 44, cy + 30, 36, 24, 6); g.fill();
     g.fillStyle = col; g.beginPath(); g.roundRect(cx - 100, cy - 20, 200, 62, 18); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.roundRect(cx - 20, cy - 12, 60, 40, 10); g.fill();
     g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.arc(cx, cy - 36, 54, 0, 6.2832); g.fill(); g.fillStyle = '#4a3b2a';
-    E(o.chEmoji, cx, cy - 36, 96); if (c.hat.e) E(c.hat.e, cx, cy - 92, 56);
+    { const U = G.raceUtil; if (U && U.faces[o.chEmoji]) { const z = 96 * 96 / 76; g.drawImage(U.emo(o.chEmoji), cx - z / 2, cy - 36 - z / 2, z, z); } else E(o.chEmoji, cx, cy - 36, 96); } if (c.hat.e) E(c.hat.e, cx, cy - 92, 56);
     // 보상 5개
     const w = 160, gap = 15, x0 = (W - (w * 5 + gap * 4)) / 2;
     MILES.forEach((m, i) => { const x = x0 + i * (w + gap), ok = s >= m.at; g.fillStyle = ok ? '#fff3b0' : 'rgba(255,255,255,.55)'; g.beginPath(); g.roundRect(x, 440, w, 150, 18); g.fill(); g.strokeStyle = ok ? '#f5b700' : '#bbb'; g.lineWidth = 4; g.stroke();
@@ -114,7 +114,7 @@
       pv.replaceChildren(
         ...(tr ? [0, 1, 2, 3].map((i) => h('span', { class: 'rwtr', style: `left:${6 + i * 15}px;opacity:${0.35 + i * 0.15}` }, tr[i % tr.length])) : []),
         h('span', { class: 'rwcar', style: `background:${col}` }), h('span', { class: 'rww w1' }), h('span', { class: 'rww w2' }),
-        h('span', { class: 'rwch' }, o.chEmoji), ...(c.hat.e ? [h('span', { class: 'rwhat' }, c.hat.e)] : []));
+        h('span', { class: 'rwch' }, (G.raceUtil && G.raceUtil.faceImg(o.chEmoji)) || o.chEmoji), ...(c.hat.e ? [h('span', { class: 'rwhat' }, c.hat.e)] : []));
     }
     const chipRow = (label, list, key, render) => {
       const row = h('div', { class: 'rwrow' }, h('b', {}, label), h('div', { class: 'rwchips' }));
