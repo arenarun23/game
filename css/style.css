@@ -439,3 +439,18 @@ html[data-game=race] .rbtn small{font-size:max(12px,clamp(.6rem,2.4vmin,.85rem))
 .pk .ic.face .faceimg{display:block;margin:0 auto;width:1em;height:1em;vertical-align:baseline}
 .rwch .faceimg{display:block;width:1.05em;height:1.05em;vertical-align:baseline}
 .hrow b .faceimg{width:1.15em;height:1.15em}
+
+/* 폰 세로: 캐릭터·차가 10개를 넘으면 2열로 두고 그림 + 이름만 보여 준다(설명은 사용법·고른 뒤 화면에서) */
+.pickgrid.row.dense{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(var(--r),minmax(0,1fr));gap:.3rem}
+.pickgrid.row.dense .card.pk{grid-template-columns:38% 1fr;grid-template-rows:1fr;padding:.15rem .35rem;column-gap:.25rem}
+.pickgrid.row.dense .pk .ic{grid-row:1;font-size:clamp(1.8rem,62cqh,3rem)}
+.pickgrid.row.dense .pk .nm{grid-row:1;align-self:center}
+html[data-game=race] .pickgrid.row.dense .pk .nm{font-size:max(15px,clamp(.9rem,26cqh,1.15rem))}
+html[data-game=race] .pickgrid.row.dense .pk .ds{display:none!important}
+/* 폰 가로(낮은 화면)에서 카드가 10개를 넘으면 3줄이 되므로 그림 + 이름만 */
+@media (max-height:460px){
+  html[data-game=race] .pickgrid.lt .pk:not(.trk) .ds{display:none!important}
+  html[data-game=race] .pickgrid.lt .pk:not(.trk){grid-template-rows:1fr;align-items:center}
+  html[data-game=race] .pickgrid.lt .pk:not(.trk) .ic{grid-row:1;font-size:clamp(1.8rem,58cqh,2.8rem)}
+  html[data-game=race] .pickgrid.lt .pk:not(.trk) .nm{grid-row:1;align-self:center}
+}
