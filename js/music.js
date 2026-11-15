@@ -27,6 +27,12 @@
     titan: { bpm: 72, root: 53, vol: 1.3, scale: 'harm', prog: [1, 6, 4, 5], lead: 'sine', leadOct: 7, rhythm: 'x.......x...x...', bass: 'x.......x......x', bassType: 'tri', k: 'x.......x...x...', s: '................', h: 'x.x.x.x.x.x.x.x.', r: '....x.......x...', arp: '0..2..1..3..2..1', arpType: 'pluck', pad: true, delay: true, swing: 0.1, seed: 404 },
     io: { bpm: 146, root: 45, vol: 0.72, scale: 'phryd', prog: [1, 2, 1, 7], lead: 'square', leadOct: 7, rhythm: 'x.xx.xx.x.xx.xxx', bass: 'xxxxxxxxxxxxxxxx', bassType: 'saw', k: 'x..xx..xx..xx.x.', s: '....x.......x..x', h: 'x.x.x.x.x.x.x.x.', r: '..x...x...x...x.', arp: '0.2.3.2.0.2.3.2.', arpType: 'pluck', seed: 505 },
     ceres: { bpm: 108, root: 65, vol: 1.15, scale: 'mixo', prog: [1, 7, 4, 1], lead: 'pluck', leadOct: 14, rhythm: 'x.x..x.x..x.x..x', bass: 'x..x..x.x..x..x.', bassType: 'tri', k: 'x.....x.x.......', s: '....x.......x...', h: '..x...x...x...x.', arp: '0.1.2.1.0.1.2.3.', arpType: 'bell', arpOct: 14, pad: true, delay: true, swing: 0.16, seed: 606 },
+    // 🦖 공룡 시대 5곡(맵마다 한 곡): 정글(통통 마림바), 뼈다귀(딱딱 실로폰), 티라노(쿵쿵 발걸음), 화산(급박한 북), 익룡(하늘을 나는 피리)
+    dino_jungle: { bpm: 120, root: 60, vol: 1.15, scale: 'mixo', prog: [1, 4, 1, 7], lead: 'marimba', leadOct: 7, rhythm: 'x.xx..x.x.xx..x.', bass: 'x..x..x.x..x..xo', bassType: 'tri', k: 'x.....x.x.......', s: '................', h: '..x...x...x...x.', t: '....x..x....x.xx', r: '.x...x...x...x..', arp: '0.2.1.2.0.2.1.2.', arpType: 'marimba', swing: 0.12, seed: 711 },
+    dino_bone: { bpm: 128, root: 62, vol: 1.2, scale: 'dorian', prog: [1, 7, 4, 5], lead: 'marimba', leadOct: 14, rhythm: 'x.x.xx..x.x.xxx.', bass: 'x...x...x...x.o.', bassType: 'tri', k: 'x.......x.......', s: '....x.......x...', h: '................', r: 'x.xxx.x.x.xxx.xx', arp: '', arpType: 'marimba', seed: 722 },
+    dino_rex: { bpm: 100, root: 45, vol: 0.85, scale: 'harm', prog: [1, 1, 6, 5], lead: 'saw', leadOct: 7, rhythm: 'x...x.x.x...xx..', bass: 'x...x...x...x.x.', bassType: 'saw', k: 'x...x...x...x.x.', s: '........x.......', h: '..x...x...x...x.', t: 'x.......x.....xx', arp: '', arpType: 'pluck', seed: 733 },
+    dino_volcano: { bpm: 148, root: 50, vol: 0.78, scale: 'phryd', prog: [1, 2, 7, 1], lead: 'square', leadOct: 7, rhythm: 'x.xx.xx.xx.xx.x.', bass: 'xxxxxxxxxxxxxxxx', bassType: 'saw', k: 'x..x..x.x..x..x.', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.', t: '..x..x....x..xxx', arp: '0.2.3.2.0.2.3.2.', arpType: 'pluck', seed: 744 },
+    dino_sky: { bpm: 116, root: 65, vol: 1.3, scale: 'lyd', prog: [1, 5, 2, 4], lead: 'flute', leadOct: 7, rhythm: 'x...x.x...x.x...', bass: 'x.......x...x...', bassType: 'sine', k: 'x.......x.......', s: '........x.......', h: '..x...x...x...x.', t: '..............x.', arp: '0.1.2.3.4.3.2.1.', arpType: 'bell', arpOct: 14, pad: true, delay: true, seed: 755 },
     space: { bpm: 132, root: 66, scale: 'dorian', prog: [1, 4, 7, 5], lead: 'sine', leadOct: 7, arpOct: 14, rhythm: 'x...x..x....x...', bass: 'x.......x.......', bassType: 'sine', k: 'x.......x.......', s: '........x.......', h: '..x...x...x...x.', arp: '0.1.2.3.4.3.2.1.', arpType: 'bell', pad: true, delay: true, seed: 88 },
   };
   const onset = (p) => [...p].map((c) => c !== '.' && c !== ' ');
@@ -70,6 +76,8 @@
       case 'sine': osc(c, dest, 'sine', f, t, dur, vol); break;
       case 'pluck': osc(c, dest, 'square', f, t, Math.min(dur, 0.22), vol * 0.8, { pluck: true, lp: 3000 }); break;
       case 'bell': osc(c, dest, 'sine', f, t, Math.max(dur, 0.7), vol, { pluck: true }); osc(c, dest, 'sine', f * 2.01, t, 0.5, vol * 0.4, { pluck: true }); osc(c, dest, 'sine', f * 3.98, t, 0.3, vol * 0.2, { pluck: true }); break;
+      case 'marimba': osc(c, dest, 'sine', f, t, Math.min(Math.max(dur, 0.18), 0.32), vol * 1.2, { pluck: true }); osc(c, dest, 'sine', f * 4, t, 0.07, vol * 0.35, { pluck: true }); break;
+      case 'flute': osc(c, dest, 'triangle', f, t, dur, vol * 0.9, { a: 0.04, r: 0.08, lp: 2600 }); osc(c, dest, 'sine', f * 2, t, dur, vol * 0.18, { a: 0.05, r: 0.08 }); break;
       case 'pad': osc(c, dest, 'triangle', f, t, dur, vol, { a: Math.min(0.25, dur / 3), r: 0.3, det: [-5, 5] }); break;
     }
   }
@@ -77,6 +85,7 @@
   function nz(c, d, t, dur, v, type, f, q) { const s = c.createBufferSource(); s.buffer = noise(c); const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q || 0.7; const g = c.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); s.connect(fl); fl.connect(g); g.connect(d); s.start(t); s.stop(t + dur + 0.02); }
   const snare = (c, d, t, v) => { nz(c, d, t, 0.17, v, 'bandpass', 1800, 0.8); osc(c, d, 'triangle', 190, t, 0.09, v * 0.5, { pluck: true }); };
   const hat = (c, d, t, v, open) => nz(c, d, t, open ? 0.14 : 0.045, v, 'highpass', 7000);
+  function tom(c, d, t, v, f) { const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.6, t + 0.16); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22); o.connect(g); g.connect(d); o.start(t); o.stop(t + 0.24); } // 북(공룡 음악)
   const rim = (c, d, t, v) => nz(c, d, t, 0.035, v, 'bandpass', 3200, 2);
 
   // ───── 연주 ─────
@@ -87,7 +96,7 @@
     const lead = c.createGain(); lead.connect(master);
     if (T.delay) { const dl = c.createDelay(1); dl.delayTime.value = (60 / bpm) * 0.75; const fb = c.createGain(); fb.gain.value = 0.38; const wet = c.createGain(); wet.gain.value = 0.4; lead.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(master); }
     return { c, T, hard, bpm, vol, dur: 60 / bpm / 4, master, lead, bars: compose(T), step: 0, next: 0, timer: 0,
-      pat: { k: onset(T.k), s: onset(T.s), h: onset(hard ? 'x.x.x.x.x.x.x.x.' : T.h), r: onset(T.r || ''), bass: [...T.bass], arp: [...(T.arp || (hard ? '0.2.3.2.0.2.3.2.' : ''))] } };
+      pat: { k: onset(T.k), s: onset(T.s), h: onset(hard ? 'x.x.x.x.x.x.x.x.' : T.h), r: onset(T.r || ''), t: onset(T.t || ''), bass: [...T.bass], arp: [...(T.arp || (hard ? '0.2.3.2.0.2.3.2.' : ''))] } };
   }
   function schedule(S, step, t0) {
     const { c, T, pat } = S, bar = Math.floor(step / 16) % 8, s = step % 16, root = T.prog[bar % 4], dur = S.dur;
@@ -97,6 +106,7 @@
     if (bar === 7 && s >= 12) snare(c, m, t0, 0.14); // 마디 끝 필인
     if (pat.h[s]) hat(c, m, t, 0.07, s % 8 === 6);
     if (pat.r[s]) rim(c, m, t, 0.1);
+    if (pat.t[s]) tom(c, m, t, 0.3, s % 8 < 4 ? 130 : s % 2 ? 98 : 82);
     const bc = pat.bass[s];
     if (bc && bc !== '.') { const d = root - 14 + (bc === 'o' ? 7 : bc === 'f' ? 4 : 0); voice(c, m, T.bassType, mtof(deg2midi(T, d)), t0, dur * 1.7, 0.2); }
     const off = S.bars[bar][s];
