@@ -29,12 +29,19 @@
   // ───── 차 그림(뒤/앞): 한 번만 그려 두고 크기만 바꿔 찍는다 ─────
   function kartSprite(car, front, col) {
     const U = G.raceUtil; // 56x40 세계 단위, 2.14배 해상도
-    return U.sprite('k3:' + car.id + col + (front ? 'f' : 'b'), 120, 86, (g) => {
+    return U.sprite('k4:' + car.id + col + (front ? 'f' : 'b'), 120, 86, (g) => {
       g.translate(60, 80); g.scale(2.14, 2.14); // 발 밑 중앙이 (0,0)
-      g.fillStyle = '#222'; g.beginPath(); g.roundRect(-27, -17, 11, 17, 3); g.roundRect(16, -17, 11, 17, 3); g.fill(); // 바퀴
-      g.fillStyle = col; g.beginPath(); g.roundRect(-25, -26, 50, 20, 6); g.fill();       // 몸통
-      g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(-25, -10, 50, 4);
-      g.fillStyle = front ? 'rgba(180,225,255,.85)' : 'rgba(40,50,70,.8)'; g.beginPath(); g.roundRect(-14, -34, 28, 11, 4); g.fill(); // 창
+      g.fillStyle = '#17181c'; g.beginPath(); g.roundRect(-27, -17, 11, 17, 3); g.roundRect(16, -17, 11, 17, 3); g.fill(); // 바퀴
+      g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(-25, -16, 3, 13); g.fillRect(18, -16, 3, 13);
+      const body = () => { g.beginPath(); g.roundRect(-25, -26, 50, 20, 6); };
+      g.fillStyle = col; body(); g.fill();       // 몸통: 위는 밝게, 아래는 어둡게, 양옆은 살짝 어둡게(둥근 느낌)
+      const b1 = g.createLinearGradient(0, -26, 0, -6); b1.addColorStop(0, 'rgba(255,255,255,.38)'); b1.addColorStop(0.35, 'rgba(255,255,255,.06)'); b1.addColorStop(1, 'rgba(0,0,0,.34)'); g.fillStyle = b1; body(); g.fill();
+      const b2 = g.createLinearGradient(-25, 0, 25, 0); b2.addColorStop(0, 'rgba(0,0,0,.24)'); b2.addColorStop(0.25, 'rgba(0,0,0,0)'); b2.addColorStop(0.75, 'rgba(0,0,0,0)'); b2.addColorStop(1, 'rgba(0,0,0,.24)'); g.fillStyle = b2; body(); g.fill();
+      g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 1; body(); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.roundRect(-19, -24.5, 22, 3, 1.5); g.fill();
+      g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-25, -10, 50, 4);
+      const wg = g.createLinearGradient(0, -34, 0, -23); if (front) { wg.addColorStop(0, 'rgba(225,245,255,.95)'); wg.addColorStop(1, 'rgba(120,185,230,.9)'); } else { wg.addColorStop(0, 'rgba(90,105,135,.9)'); wg.addColorStop(1, 'rgba(25,32,48,.9)'); }
+      g.fillStyle = wg; g.beginPath(); g.roundRect(-14, -34, 28, 11, 4); g.fill(); g.strokeStyle = 'rgba(0,0,0,.3)'; g.stroke(); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-11, -32.5, 9, 2); // 창
       if (front) { g.fillStyle = '#fff5a8'; g.fillRect(-22, -22, 9, 5); g.fillRect(13, -22, 9, 5); }
       else { g.fillStyle = '#ff3b3b'; g.fillRect(-23, -23, 9, 5); g.fillRect(14, -23, 9, 5); }
       if (car.id === 'bolt') { g.fillStyle = '#222'; g.fillRect(-26, -36, 52, 4); g.fillRect(-18, -34, 3, 8); g.fillRect(15, -34, 3, 8); }
@@ -72,7 +79,7 @@
       else if (ch.id === 'rapt') { tri([[30, 44], [20, 4], [46, 32]], '#2fa39a'); tri([[44, 36], [48, 0], [56, 34]], '#f2c14e'); tri([[66, 44], [76, 4], [52, 32]], '#2fa39a'); head('#e0663a'); ell(48, 86, 14, 8, 0, '#c9552d'); }
       else { ell(15, 70, 7, 15, 0.45, '#232733'); ell(81, 70, 7, 15, -0.45, '#232733'); head('#2d3240'); ell(48, 86, 15, 7, 0, '#232733'); }
       g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.ellipse(38, 46, 12, 8, -0.6, 0, TAU); g.fill();
-      g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 2; g.beginPath(); g.arc(48, 58, 29, 0, TAU); g.stroke();
+      g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 2; g.beginPath(); g.arc(48, 58, 29, 0, TAU); g.stroke(); G.raceUtil.shade(g, 96);
     });
   }
 
@@ -176,7 +183,7 @@
         for (const [t2, r2, a2] of [[0.35, 0.03, 0.16], [0.7, 0.05, 0.1], [1.15, 0.025, 0.14]]) { const fx2 = gx + (cxs - gx) * t2, fy2 = gy + (cys - gy) * t2; ctx.fillStyle = `rgba(255,235,200,${a2})`; ctx.beginPath(); ctx.arc(fx2, fy2, Math.min(W, H) * r2, 0, TAU); ctx.fill(); } }
     }
     if (SPC && th.planet && hy > 20) drawPlanet(ctx, th.planet, W, hy, F, yaw, H);
-    ctx.fillStyle = mixHex(th.bg, fogc, Math.min(0.9, 0.22 * FOGK)); ctx.fillRect(0, hy, W, H - hy + 1);
+    { const g0 = ctx.createLinearGradient(0, hy, 0, H); g0.addColorStop(0, mixHex(th.bg, fogc, Math.min(0.92, 0.55 * FOGK))); g0.addColorStop(0.45, mixHex(th.bg, fogc, Math.min(0.9, 0.18 * FOGK))); g0.addColorStop(1, mixHex(th.bg, '#000000', 0.16)); ctx.fillStyle = g0; ctx.fillRect(0, hy, W, H - hy + 1); } // 땅: 멀리는 뿌옇게, 가까이는 짙게(깊이감)
     const sc = H / 640;
     for (let layer = 0; layer < 2; layer++) {
       const ox = -yaw * F * (0.5 + 0.35 * layer), amp = (34 + layer * 16) * sc, base = hy + 1;
@@ -227,7 +234,8 @@
         { const dm = T.space && (T.dust[((ks[e] % M) + M) % M] || E.stormN > 0.5); quad(a + 3, a + 6, b + 6, b + 3, (dm ? (stripe ? cols.dust : cols.dust2) : (stripe ? cols.road : cols.road2))[L], true); }
         if (st2) quad(a + 4, a + 5, b + 5, b + 4, cols.line[L], true);
         { const wc = SPC ? (stripe ? cols.rail0 : cols.rail1)[L] : cc[L]; // 우주: 금속 가드레일(밝고 어두운 마디)
-          quad(a + 1, a + 10, b + 10, b + 1, wc, true); quad(a + 8, a + 11, b + 11, b + 8, wc, true); }
+          if (!SPC && !cols.wd0) { cols.wd0 = tbl(mixHex(th.curb[0], '#000000', 0.3), fogc); cols.wd1 = tbl(mixHex(th.curb[1], '#000000', 0.3), fogc); }
+          quad(a + 1, a + 10, b + 10, b + 1, SPC ? wc : (stripe ? cols.wd1 : cols.wd0)[L], true); quad(a + 8, a + 11, b + 11, b + 8, wc, true); } // 왼쪽 벽은 그늘진 색(햇빛이 오른쪽에서)
         continue;
       }
       const dz = it.dd || it.d, L = lvlOf(dz), s = F / Math.max(dz, 1);
@@ -260,11 +268,12 @@
           for (const [dx2, hh, ww] of [[-0.28, 0.7, 0.26], [0, 1, 0.3], [0.3, 0.6, 0.24]]) { ctx.fillStyle = mixHex('#bfe0f4', '#000000', 1 - propSt.B); ctx.beginPath(); ctx.moveTo(X0 + (dx2 - ww / 2) * w2, Y0); ctx.lineTo(X0 + dx2 * w2, Y0 - hh * h2); ctx.lineTo(X0 + (dx2 + ww / 2) * w2, Y0); ctx.closePath(); ctx.fill(); ctx.fillStyle = `rgba(255,255,255,${0.35 + 0.2 * propSt.B})`; ctx.beginPath(); ctx.moveTo(X0 + dx2 * w2, Y0 - hh * h2); ctx.lineTo(X0 + (dx2 + sd * ww / 2) * w2, Y0); ctx.lineTo(X0 + dx2 * w2, Y0); ctx.closePath(); ctx.fill(); }
         } else if (o.e === 'pebble' || o.e === 'dish' || o.e === 'lander' || o.e === 'hab' || o.e === 'solar' || o.e === 'mast') {
           drawProp(ctx, o.e, it.sx, it.sy, sz * (o.e === 'pebble' ? 0.55 : o.e === 'hab' ? 1.05 : 0.9), propSt);
-        } else ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz);
+        } else { if (!lowQ) { ctx.fillStyle = 'rgba(0,0,0,.24)'; ctx.beginPath(); ctx.ellipse(it.sx + sz * 0.16, it.sy + sz * 0.04, sz * 0.46, sz * 0.1, 0, 0, TAU); ctx.fill(); } ctx.drawImage(U.emo(o.e), it.sx - sz / 2, it.sy - sz * 0.92, sz, sz); } // 땅 그림자
         if (fade < 1) ctx.globalAlpha = 1;
       } else if (it.kind === 2) { // 아이템 상자(빙글빙글)
         const w = 30 * s * (0.35 + 0.65 * Math.abs(Math.cos(E.t * 2.4 + it.i))), h = 30 * s; ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#c98a00'; ctx.lineWidth = Math.max(1, 2 * s);
         ctx.beginPath(); ctx.roundRect(it.sx - w / 2, it.sy - h / 2, w, h, 5 * s); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,.42)'; ctx.fillRect(it.sx - w * 0.38, it.sy - h * 0.38, w * 0.76, h * 0.24); ctx.fillStyle = 'rgba(160,90,0,.28)'; ctx.fillRect(it.sx - w * 0.38, it.sy + h * 0.16, w * 0.76, h * 0.22);
         ctx.fillStyle = '#fff'; ctx.font = 'bold ' + Math.max(8, 22 * s) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', it.sx, it.sy + 1);
       } else if (it.kind === 3) { // 길 위의 지대(바닥에 깔린 모양)
         const z = it.z, c = Math.cos(z.a), sn = Math.sin(z.a), hz = hgt[z.idx], pts = [];
