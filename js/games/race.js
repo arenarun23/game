@@ -309,9 +309,10 @@
         // 내 조종 = 키보드/버튼/막대/기울기 + (도우미가 켜져 있으면) 길 안내를 섞는다
         function playerControl(r, dt) {
           let u = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-          if (ctlMode === 'slide') { padS += (padV - padS) * (1 - Math.exp(-SL.rate * (dt || 0.016))); u += Math.sign(padS) * Math.pow(Math.abs(padS), SL.p) * SL.k; } else if (ctlMode === 'tilt') u += tiltV;
+          if (ctlMode === 'slide') { padS += (padV - padS) * (1 - Math.exp(-SL.rate * (dt || 0.016))); u += Math.sign(padS) * Math.pow(Math.abs(padS), SL.p) * SL.k; } else if (ctlMode === 'tilt') { const L = r.off_lat || 0; u += tiltV * (Math.abs(L) > hw && tiltV * L < 0 ? 1.6 : 1); } // 길 밖에서 안쪽으로 기울이면 더 잘 듣게
           u = clamp(u, -1, 1); inputV = ctlMode === 'slide' ? padS : u; r.throttle = 1; let st = u;
           if (assistOn && r.fin == null) { const edge = clamp((Math.abs(r.off_lat || 0) - hw * 0.55) / (hw * 0.9), 0, 1), k = (hard ? 0.4 : kid ? 0.9 : 0.65) + (1 - (hard ? 0.4 : kid ? 0.9 : 0.65)) * edge, g = guide(r, 0); st = clamp(u + g.steer * k * (1 - Math.min(1, Math.abs(u)) * (1 - edge)), -1, 1); r.throttle = clamp(1 - g.curve * 0.45 * k, 0.62, 1); } // 가장자리로 갈수록 도우미가 세짐
+          { const L = r.off_lat || 0, out = clamp((Math.abs(L) - hw) / (hw * 0.25), 0, 1); if (out > 0 && r.fin == null) st = clamp(st - Math.sign(L) * out * (kid ? 0.5 : hard ? 0.15 : 0.35), -1, 1); } // 길 밖(벽 옆)에 붙어 달리지 않게, 도우미가 꺼져 있어도 길 안쪽으로 살짝 당겨 준다
           r.steerIn = st;
         }
         dbg.setCtl = setCtl; dbg.inp = () => ({ ctlMode, assistOn, padV, tiltV, inputV, paused }); dbg.setAssist = (v) => { assistOn = v; refreshChips(); };
@@ -457,7 +458,9 @@
             dbg.walls[r.isPlayer ? 0 : 1]++; if (dbg.log) dbg.log.push({ me: r.isPlayer ? 1 : 0, idx: r.idx, v: Math.round(r.v), boost: r.boost > 0 ? 1 : 0, air: r.air > 0 ? 1 : 0 });
             const c = P[r.idx], sg = Math.sign(L), push = L - sg * WALL; r.x -= c.nx * push; r.y -= c.ny * push;
             const vn = r.vx * c.nx + r.vy * c.ny; if (vn * sg > 0) { r.vx -= c.nx * vn; r.vy -= c.ny * vn; }
-            r.v *= 0.975; r.h += angDiff(Math.atan2(c.ty, c.tx), r.h) * Math.min(1, 6 * dt);
+            // 벽에 붙어서 계속 달리지 않게: 길 방향보다 살짝 안쪽을 보게 돌려 주고, 안쪽으로 핸들을 꺾으면(기울이면) 더 크게 안쪽으로 돌린다
+            const inw = clamp(-sg * (r.steerIn || 0), 0, 1);
+            r.v *= 0.975; r.h += angDiff(Math.atan2(c.ty, c.tx) - sg * (0.26 + 0.4 * inw), r.h) * Math.min(1, 10 * dt);
           }
           // 박스 줍기
           for (let i = 0; i < T.boxes.length; i++) { if (boxT[i] > 0) continue; const b = T.boxes[i]; if ((b.x - r.x) ** 2 + (b.y - r.y) ** 2 < 900) { if (!hasFree(r) || r.fin != null) { if (r.isPlayer && t - (r.fullT || -9) > 2) { r.fullT = t; toast('🃏 카드 칸이 가득 찼어요! 카드를 써요', 1.4); } continue; } boxT[i] = 4; const it = randItem(r); give(r, it); if (r.isPlayer) { G.sfx.ok(); const n = G.store.get('race:tips', 0); if (n < 3) { G.store.set('race:tips', n + 1); toast(`${ITEMS[it].e} ${ITEMS[it].n}! ${ITEMS[it].d} — 오른쪽 카드 칸을 눌러요`, 3); } else toast(`${ITEMS[it].e} ${ITEMS[it].n}!`, 1.2); } } }
