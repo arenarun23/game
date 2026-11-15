@@ -249,41 +249,53 @@
         const coarse = matchMedia('(pointer: coarse)').matches, MODES = ['slide', 'tilt', 'buttons'], LABEL = { slide: '🎚️ 밀어서', tilt: '📱 기울여서', buttons: '◀▶ 버튼' };
         const needPerm = typeof window.DeviceOrientationEvent !== 'undefined' && typeof window.DeviceOrientationEvent.requestPermission === 'function';
         let ctlMode = G.store.get('race:ctl', coarse ? 'slide' : 'buttons'), assistOn = kid ? true : G.store.get('race:assist', coarse);
-        let iosTilt = false; if (ctlMode === 'tilt' && needPerm) { ctlMode = 'slide'; iosTilt = true; } // 아이폰: 허락이 필요해서 일단 '밀어서'로 두고, 이미 허락했으면 아래에서 다시 '기울여서'로 돌린다
         const SL = hard ? { k: 1, p: 1, rate: 60 } : kid ? { k: 0.5, p: 1.7, rate: 5 } : { k: 0.72, p: 1.4, rate: 8 }; // 밀어서 조종: 쉬울수록 핸들이 덜 꺾이고(k) 가운데 근처가 더 둔하고(p) 천천히 따라온다(rate)
         let padS = 0, padV = 0, padOn = false, tiltV = 0, tiltZero = null, tiltGot = false, tiltTimer = 0, inputV = 0, paused = false;
         const refreshChips = () => {
-          wrap.dataset.ctl = ctlMode; chipA.textContent = '🧭 도우미 ' + (assistOn ? '켜짐' : '꺼짐'); chipA.setAttribute('aria-pressed', String(assistOn)); chipC.textContent = LABEL[ctlMode];
-          bubL.textContent = ctlMode === 'slide' ? '👆 이 막대를 좌우로 밀어요' : ctlMode === 'tilt' ? '📱 폰을 기울여요 (지금 자세가 기준)' : '◀ ▶ 로 방향을 정해요';
+          wrap.dataset.ctl = ctlMode; chipA.textContent = '🧭 도우미 ' + (assistOn ? '켜짐' : '꺼짐'); chipA.setAttribute('aria-pressed', String(assistOn)); chipC.textContent = LABEL[ctlMode] + (tiltLive && ctlMode !== 'tilt' ? ' +📱' : ''); // +📱 = 기울기 신호가 들어오는 중(기울여도 꺾인다)
+          bubL.textContent = ctlMode === 'slide' ? (tiltLive ? '👆 막대를 밀거나 📱 기울여요' : '👆 이 막대를 좌우로 밀어요') : ctlMode === 'tilt' ? '📱 기울여요 (지금 자세가 기준)' : (tiltLive ? '◀ ▶ 를 누르거나 📱 기울여요' : '◀ ▶ 로 방향을 정해요');
         };
         // 폰의 기울기 → 핸들 각도. 화면 방향(세로/가로)과 상관없이 "오른쪽으로 기울이면 오른쪽"이 되도록 중력 방향으로 계산한다.
-        const oriAng = (e) => {
-          const b = e.beta * Math.PI / 180, g = e.gamma * Math.PI / 180, ux = -Math.sin(g) * Math.cos(b), uy = Math.sin(b), uz = Math.cos(g) * Math.cos(b);
-          const a0 = screen.orientation && screen.orientation.angle != null ? screen.orientation.angle : (window.orientation || 0), a = ((a0 % 360) + 360) % 360;
-          let tr, up; if (a === 90) { tr = uy; up = ux; } else if (a === 180) { tr = ux; up = -uy; } else if (a === 270) { tr = -uy; up = -ux; } else { tr = -ux; up = uy; }
+        // 기기의 '위쪽' 방향(ux,uy,uz) → 화면 기준 좌우 기울기 각도.
+        // 어느 쪽이 화면의 위인지는 기준을 잡을 때 중력으로 직접 알아낸다(세워 들었을 때). 화면 방향 값(screen.orientation)이 기기 축과 안 맞는 태블릿에서도 되도록.
+        // 거의 눕혀 들어서 알 수 없으면 화면 방향 값으로 정한다.
+        let tiltAxis = null;
+        const angOf = (ux, uy, uz) => {
+          if (tiltAxis === null || tiltZero === null) {
+            if (Math.hypot(ux, uy) > 0.26) tiltAxis = Math.abs(uy) >= Math.abs(ux) ? (uy > 0 ? 0 : 180) : (ux > 0 ? 90 : 270);
+            else { const a0 = screen.orientation && screen.orientation.angle != null ? screen.orientation.angle : (window.orientation || 0); tiltAxis = ((Math.round(a0 / 90) * 90 % 360) + 360) % 360; }
+          }
+          const a = tiltAxis; let tr, up; if (a === 90) { tr = uy; up = ux; } else if (a === 180) { tr = ux; up = -uy; } else if (a === 270) { tr = -uy; up = -ux; } else { tr = -ux; up = uy; }
           return Math.atan2(tr, Math.hypot(up, uz)) * 180 / Math.PI;
         };
-        const onOri = (e) => {
-          if (e.beta == null || e.gamma == null) return; tiltGot = true;
-          const ang = oriAng(e);
+        const oriAng = (e) => { const b = e.beta * Math.PI / 180, g = e.gamma * Math.PI / 180; return angOf(-Math.sin(g) * Math.cos(b), Math.sin(b), Math.cos(g) * Math.cos(b)); };
+        // 기울기는 조종 방식과 상관없이 늘 듣는다(밀어서·버튼 방식에서도 기울이면 꺾인다). 신호는 두 가지 중 오는 쪽을 쓴다: 방향 센서(deviceorientation), 없으면 가속도 센서(devicemotion)
+        let tiltAt = 0, oriAt = 0, tiltLive = false;
+        const feedTilt = (ang) => {
+          tiltGot = true; tiltAt = performance.now();
           if (tiltZero === null) tiltZero = ang;
+          tiltZero += (ang - tiltZero) * 0.0015; // 잡는 자세가 바뀌어도 한쪽으로 쏠리지 않게 기준을 아주 천천히 따라간다
           const d = ang - tiltZero, v = Math.abs(d) < 1.5 ? 0 : clamp((d - Math.sign(d) * 1.5) / 11, -1, 1); tiltV += (v - tiltV) * 0.45; // 12.5도쯤 기울이면 끝까지 꺾인다
+          if (!tiltLive) { tiltLive = true; refreshChips(); }
         };
-        // 기울여서 조종이 아닌데 폰을 기울이며 달리면(센서는 있는데 방식이 '밀어서'·'버튼') 바꾸는 법을 한 번 알려 준다
-        let hintZero = null, hintN = 0, hinted = false;
-        const onOriHint = (e) => {
-          if (hinted || ctlMode === 'tilt' || state !== 'go' || paused || e.beta == null || e.gamma == null) return;
-          const ang = oriAng(e); if (hintZero === null) hintZero = ang;
-          if (Math.abs(ang - hintZero) > 13 && !padOn && !keys.left && !keys.right) hintN++; else hintN = Math.max(0, hintN - 2);
-          if (hintN > 30) { hinted = true; toast(`📱 기울여서 조종하려면 [${LABEL[ctlMode]}] 버튼을 눌러 '기울여서'로 바꿔요`, 4.5); chipC.classList.add('nudge'); setTimeout(() => chipC.classList.remove('nudge'), 4500); }
+        const onOri = (e) => { if (e.beta == null || e.gamma == null) return; oriAt = performance.now(); feedTilt(oriAng(e)); };
+        const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const onMot = (e) => {
+          const a = e.accelerationIncludingGravity; if (!a || a.x == null || a.y == null || a.z == null || performance.now() - oriAt < 500) return;
+          const n = Math.hypot(a.x, a.y, a.z); if (n < 3) return; const k = (IOS ? -1 : 1) / n; // 안드로이드: 위쪽 방향, 아이폰: 아래쪽 방향
+          feedTilt(angOf(a.x * k, a.y * k, a.z * k));
         };
-        addEventListener('deviceorientation', onOriHint); // (허락이 필요한 기기에서는 허락 전엔 신호가 안 올 뿐이다)
         const recal = () => { tiltZero = null; };
+        addEventListener('deviceorientation', onOri); addEventListener('devicemotion', onMot); addEventListener('orientationchange', recal);
+        // 허락이 필요한 브라우저(아이폰 등): 이미 허락했으면 바로, 아니면 경기 화면을 처음 누를 때 물어본다
+        const askSensor = () => { for (const E of [window.DeviceOrientationEvent, window.DeviceMotionEvent]) { try { if (E && typeof E.requestPermission === 'function') E.requestPermission().catch(() => {}); } catch (e) {} } };
+        askSensor(); const askOnce = () => { removeEventListener('pointerdown', askOnce, true); if (!tiltGot) askSensor(); }; addEventListener('pointerdown', askOnce, true);
         function startTilt() {
-          tiltZero = null; tiltGot = false; addEventListener('deviceorientation', onOri); addEventListener('orientationchange', recal); clearTimeout(tiltTimer);
-          tiltTimer = setTimeout(() => { if (!tiltGot && ctlMode === 'tilt') { toast('📱 기울기 센서가 없어요. 밀어서 조종으로 바꿔요', 3); setCtl('slide'); } }, 1800);
+          tiltZero = null; clearTimeout(tiltTimer);
+          tiltTimer = setTimeout(() => { if (performance.now() - tiltAt > 1500 && ctlMode === 'tilt') { toast('📱 기울기 신호가 안 와요. 밀어서 조종으로 바꿔요', 3.5); setCtl('slide'); } }, 2500);
         }
-        function stopTilt() { removeEventListener('deviceorientation', onOri); removeEventListener('orientationchange', recal); clearTimeout(tiltTimer); tiltV = 0; }
+        function stopTilt() { clearTimeout(tiltTimer); }
+        function stopSensors() { removeEventListener('deviceorientation', onOri); removeEventListener('devicemotion', onMot); removeEventListener('orientationchange', recal); removeEventListener('pointerdown', askOnce, true); clearTimeout(tiltTimer); }
         function setCtl(m) { stopTilt(); ctlMode = m; G.store.set('race:ctl', m); padV = 0; padOn = false; if (m === 'tilt') startTilt(); refreshChips(); }
         chipC.addEventListener('click', () => {
           G.sfx.tap(); const next = MODES[(MODES.indexOf(ctlMode) + 1) % MODES.length];
@@ -325,15 +337,15 @@
         // 내 조종 = 키보드/버튼/막대/기울기 + (도우미가 켜져 있으면) 길 안내를 섞는다
         function playerControl(r, dt) {
           let u = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-          if (ctlMode === 'slide') { padS += (padV - padS) * (1 - Math.exp(-SL.rate * (dt || 0.016))); u += Math.sign(padS) * Math.pow(Math.abs(padS), SL.p) * SL.k; } else if (ctlMode === 'tilt') { const L = r.off_lat || 0; u += tiltV * (Math.abs(L) > hw && tiltV * L < 0 ? 1.6 : 1); } // 길 밖에서 안쪽으로 기울이면 더 잘 듣게
-          u = clamp(u, -1, 1); inputV = ctlMode === 'slide' ? padS : u; r.throttle = 1; let st = u;
+          if (ctlMode === 'slide') { padS += (padV - padS) * (1 - Math.exp(-SL.rate * (dt || 0.016))); u += Math.sign(padS) * Math.pow(Math.abs(padS), SL.p) * SL.k; }
+          let tl = 0; if (performance.now() - tiltAt < 700) { const L = r.off_lat || 0; tl = tiltV * (Math.abs(L) > hw && tiltV * L < 0 ? 1.6 : 1); u += tl; } else tiltV = 0; // 기울기는 어느 방식에서나 더해진다 // 길 밖에서 안쪽으로 기울이면 더 잘 듣게
+          u = clamp(u, -1, 1); inputV = ctlMode === 'slide' ? clamp(padS + tl, -1, 1) : u; r.throttle = 1; let st = u;
           if (assistOn && r.fin == null) { const edge = clamp((Math.abs(r.off_lat || 0) - hw * 0.55) / (hw * 0.9), 0, 1), k = (hard ? 0.4 : kid ? 0.9 : 0.65) + (1 - (hard ? 0.4 : kid ? 0.9 : 0.65)) * edge, g = guide(r, 0); st = clamp(u + g.steer * k * (1 - Math.min(1, Math.abs(u)) * (1 - edge)), -1, 1); r.throttle = clamp(1 - g.curve * 0.45 * k, 0.62, 1); } // 가장자리로 갈수록 도우미가 세짐
           { const L = r.off_lat || 0, out = clamp((Math.abs(L) - hw) / (hw * 0.25), 0, 1); if (out > 0 && r.fin == null) st = clamp(st - Math.sign(L) * out * (kid ? 0.5 : hard ? 0.15 : 0.35), -1, 1); } // 길 밖(벽 옆)에 붙어 달리지 않게, 도우미가 꺼져 있어도 길 안쪽으로 살짝 당겨 준다
           r.steerIn = st;
         }
         dbg.setCtl = setCtl; dbg.inp = () => ({ ctlMode, assistOn, padV, tiltV, inputV, paused }); dbg.setAssist = (v) => { assistOn = v; refreshChips(); };
         refreshChips(); if (ctlMode === 'tilt') startTilt();
-        if (iosTilt) { try { window.DeviceOrientationEvent.requestPermission().then((r) => { if (r === 'granted') setCtl('tilt'); else G.store.set('race:ctl', 'tilt'); }).catch(() => { G.store.set('race:ctl', 'tilt'); toast(`📱 기울여서 조종하려면 [${LABEL.slide}] 버튼을 눌러요`, 3.5); }); } catch (e) {} }
         if (!G.store.get('race:help', false)) { G.store.set('race:help', true); setTimeout(openHelp, 150); }
 
         const rank = (r) => { const sc = (a) => (a.fin != null ? 1e9 - a.fin : a.prog); let k = 1; for (const o of racers) if (o !== r && sc(o) > sc(r)) k++; return k; };
@@ -712,7 +724,7 @@
           }
         }
         raf = requestAnimationFrame(frame);
-        stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); stopTilt(); removeEventListener('deviceorientation', onOriHint); G.music.stop(); G.music.release('help'); G.music.release('pause'); bPause.remove(); bFull.remove(); delete document.documentElement.dataset.racing; document.removeEventListener('visibilitychange', onVis); document.querySelectorAll('.rhelp').forEach((e) => e.remove()); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
+        stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); stopTilt(); stopSensors(); G.music.stop(); G.music.release('help'); G.music.release('pause'); bPause.remove(); bFull.remove(); delete document.documentElement.dataset.racing; document.removeEventListener('visibilitychange', onVis); document.querySelectorAll('.rhelp').forEach((e) => e.remove()); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
       }
 
       if (pendingTrack !== null) { sel.tr = pendingTrack; pendingTrack = null; G.store.set('race:sel', sel); G.navPush(showTracks); startRace(); } else showChars();
