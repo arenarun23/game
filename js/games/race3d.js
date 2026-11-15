@@ -43,6 +43,11 @@
       else if (car.id === 'hop') { g.fillStyle = '#fff'; g.fillRect(-10, -40, 20, 6); g.fillStyle = 'rgba(0,0,0,.28)'; for (let i = -24; i < 24; i += 8) g.fillRect(i, -12, 4, 4); }
       else if (car.id === 'van') { g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(-23, -32, 46, 3); }
       else if (car.id === 'cop') { g.fillStyle = '#fff'; g.fillRect(-25, -14, 50, 4); g.fillStyle = '#ff3b3b'; g.fillRect(-11, -39, 10, 6); g.fillStyle = '#3b8bff'; g.fillRect(1, -39, 10, 6); }
+      else if (car.id === 'rex') { g.fillStyle = '#fff'; for (let i = -22; i < 22; i += 8) g.fillRect(i, -28, 4, 4); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(-25, -14, 50, 4); }
+      else if (car.id === 'horn') { g.fillStyle = '#f5ecd0'; g.fillRect(-20, -42, 5, 9); g.fillRect(15, -42, 5, 9); g.fillRect(-2.5, -40, 5, 7); }
+      else if (car.id === 'aqua') { g.fillStyle = '#e8792b'; for (let i = -18; i < 18; i += 6) g.fillRect(i, -34 - (8 - Math.abs(i) / 3), 4, 10 - Math.abs(i) / 3); }
+      else if (car.id === 'spike') { g.fillStyle = '#f0883e'; for (let i = -16; i <= 16; i += 8) g.fillRect(i - 2.5, -43, 5, 9); }
+      else if (car.id === 'claw') { g.fillStyle = '#222'; for (let i = -20; i < 20; i += 12) g.fillRect(i, -24, 5, 14); }
       else if (car.id === 'fire') { g.fillStyle = '#ffd24a'; g.fillRect(-25, -14, 50, 4); g.fillStyle = '#eee'; for (let i = -22; i < 22; i += 7) g.fillRect(i, -40, 3, 7); g.fillRect(-23, -38, 46, 2); }
     });
   }
@@ -60,6 +65,11 @@
       else if (ch.id === 'leo') { g.fillStyle = '#b8742c'; g.beginPath(); g.arc(48, 56, 38, 0, TAU); g.fill(); g.fillStyle = '#8a5120'; for (let a = 0; a < 12; a++) { g.beginPath(); g.arc(48 + Math.cos(a / 12 * TAU) * 34, 56 + Math.sin(a / 12 * TAU) * 34, 8, 0, TAU); g.fill(); } ell(24, 28, 9, 9, 0, '#e2a24f'); ell(72, 28, 9, 9, 0, '#e2a24f'); head('#e8b35e'); ell(48, 84, 14, 7, 0, '#d79a45'); }
       else if (ch.id === 'chee') { ell(27, 34, 11, 11, 0, '#e3b04b'); ell(69, 34, 11, 11, 0, '#e3b04b'); ell(27, 35, 5, 5, 0, '#2a2118'); ell(69, 35, 5, 5, 0, '#2a2118'); head('#ecbc55'); g.fillStyle = '#3a2c1c'; for (const [x, y] of [[34, 48], [48, 42], [62, 48], [38, 62], [58, 62], [48, 70], [30, 70], [66, 70]]) { g.beginPath(); g.arc(x, y, 4, 0, TAU); g.fill(); } ell(48, 86, 14, 7, 0, '#e3b04b'); }
       else if (ch.id === 'tiger') { ell(27, 33, 12, 12, 0, '#f08a2c'); ell(69, 33, 12, 12, 0, '#f08a2c'); ell(27, 34, 6, 6, 0, '#2a1a10'); ell(69, 34, 6, 6, 0, '#2a1a10'); head('#f4952f'); g.fillStyle = '#2a1a10'; for (const [x, y, w] of [[48, 36, 5], [34, 44, 4], [62, 44, 4], [26, 58, 4], [70, 58, 4], [34, 72, 4], [62, 72, 4]]) g.fillRect(x - w / 2, y, w, 10); ell(48, 86, 15, 7, 0, '#f08a2c'); }
+      else if (ch.id === 'trex') { for (const x of [36, 48, 60]) ell(x, x === 48 ? 28 : 32, 6.5, 6.5, 0, '#3f8f40'); head('#5bb85a'); ell(48, 86, 14, 8, 0, '#4aa84a'); }
+      else if (ch.id === 'tricera') { ell(48, 50, 41, 38, 0, '#c9803a'); g.fillStyle = '#f4d58a'; for (let a = 0; a < 12; a++) { const t = a / 12 * TAU; g.beginPath(); g.arc(48 + Math.cos(t) * 33, 50 + Math.sin(t) * 30, 3.4, 0, TAU); g.fill(); } head('#d9984a'); ell(48, 84, 13, 7, 0, '#c98a3c'); }
+      else if (ch.id === 'spino') { tri([[16, 56], [22, 10], [34, 30], [42, 2], [54, 2], [62, 30], [74, 10], [80, 56]], '#e8792b'); head('#3f8fb5'); ell(48, 86, 14, 8, 0, '#2f7a9c'); }
+      else if (ch.id === 'stego') { ell(26, 30, 10, 15, -0.5, '#f0883e'); ell(48, 22, 11, 16, 0, '#f0883e'); ell(70, 30, 10, 15, 0.5, '#f0883e'); head('#8dbb4a'); ell(48, 86, 14, 8, 0, '#7aa63c'); }
+      else if (ch.id === 'rapt') { tri([[30, 44], [20, 4], [46, 32]], '#2fa39a'); tri([[44, 36], [48, 0], [56, 34]], '#f2c14e'); tri([[66, 44], [76, 4], [52, 32]], '#2fa39a'); head('#e0663a'); ell(48, 86, 14, 8, 0, '#c9552d'); }
       else { ell(15, 70, 7, 15, 0.45, '#232733'); ell(81, 70, 7, 15, -0.45, '#232733'); head('#2d3240'); ell(48, 86, 15, 7, 0, '#232733'); }
       g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.ellipse(38, 46, 12, 8, -0.6, 0, TAU); g.fill();
       g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 2; g.beginPath(); g.arc(48, 58, 29, 0, TAU); g.stroke();

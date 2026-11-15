@@ -1,4 +1,4 @@
-// 레이싱 데이터: 캐릭터 8, 차 8, 경기장 8 + 트랙 만들기
+// 레이싱 데이터: 캐릭터 13(동물 8 + 공룡 5), 차 13, 경기장(이지·하드 각 34) + 트랙 만들기
 (function () {
   'use strict';
   const TAU = Math.PI * 2;
@@ -13,6 +13,11 @@
     { id: 'eleph', n: '코코', e: '🐘', color: 'sky', trait: '앞 차를 밀치며 돌파해요', skill: { id: 'pit', tag: '구멍', n: '땅 구멍', e: '🕳️', d: '뒤에 구멍을 잠시 만들어 빠뜨려요', cd: 12 }, mod: { acc: 0.9, max: 1, turn: 0.85, mass: 1.6, off: 0.1, plow: true } },
     { id: 'chee', n: '치타', e: '🐆', color: 'lemon', trait: '엄청 빨라요', skill: { id: 'sprint', tag: '질주', n: '번개 질주', e: '⚡', d: '잠깐 번개처럼 달려요', cd: 9 }, mod: { acc: 1.1, max: 1.07, turn: 0.95, mass: 0.8, off: 0 } },
     { id: 'tiger', n: '호랑이', e: '🐯', color: 'orange', trait: '힘이 세고 안 흔들려요', skill: { id: 'claw', tag: '발톱', n: '발톱 할퀴기', e: '🐾', d: '앞에 있는 가까운 차를 할퀴어 빙글 돌려요', cd: 10 }, mod: { acc: 1, max: 1.03, turn: 1, mass: 1.3, off: 0.08 } },
+    { id: 'trex', n: '티라노', e: '🦖', color: 'mint', trait: '공룡 왕! 힘이 제일 세요', skill: { id: 'roar', tag: '포효', n: '티라노 포효', e: '📣', d: '앞에 있는 차들이 무서워서 빙글 돌아요', cd: 11 }, mod: { acc: 0.9, max: 1.05, turn: 0.92, mass: 1.4, off: 0.05 } },
+    { id: 'tricera', n: '트리케라', e: '🦏', color: 'peach', trait: '뿔 방패로 안 밀려요', skill: { id: 'shield', tag: '뿔방패', n: '뿔 방패', e: '🛡️', d: '3초 동안 공격을 막아요', cd: 12 }, mod: { acc: 0.92, max: 1, turn: 0.95, mass: 1.35, off: 0.1 } },
+    { id: 'spino', n: '스피노', e: '🐊', color: 'sky', trait: '풀밭도 물길도 쌩쌩 달려요', skill: { id: 'splash', tag: '물보라', n: '물보라', e: '💦', d: '앞에 있는 차들을 물로 밀어 느리게 해요', cd: 12 }, mod: { acc: 1, max: 1.04, turn: 1, mass: 1.1, off: 0.15 } },
+    { id: 'stego', n: '스테고', e: '🦕', color: 'lemon', trait: '단단한 꼬리로 막아요', skill: { id: 'wave', tag: '꼬리', n: '꼬리 휘두르기', e: '🌀', d: '주변 차들을 꼬리로 밀어내요', cd: 13 }, mod: { acc: 0.95, max: 1, turn: 0.95, mass: 1.25, off: 0.05 } },
+    { id: 'rapt', n: '랩터', e: '🦎', color: 'orange', trait: '빠르고 날쌔요', skill: { id: 'sprint', tag: '사냥', n: '사냥 질주', e: '💨', d: '잠깐 번개처럼 달려요', cd: 9 }, mod: { acc: 1.15, max: 1.05, turn: 1.1, mass: 0.8, off: 0 } },
   ];
 
   // 차: 능력치(st) + 전용 스킬. bars = 화면에 보여 줄 별점(속도·가속·핸들·튼튼)
@@ -25,6 +30,11 @@
     { id: 'hop', n: '폴짝이', e: '🚕', color: '#1abc9c', ui: 'mint', trait: '점프해서 앞 차를 넘어가요', skill: { id: 'hop', tag: '점프', n: '점프 추월', e: '🦘', d: '폴짝 뛰어 다른 차 위를 넘어가요', cd: 9 }, st: { speed: 1.0, acc: 1.05, turn: 1.05, mass: 0.85, off: 0 }, bars: [3, 4, 4, 1] },
     { id: 'cop', n: '순찰이', e: '🚓', color: '#5b6fe0', ui: 'sky', trait: '핸들이 좋고 든든해요', skill: { id: 'siren', tag: '사이렌', n: '사이렌', e: '🚨', d: '바로 뒤 차들이 놀라서 빙글 돌아요', cd: 11 }, st: { speed: 1.0, acc: 1.0, turn: 1.12, mass: 1.15, off: 0.05 }, bars: [3, 3, 4, 3] },
     { id: 'fire', n: '소방이', e: '🚒', color: '#b5281c', ui: 'peach', trait: '튼튼하고 힘이 좋아요', skill: { id: 'splash', tag: '물대포', n: '물대포', e: '💦', d: '앞에 있는 차들을 물로 밀어 느리게 해요', cd: 12 }, st: { speed: 0.98, acc: 0.95, turn: 0.92, mass: 1.35, off: 0.12 }, bars: [3, 2, 3, 4] },
+    { id: 'rex', n: '쿵쿵이', e: '🚛', color: '#2e8b57', ui: 'mint', trait: '아주 무거워서 끄떡없어요', skill: { id: 'wave', tag: '쿵쿵', n: '쿵쿵 발구르기', e: '🦶', d: '주변 차를 밀어내요', cd: 13 }, st: { speed: 1.02, acc: 0.88, turn: 0.82, mass: 1.55, off: 0.1 }, bars: [3, 2, 2, 5] },
+    { id: 'horn', n: '뿔뿔이', e: '🚜', color: '#d2822f', ui: 'peach', trait: '뿔로 앞 차를 밀며 달려요', skill: { id: 'express', tag: '뿔돌진', n: '뿔 돌진', e: '💢', d: '방패를 쓰고 쌩 달려요', cd: 13 }, st: { speed: 0.96, acc: 0.95, turn: 0.9, mass: 1.5, off: 0.15, plow: true }, bars: [2, 3, 3, 5] },
+    { id: 'aqua', n: '물살이', e: '🚘', color: '#1f8fb5', ui: 'sky', trait: '풀밭도 물길도 잘 달려요', skill: { id: 'oil', tag: '웅덩이', n: '물웅덩이', e: '💧', d: '밟으면 미끄러져요', cd: 10 }, st: { speed: 1.05, acc: 1.0, turn: 1.05, mass: 1.0, off: 0.2 }, bars: [4, 3, 4, 3] },
+    { id: 'spike', n: '가시이', e: '🚚', color: '#6aa84f', ui: 'lemon', trait: '가시가 있어서 건드리면 따끔해요', skill: { id: 'trap', tag: '가시', n: '가시 함정', e: '🌵', d: '뒤에 가시 함정을 놓아요', cd: 9 }, st: { speed: 0.98, acc: 1.0, turn: 0.95, mass: 1.3, off: 0.08 }, bars: [3, 3, 3, 4] },
+    { id: 'claw', n: '날쌘이', e: '🏍️', color: '#e0603a', ui: 'peach', trait: '가볍고 빨라서 폴짝 앞질러요', skill: { id: 'hop', tag: '폴짝', n: '폴짝 사냥', e: '🦘', d: '폴짝 뛰어 다른 차 위를 넘어가요', cd: 9 }, st: { speed: 1.1, acc: 1.15, turn: 1.1, mass: 0.75, off: 0 }, bars: [5, 5, 4, 1] },
   ];
 
   // ───────── 경기장 ─────────
@@ -64,6 +74,8 @@
     titan: { bg: '#8a5a24', shoulder: '#794c1c', road: '#39302a', curb: ['#e7d9bf', '#a08e6e'], line: '#f1e4cb', slow: '#566f66', sky: ['#5c3a12', '#cf9446'], ridge: ['#7b4d1d', '#5d3913'], planet: 'saturn', fogK: 1.5, deco: ['lake', 'lake', 'rock', 'rock', 'pebble', 'pebble', 'crater', 'dish', 'hab', 'mast', 'solar'] },
     io: { bg: '#b5a030', shoulder: '#a08c26', road: '#2e2a22', curb: ['#efe6c0', '#9c8f5a'], line: '#f5ecc8', slow: '#8a7a2a', sky: ['#000000', '#12060a'], ridge: ['#7e6414', '#58440e'], stars: true, planet: 'jupiter', sun: { az: 1.8, el: 0.3 }, fogK: 0.25, deco: ['vent', 'vent', 'rock', 'rock', 'crater', 'pebble', 'pebble', 'pebble', 'dish', 'hab', 'mast', 'solar'] },
     ceres: { bg: '#5f5c58', shoulder: '#524f4b', road: '#2d2f35', curb: ['#e5e8e6', '#8c918e'], line: '#f0f3f1', slow: '#cfd8d2', sky: ['#000000', '#03040a'], ridge: ['#4c4944', '#3a3834'], stars: true, planet: 'belt', sun: { az: -1.4, el: 0.2 }, fogK: 0.08, deco: ['rock', 'rock', 'rock', 'crater', 'crater', 'pebble', 'pebble', 'pebble', 'dish', 'lander', 'hab', 'solar', 'mast'] },
+    dino: { bg: '#6f9a3c', shoulder: '#5f8a33', road: '#7a6249', curb: ['#e67e22', '#f6e7c1'], line: '#f6e7c1', slow: '#4e3a22', sky: ['#ffbf69', '#fff0c9'], ridge: ['#4f8a3c', '#3a6d2c'], deco: ['🌴', '🦴', '🌿', '🥚', '🦕', '🌋'] },
+    jura: { bg: '#3f6b34', shoulder: '#335a2b', road: '#5d4b3a', curb: ['#ff9f1c', '#2b2b2b'], line: '#ffe0a3', slow: '#3a2a1a', sky: ['#7a3b2e', '#ffb074'], ridge: ['#2f5a2a', '#244620'], deco: ['🌴', '🌋', '🦖', '🥚', '🌿', '🪨'] },
     space: { bg: '#0b0b2a', shoulder: '#15154a', road: '#46486a', curb: ['#9b59b6', '#ffffff'], line: '#7ff7ff', slow: '#2c2c5a', sky: ['#02020f', '#1b1b5a'], ridge: ['#2a2a78', '#1a1a52'], deco: ['⭐', '🪐', '🛰️', '☄️', '🌙'] },
   };
   // 이지: 넓은 길(w 170), 부드러운 모양 / 하드: 좁은 길(w 130), 급커브·꼬인 모양, 함정 더 많음
@@ -169,6 +181,19 @@
   ];
   TRACKS_EASY.push(...mkSpace2(170));
   TRACKS_HARD.push(...mkSpace2(130));
+  // 🦖 공룡 시대 경기장 4개(2D 2개 + 3D 2개)
+  TRACKS_EASY.push(
+    T('dino', '정글 공룡길', '🌴', '공룡 꼬리 모양', '꿈틀꿈틀 공룡 꼬리를 따라 달려요', [[1500, -100], [1300, -550], [800, -700], [300, -520], [-200, -330], [-700, -450], [-1200, -360], [-1550, -320], [-1720, -30], [-1550, 270], [-1200, 260], [-700, 250], [-200, 430], [300, 650], [800, 700], [1300, 550]], 170, 0.0, { boost: 4, slow: 5, ice: 0 }),
+    T('jura', '뼈다귀 공원', '🦴', '뼈다귀 모양', '커다란 뼈다귀 둘레길', [[-1500, -500], [-1100, -700], [-800, -450], [-700, -250], [700, -250], [800, -450], [1100, -700], [1500, -500], [1500, 500], [1100, 700], [800, 450], [700, 250], [-700, 250], [-800, 450], [-1100, 700], [-1500, 500]], 170, 0.0, { boost: 5, slow: 4, ice: 0 }),
+    T3('dino', '티라노 발자국', '🦖', '3D · 발자국', '커다란 공룡 발자국 언덕길', polar(1250, 3, 0.34, 48, Math.PI / 2), 170, 0.0, { boost: 4, slow: 4, ice: 0, jump: 2 }, 75, [[2, 55, 0.3], [3, 22, 1.1]]),
+    T3('jura', '화산 분화구', '🌋', '3D · 배 모양', '화산 둘레를 도는 언덕길', [[-1500, 900], [-750, -750], [-450, -1000], [-250, -650], [250, -650], [450, -1000], [750, -750], [1500, 900]], 170, 0.0, { boost: 5, slow: 5, ice: 0, jump: 2 }, 80, [[2, 60, 0.6], [3, 24, 0]]),
+  );
+  TRACKS_HARD.push(
+    T('dino', '스테고 등 서킷', '🦕', '등판 서킷', '뾰족뾰족 일곱 개의 등판 모퉁이', polar(1150, 7, 0.19, 56), 130, 0.0, { boost: 5, slow: 8, ice: 0 }),
+    T('jura', '뼈다귀 서킷', '🦴', '뼈다귀 서킷', '가운데가 좁은 뼈다귀 길', [[-1500, -550], [-1100, -750], [-800, -500], [-650, -180], [650, -180], [800, -500], [1100, -750], [1500, -550], [1500, 550], [1100, 750], [800, 500], [650, 180], [-650, 180], [-800, 500], [-1100, 750], [-1500, 550]], 130, 0.0, { boost: 6, slow: 7, ice: 0 }),
+    T3('dino', '티라노 협곡', '🦖', '3D · 발자국 협곡', '가파른 공룡 발자국 능선', polar(1250, 3, 0.4, 56, Math.PI / 2), 130, 0.0, { boost: 5, slow: 6, ice: 0, jump: 3 }, 100, [[2, 75, 0.2], [3, 30, 1]]),
+    T3('jura', '화산 폭발', '🌋', '3D · 분화구 능선', '불길이 솟는 가파른 화산길', [[-1500, 900], [-800, -700], [-500, -1050], [-260, -560], [260, -560], [500, -1050], [800, -700], [1500, 900], [0, 560]], 130, 0.0, { boost: 5, slow: 7, ice: 0, jump: 3 }, 105, [[2, 80, 0.5], [4, 28, 0.9]]),
+  );
   function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
   // 꼭짓점 → 부드러운 닫힌 곡선(모서리 깎기 반복) → 일정 간격(약 12)의 점

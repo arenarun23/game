@@ -19,7 +19,48 @@
   // 치타·코끼리는 이모지가 온몸이라(다른 친구는 얼굴) 얼굴만 직접 그린다. 이모지 글자(🐆 🐘)를 이 그림으로 바꿔 찍는다.
   const circ = (g, x, y, r, col) => { g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); };
   const ellp = (g, x, y, rx, ry, col, rot) => { g.fillStyle = col; g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, TAU); g.fill(); };
+  const tri = (g, pts, col) => { g.fillStyle = col; g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.closePath(); g.fill(); };
   const FACES = {
+    '🦖': (g) => { // 티라노: 초록 얼굴 + 머리 돌기 + 화난 눈썹 + 이빨
+      circ(g, 36, 17, 6, '#3f8f40'); circ(g, 48, 13, 6.5, '#3f8f40'); circ(g, 60, 17, 6, '#3f8f40');
+      circ(g, 48, 52, 38, '#5bb85a'); ellp(g, 48, 68, 27, 18, '#86d27f'); circ(g, 40, 62, 2.4, '#2f6b34'); circ(g, 56, 62, 2.4, '#2f6b34');
+      circ(g, 33, 44, 6.5, '#fff'); circ(g, 63, 44, 6.5, '#fff'); circ(g, 34, 45, 3.6, '#222'); circ(g, 62, 45, 3.6, '#222');
+      g.strokeStyle = '#2f5f33'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(24, 33); g.lineTo(41, 39); g.moveTo(72, 33); g.lineTo(55, 39); g.stroke();
+      g.strokeStyle = '#2f5f33'; g.lineWidth = 3; g.beginPath(); g.moveTo(30, 76); g.quadraticCurveTo(48, 84, 66, 76); g.stroke();
+      g.fillStyle = '#fff'; for (const x of [34, 44, 52, 62]) { g.beginPath(); g.moveTo(x - 3.2, 77); g.lineTo(x + 3.2, 77); g.lineTo(x, 85); g.closePath(); g.fill(); }
+    },
+    '🦏': (g) => { // 트리케라톱스: 큰 프릴 + 뿔 세 개
+      ellp(g, 48, 38, 42, 34, '#c9803a'); g.fillStyle = '#f4d58a'; for (let a = 0; a < 11; a++) { const t = Math.PI * (1.08 + 0.84 * a / 10); g.beginPath(); g.arc(48 + Math.cos(t) * 35, 38 + Math.sin(t) * 28, 3.4, 0, TAU); g.fill(); }
+      circ(g, 48, 58, 31, '#e0a553'); ellp(g, 48, 74, 17, 12, '#c98a3c');
+      tri(g, [[24, 44], [17, 8], [37, 36]], '#fff4d6'); tri(g, [[72, 44], [79, 8], [59, 36]], '#fff4d6'); tri(g, [[42, 62], [48, 42], [54, 62]], '#fff4d6');
+      circ(g, 33, 54, 5.6, '#fff'); circ(g, 63, 54, 5.6, '#fff'); circ(g, 34, 55, 3.3, '#222'); circ(g, 62, 55, 3.3, '#222');
+      g.strokeStyle = '#7a4a1c'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(40, 79); g.quadraticCurveTo(48, 84, 56, 79); g.stroke(); circ(g, 42, 71, 1.8, '#7a4a1c'); circ(g, 54, 71, 1.8, '#7a4a1c');
+    },
+    '🐊': (g) => { // 스피노사우루스: 등 돛 + 파란 얼굴 + 긴 주둥이
+      g.fillStyle = '#e8792b'; g.beginPath(); g.moveTo(16, 50); g.lineTo(22, 12); g.lineTo(34, 28); g.lineTo(42, 4); g.lineTo(54, 4); g.lineTo(62, 28); g.lineTo(74, 12); g.lineTo(80, 50); g.closePath(); g.fill();
+      g.strokeStyle = '#f7b267'; g.lineWidth = 2.6; g.lineCap = 'round'; for (const [x, y] of [[26, 22], [40, 18], [48, 14], [56, 18], [70, 22]]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 20); g.stroke(); }
+      circ(g, 48, 54, 33, '#3f8fb5'); ellp(g, 48, 73, 20, 14, '#6bb7d4'); circ(g, 41, 68, 2.4, '#1d5670'); circ(g, 55, 68, 2.4, '#1d5670');
+      circ(g, 33, 48, 6, '#fff'); circ(g, 63, 48, 6, '#fff'); circ(g, 34, 49, 3.4, '#222'); circ(g, 62, 49, 3.4, '#222');
+      g.strokeStyle = '#1d5670'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(34, 79); g.quadraticCurveTo(48, 86, 62, 79); g.stroke();
+      g.fillStyle = '#fff'; for (const x of [38, 46, 54, 60]) { g.beginPath(); g.moveTo(x - 2.2, 80); g.lineTo(x + 2.2, 80); g.lineTo(x, 85); g.closePath(); g.fill(); }
+    },
+    '🦕': (g) => { // 스테고사우루스: 등판 + 연두 얼굴 + 순한 눈
+      for (const [x, y, rot] of [[26, 26, -0.5], [48, 18, 0], [70, 26, 0.5]]) { ellp(g, x, y, 9.5, 15, '#f0883e', rot); ellp(g, x, y, 4.5, 9, '#f8b777', rot); }
+      circ(g, 48, 56, 33, '#8dbb4a'); ellp(g, 48, 72, 20, 15, '#b3d86d'); circ(g, 42, 68, 2.2, '#4f6f22'); circ(g, 54, 68, 2.2, '#4f6f22');
+      circ(g, 33, 52, 6, '#fff'); circ(g, 63, 52, 6, '#fff'); circ(g, 34, 53, 3.6, '#222'); circ(g, 62, 53, 3.6, '#222'); circ(g, 35.2, 51.6, 1.2, '#fff'); circ(g, 63.2, 51.6, 1.2, '#fff');
+      g.fillStyle = '#6f9a35'; for (const [x, y] of [[26, 40], [70, 40], [22, 62], [74, 62]]) { g.beginPath(); g.arc(x, y, 3, 0, TAU); g.fill(); }
+      ellp(g, 26, 66, 5, 3, 'rgba(255,130,150,.45)'); ellp(g, 70, 66, 5, 3, 'rgba(255,130,150,.45)');
+      g.strokeStyle = '#4f6f22'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(39, 79); g.quadraticCurveTo(48, 85, 57, 79); g.stroke();
+    },
+    '🦎': (g) => { // 벨로키랍토르: 깃털 볏 + 주황 얼굴 + 날카로운 노란 눈
+      tri(g, [[30, 40], [22, 4], [44, 30]], '#2fa39a'); tri(g, [[44, 34], [48, 0], [56, 32]], '#f2c14e'); tri(g, [[66, 40], [74, 4], [52, 30]], '#2fa39a');
+      circ(g, 48, 55, 33, '#e0663a'); ellp(g, 48, 72, 17, 15, '#f7a866');
+      g.strokeStyle = '#7a2e14'; g.lineWidth = 3; g.lineCap = 'round'; for (const x of [40, 48, 56]) { g.beginPath(); g.moveTo(x, 28); g.lineTo(x, 38); g.stroke(); }
+      circ(g, 33, 50, 6.2, '#ffe27a'); circ(g, 63, 50, 6.2, '#ffe27a'); ellp(g, 33.5, 50, 1.9, 5, '#222'); ellp(g, 62.5, 50, 1.9, 5, '#222');
+      g.strokeStyle = '#7a2e14'; g.lineWidth = 3.4; g.beginPath(); g.moveTo(24, 41); g.lineTo(40, 46); g.moveTo(72, 41); g.lineTo(56, 46); g.stroke();
+      circ(g, 43, 66, 2, '#7a2e14'); circ(g, 53, 66, 2, '#7a2e14'); g.lineWidth = 2.6; g.beginPath(); g.moveTo(34, 78); g.quadraticCurveTo(48, 84, 62, 78); g.stroke();
+      g.fillStyle = '#fff'; for (const x of [40, 48, 56]) { g.beginPath(); g.moveTo(x - 2, 79); g.lineTo(x + 2, 79); g.lineTo(x, 84); g.closePath(); g.fill(); }
+    },
     '🐆': (g) => { // 치타: 노란 얼굴 + 검은 점 + 눈물 줄무늬
       circ(g, 19, 25, 11, '#d99a2b'); circ(g, 77, 25, 11, '#d99a2b'); circ(g, 19, 26, 5.5, '#3a2c1c'); circ(g, 77, 26, 5.5, '#3a2c1c');
       circ(g, 48, 54, 38, '#f2c14e'); ellp(g, 48, 68, 20, 15, '#fff1c9');
@@ -92,9 +133,9 @@
         if (stopFn) { stopFn(); stopFn = null; }
         clearTabs();
         const land = innerWidth > innerHeight * 1.05, n = items.length;
-        const c = land ? (n <= 4 ? n : n <= 10 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 ? 3 : 2), r = Math.ceil(n / c);
+        const dense = !land && step <= 2 && n > 9, c = dense ? 2 : land ? (n <= 4 ? n : n <= 10 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 ? 3 : 2), r = Math.ceil(n / c);
         const rowMode = !land && step <= 2, many = !land && (step === 3 ? n > 12 : n > 5); // 폰 세로에서 경기장이 8개를 넘으면 2열로 두고 아래로 넘겨 본다 // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
-        const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : '') + (many ? ' many' : ''), style: rowMode ? `--c:1;--r:${n}` : `--c:${c};--r:${r}` }, items.map((it, i) =>
+        const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : '') + (dense ? ' dense' : '') + (land && n > 10 ? ' lt' : '') + (many ? ' many' : ''), style: rowMode ? (dense ? `--c:2;--r:${r}` : `--c:1;--r:${n}`) : `--c:${c};--r:${r}` }, items.map((it, i) =>
           G.h('button', { class: 'card pk c-' + it.color + (typeof it.ic === 'string' ? '' : ' trk'), 'aria-pressed': String(i === cur), onclick: () => { G.sfx.tap(); onPick(i); } },
             G.h('span', { class: 'ic' + (typeof it.ic === 'string' && FACES[it.ic] ? ' face' : '') }, typeof it.ic === 'string' && FACES[it.ic] ? faceImg(it.ic) : it.ic), G.h('span', Object.assign({ class: 'nm' }, typeof it.ic === 'string' && !FACES[it.ic] ? { 'data-e': it.ic } : {}), it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
         const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), extra || null, G.h('div', { class: 'fitbox' }, grid)];
@@ -478,6 +519,11 @@
           else if (car.id === 'hop') { c.fillStyle = '#fff'; c.fillRect(-4, -5, 8, 10); c.fillStyle = 'rgba(0,0,0,.28)'; for (let i = -22; i < 20; i += 8) c.fillRect(i, -14, 4, 4); }
           else if (car.id === 'bus') { c.fillStyle = 'rgba(255,255,255,.55)'; for (let i = -20; i < 18; i += 10) c.fillRect(i, -10, 7, 20); }
           else if (car.id === 'cop') { c.fillStyle = '#fff'; c.fillRect(-24, -14, 8, 28); c.fillStyle = '#ff3b3b'; c.fillRect(-4, -9, 8, 8); c.fillStyle = '#3b8bff'; c.fillRect(-4, 1, 8, 8); }
+          else if (car.id === 'rex') { c.fillStyle = '#fff'; for (let i = -12; i < 12; i += 6) c.fillRect(21, i, 5, 3); c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(-24, -14, 6, 28); }
+          else if (car.id === 'horn') { c.fillStyle = '#f5ecd0'; c.fillRect(22, -13, 7, 3); c.fillRect(22, 10, 7, 3); c.fillRect(24, -1.5, 7, 3); }
+          else if (car.id === 'aqua') { c.fillStyle = '#e8792b'; c.fillRect(-20, -3, 34, 6); c.fillStyle = '#f7b267'; for (let i = -16; i < 12; i += 8) c.fillRect(i, -3, 3, 6); }
+          else if (car.id === 'spike') { c.fillStyle = '#f0883e'; for (let i = -20; i < 18; i += 8) c.fillRect(i, -3, 5, 6); }
+          else if (car.id === 'claw') { c.fillStyle = '#222'; c.fillRect(-22, -10, 14, 3); c.fillRect(-22, -1.5, 14, 3); c.fillRect(-22, 7, 14, 3); }
           else if (car.id === 'fire') { c.fillStyle = '#ffd24a'; c.fillRect(-23, -2, 38, 4); c.fillStyle = '#eee'; for (let i = -22; i < 12; i += 6) c.fillRect(i, -9, 2, 18); }
           else { c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(-22, -2, 10, 4); }
         }
