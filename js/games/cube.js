@@ -171,7 +171,7 @@
         FACES.forEach((F, f) => {
           const face = h('div', { class: 'cbf' }); face.style.transform = FT[f] + ' translateZ(calc(var(--s) / 2))';
           const i = FI[p + '|' + f];
-          if (i != null) { face.dataset.f = f; stickers[i] = h('i'); face.append(stickers[i]); }
+          if (i != null) { face.dataset.f = f; stickers[i] = h('i', { class: p.filter((v) => v === 0).length === 2 ? 'ctr' : null }); face.append(stickers[i]); }
           el.append(face);
         });
         cubies.push({ p, el }); cubeEl.append(el);
@@ -179,6 +179,8 @@
       const arrow = h('div', { class: 'cbarrow', hidden: true }); arrow.innerHTML = '<div class="spin">' + arrowSvg + '</div>';
       cubeEl.append(arrow);
       const place = (c, extra) => { c.el.style.transform = (extra || '') + `translate3d(${c.p[0] * S}px,${c.p[1] * S}px,${c.p[2] * S}px)`; };
+      // 돌릴 면(q)의 스티커는 그대로, 같은 층의 옆 면 스티커는 d1(조금 흐리게), 나머지는 d2(많이 흐리게)
+      const setDim = (q) => stickers.forEach((el, i) => { const n = q && FACES[q.f].n, on = q && ((i / 9) | 0) !== q.f; el.classList.toggle('d1', !!(on && dot(FL[i].p, n) === 1)); el.classList.toggle('d2', !!(q && ((i / 9) | 0) !== q.f && dot(FL[i].p, n) !== 1)); });
       const paint = () => { for (let i = 0; i < 54; i++) stickers[i].style.background = FACES[(st[i] / 9) | 0].color; };
       const setView = () => { cubeEl.style.transform = `matrix3d(${M[0]},${M[3]},${M[6]},0,${M[1]},${M[4]},${M[7]},0,${M[2]},${M[5]},${M[8]},0,0,0,0,1)`; };
 
@@ -228,12 +230,13 @@
 
       // ───── 자유롭게 돌리기 ─────
       const say = (t, s) => { title.textContent = t; msg.replaceChildren(...[].concat(s)); };
-      const chip = (f) => h('span', { class: 'cbchip', style: 'background:' + FACES[f].color });
+      const chip = (f) => { const m = h('span', { class: 'cbmini', 'aria-hidden': 'true' }); for (let i = 0; i < 9; i++) m.append(h('i', i === 4 ? { style: 'background:' + FACES[f].color } : null)); return m; };
+      const nameOf = (f) => '가운데가 ' + FACES[f].name + ' 면';
       const btn = (label, fn, cls) => h('button', { class: 'mode ' + (cls || ''), onclick: fn }, label);
       const pushHist = (q) => { hist = toQuarters(hist.map(qm).concat(qm(q))); };
       const freeUi = () => {
         guide = null; auto = false; clearTimeout(autoT);
-        cubies.forEach((c) => c.el.classList.remove('dim')); arrow.hidden = true; steps.replaceChildren(); scoreEl.hidden = true;
+        setDim(null); arrow.hidden = true; steps.replaceChildren(); scoreEl.hidden = true;
         if (isSolved(st)) say('큐브를 돌려 보세요!', '손가락으로 끌면 큐브가 빙글 돌아요. 색깔 면을 콕 누르면 그 면이 돌아요.');
         else say('큐브가 섞였어요!', '🎓 알려 줘! 는 하나씩 보여 줘요. ✋ 내가 할래! 는 내가 돌리면 맞았는지 알려 줘요.');
         const dirBtn = btn(dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로', () => { G.sfx.tap(); dir = -dir; dirBtn.textContent = dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로'; });
@@ -291,7 +294,7 @@
         await turn({ f, d: dir }, 220); if (dead) return;
         G.sfx.bad(); mark(false); g.bad++; g.miss++;
         scoreEl.textContent = '⭕ ' + g.ok + '   ❌ ' + g.bad;
-        msg.replaceChildren(f !== q.f ? '앗, 다른 면이에요! 다시 돌려 놓을게요.' : '앗, 방향이 반대예요! 다시 돌려 놓을게요.');
+        msg.replaceChildren(f !== q.f ? '앗, 그건 ' + nameOf(f) + '이에요! ' + nameOf(q.f) + '을 찾아요.' : '앗, 방향이 반대예요! 다시 돌려 놓을게요.');
         await wait(700); if (dead) return;
         await turn({ f, d: -dir }, 220); busy = false;
         if (dead || guide !== g) return;
@@ -304,9 +307,9 @@
         steps.replaceChildren(...g.stages.map((s, i) => h('span', { class: 'cbstep' + (i < g.si ? ' done' : i === g.si ? ' on' : '') }, i < g.si ? '✓' : String(i + 1))));
         title.textContent = (g.stages.length > 1 ? (g.si + 1) + '단계 · ' : '') + sg.name + '  (' + (g.mi + 1) + '/' + sg.moves.length + ')';
         const show = !g.self || g.hint;                              // 스스로 할 때는 힌트를 켰을 때만 화살표·밝은 면을 보여 준다
-        if (g.self) { msg.replaceChildren(chip(q.f), FACES[q.f].name + ' 면을 ', h('b', { class: 'cbdir' }, q.d > 0 ? '↻ 오른쪽' : '↺ 왼쪽'), '으로 돌려요'); scoreEl.textContent = '⭕ ' + g.ok + '   ❌ ' + g.bad; scoreEl.hidden = false; }
-        else msg.replaceChildren(chip(q.f), FACES[q.f].name + ' 면을 화살표처럼 돌려요');
-        cubies.forEach((c) => c.el.classList.toggle('dim', show && dot(c.p, FACES[q.f].n) !== 1));
+        if (g.self) { msg.replaceChildren(chip(q.f), nameOf(q.f) + '을 ', h('b', { class: 'cbdir' }, q.d > 0 ? '↻ 오른쪽' : '↺ 왼쪽'), '으로 돌려요'); scoreEl.textContent = '⭕ ' + g.ok + '   ❌ ' + g.bad; scoreEl.hidden = false; }
+        else msg.replaceChildren(chip(q.f), nameOf(q.f) + '을 화살표처럼 돌려요');
+        setDim(show ? q : null);
         busy = true;
         if (g.intro) { g.intro = false; G.speak(sg.say); await viewTo(poseFor(show ? q.f : null, sg.up), 700); }
         else if (show && ap(M, FACES[q.f].n)[2] < 0.3) await viewTo(poseFor(q.f, sg.up));

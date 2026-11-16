@@ -472,13 +472,16 @@ html[data-game=race] .pickgrid.lt .pk:not(.trk) .ds .ln:first-child{display:bloc
 .cbstep.done{background:#c9f2e0;border-color:#7fd3a8}
 .cbtitle{font-size:max(15px,1.15rem)}
 .cbmsg{font-size:max(15px,1.2rem);line-height:1.3;display:flex;align-items:center;justify-content:center;gap:.4rem;flex-wrap:wrap}
-.cbchip{display:inline-block;width:1.5rem;height:1.5rem;border-radius:.35rem;border:3px solid #222;flex:none}
+.cbmini{display:inline-grid;grid-template:repeat(3,1fr)/repeat(3,1fr);gap:2px;width:1.9rem;height:1.9rem;padding:2px;background:#16161a;border-radius:.3rem;flex:none}
+.cbmini i{background:#d9d3c6;border-radius:2px}
 .cbview{grid-area:view;position:relative;min-height:0;touch-action:none;cursor:grab;display:grid;place-items:center;overflow:hidden;border-radius:1.2rem;background:radial-gradient(circle at 50% 45%,#fff 0,#fff3d6 70%)}
 .cbcube{position:relative;width:0;height:0;transform-style:preserve-3d}
 .cbc{position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d}
 .cbf{position:absolute;width:var(--s);height:var(--s);left:calc(var(--s) / -2);top:calc(var(--s) / -2);background:#16161a;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .cbf i{position:absolute;inset:6%;border-radius:16%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
-.cbc.dim i{opacity:.3}
+.cbf i.d1{opacity:.55}
+.cbf i.d2{opacity:.22}
+.cbf i.ctr::after{content:'';position:absolute;inset:30%;border-radius:50%;border:max(2px,.14rem) solid rgba(0,0,0,.38)}
 .cbarrow{position:absolute;width:calc(var(--s) * 3);height:calc(var(--s) * 3);left:calc(var(--s) * -1.5);top:calc(var(--s) * -1.5);pointer-events:none;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .cbarrow[hidden]{display:none}
 .cbarrow .spin{width:100%;height:100%;animation:cbspin 2.4s linear infinite}
