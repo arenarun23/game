@@ -504,3 +504,5 @@ html[data-game=cube] #title{white-space:nowrap;font-size:clamp(1.05rem,4.6vw,1.5
 .cbscore[hidden],.cbmark[hidden]{display:none}
 .cbdir{font-weight:400;background:#fff;border:2px solid var(--line);border-radius:.6rem;padding:0 .4rem;white-space:nowrap}
 @keyframes cbpop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+/* 큐브는 휴대폰의 '웹페이지 어둡게(다크 모드)'가 켜져 있어도 하얀 면이 하얗게 보여야 한다 → 이 화면에서만 밝은 모드로 고정(`only light` 만 효과가 있다) */
+html[data-game=cube]{color-scheme:only light}
