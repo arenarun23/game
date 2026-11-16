@@ -52,6 +52,15 @@
       ellp(g, 26, 66, 5, 3, 'rgba(255,130,150,.45)'); ellp(g, 70, 66, 5, 3, 'rgba(255,130,150,.45)');
       g.strokeStyle = '#4f6f22'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(39, 79); g.quadraticCurveTo(48, 85, 57, 79); g.stroke();
     },
+    '🐍': (g) => { // 모아뱀: 초록 머리 + 노란 배 무늬 + 세로 눈동자 + 갈라진 혀
+      g.strokeStyle = '#e8483f'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(48, 78); g.lineTo(48, 88); g.moveTo(48, 88); g.lineTo(42, 94); g.moveTo(48, 88); g.lineTo(54, 94); g.stroke();
+      ellp(g, 48, 50, 36, 33, '#58b947'); ellp(g, 48, 68, 24, 15, '#cfe77a');
+      g.fillStyle = '#3d9336'; for (const [x, y, r0] of [[48, 22, 5.5], [36, 27, 4], [60, 27, 4], [48, 34, 3.2]]) { g.beginPath(); g.arc(x, y, r0, 0, TAU); g.fill(); }
+      circ(g, 32, 46, 7.5, '#ffe45c'); circ(g, 64, 46, 7.5, '#ffe45c'); ellp(g, 32, 46, 2.2, 6, '#222'); ellp(g, 64, 46, 2.2, 6, '#222'); circ(g, 34, 43, 1.4, '#fff'); circ(g, 66, 43, 1.4, '#fff');
+      circ(g, 44, 62, 1.8, '#2f6b2a'); circ(g, 52, 62, 1.8, '#2f6b2a');
+      g.strokeStyle = '#2f6b2a'; g.lineWidth = 2.8; g.beginPath(); g.moveTo(32, 71); g.quadraticCurveTo(48, 80, 64, 71); g.stroke();
+      ellp(g, 24, 60, 5, 3, 'rgba(255,130,150,.4)'); ellp(g, 72, 60, 5, 3, 'rgba(255,130,150,.4)');
+    },
     '🦎': (g) => { // 벨로키랍토르: 깃털 볏 + 주황 얼굴 + 날카로운 노란 눈
       tri(g, [[30, 40], [22, 4], [44, 30]], '#2fa39a'); tri(g, [[44, 34], [48, 0], [56, 32]], '#f2c14e'); tri(g, [[66, 40], [74, 4], [52, 30]], '#2fa39a');
       circ(g, 48, 55, 33, '#e0663a'); ellp(g, 48, 72, 17, 15, '#f7a866');
@@ -275,7 +284,9 @@
           tiltGot = true; tiltAt = performance.now();
           if (tiltZero === null) tiltZero = ang;
           tiltZero += (ang - tiltZero) * 0.0015; // 잡는 자세가 바뀌어도 한쪽으로 쏠리지 않게 기준을 아주 천천히 따라간다
-          const d = ang - tiltZero, v = Math.abs(d) < 1.5 ? 0 : clamp((d - Math.sign(d) * 1.5) / 11, -1, 1); tiltV += (v - tiltV) * 0.45; // 12.5도쯤 기울이면 끝까지 꺾인다
+          // 기울기 → 핸들: 난이도마다 [안 듣는 각도, 끝까지 가는 각도, 최대 핸들, 굽은 정도, 따라가는 빠르기]. 쉬울수록 많이 기울여야 하고 조금만 천천히 꺾인다.
+          const TL = kid ? [3, 28, 0.5, 1.4, 0.14] : hard ? [2, 17, 1, 1.25, 0.3] : [2.5, 24, 0.72, 1.45, 0.2];
+          const d = ang - tiltZero, x = clamp((Math.abs(d) - TL[0]) / (TL[1] - TL[0]), 0, 1), v = Math.sign(d) * Math.pow(x, TL[3]) * TL[2]; tiltV += (v - tiltV) * TL[4];
           if (!tiltLive) { tiltLive = true; refreshChips(); }
         };
         const onOri = (e) => { if (e.beta == null || e.gamma == null) return; oriAt = performance.now(); feedTilt(oriAng(e)); };
@@ -358,6 +369,7 @@
         const randItem = (r) => { const k = rank(r), pool = k >= 4 ? ['boost', 'boost', 'missile', 'shield', 'banana'] : k >= 2 ? ['boost', 'missile', 'shield', 'banana'] : ['shield', 'banana', 'banana', 'boost']; return G.pick(pool); };
         function hit(r, kind, dur) {
           if (r.fin != null) return false;
+          if (r.slip > 0) return false; // 스르륵 피하는 중
           if (r.shield > 0) { r.shield = 0; if (r.isPlayer) toast('🛡️ 막았어요!'); return false; }
           if (kind === 'freeze') r.frozen = Math.max(r.frozen, dur); else { r.stun = Math.max(r.stun, dur); }
           r.v *= 0.3; if (r.isPlayer) { G.sfx.bad(); toast(kind === 'freeze' ? '🧊 꽁꽁!' : '😵 앗!'); } return true;
@@ -398,6 +410,8 @@
               for (const o of racers) if (o !== r) { const dx = o.x - r.x, dy = o.y - r.y, d = Math.hypot(dx, dy); if (d < 460 && dx * Math.cos(r.h) + dy * Math.sin(r.h) > 0) hit(o, 'spin', 0.9); } break;
             case 'express': r.shield = Math.max(r.shield, 2.5); r.boost = Math.max(r.boost, 1.6); r.boostMul = 1.4; break;
             case 'pit': drop('pit', r, -40); break;
+            case 'slither': r.slip = 3; r.boost = Math.max(r.boost, 0.9); r.boostMul = 1.2; break; // 뱀처럼 다른 차·함정을 피해 지나간다
+            case 'zig': r.slip = 1.7; r.boost = Math.max(r.boost, 1.5); r.boostMul = 1.45; break;
             case 'hop': r.air = r.airMax = JUMP * GK; r.hop = JUMP * GK * 1.25; r.boost = Math.max(r.boost, 0.5); r.boostMul = 1.2; break; // 뛰어서 다른 차 위를 지나간다
             case 'magnet': if (!give(r, randItem(r))) r.boost = Math.max(r.boost, 0.9); break;
           }
@@ -445,7 +459,7 @@
           if (r.fin != null) { r.steerIn = clamp(r.steerIn, -1, 1); r.throttle = 0.6; }
           if (r.trail && state === 'go') { r.trT -= dt; if (r.trT <= 0 && r.v > 60) { r.trT = 0.07; r.trI = (r.trI || 0) + 1; r.tr.push({ x: r.x - Math.cos(r.h) * 22, y: r.y - Math.sin(r.h) * 22, h: hOf(r) - r.zair, t: 0, e: r.trail[r.trI % r.trail.length] }); } }
           for (let i = r.tr.length - 1; i >= 0; i--) { r.tr[i].t += dt; if (r.tr[i].t > 0.6) r.tr.splice(i, 1); }
-          r.plowCd = Math.max(0, r.plowCd - dt); r.hop = Math.max(0, r.hop - dt);
+          r.plowCd = Math.max(0, r.plowCd - dt); r.hop = Math.max(0, r.hop - dt); r.slip = Math.max(0, (r.slip || 0) - dt);
           if (SP && state === 'go') { // 먼지 꼬리: 땅에 닿아 달릴 때만, 중력이 약하면 오래 떠 있는다
             r.dT = (r.dT || 0) - dt; if (r.dT <= 0 && r.v > 110 && r.air <= 0 && r.dust.length < 26) { r.dT = 0.05; r.dust.push({ x: r.x - Math.cos(r.h) * 22 + (rnd() - 0.5) * 16, y: r.y - Math.sin(r.h) * 22 + (rnd() - 0.5) * 16, h: hOf(r) - r.zair, t: 0, life: 0.7 * GK }); }
             for (let i = r.dust.length - 1; i >= 0; i--) { r.dust[i].t += dt; if (r.dust[i].t > r.dust[i].life) r.dust.splice(i, 1); }
@@ -508,7 +522,7 @@
               o.x += Math.cos(o.h) * o.sp * dt; o.y += Math.sin(o.h) * o.sp * dt;
             }
             let gone = o.life <= 0;
-            for (const r of racers) { if (gone) break; if (o.grace > 0 && r === o.owner) continue; if (r.hop > 0 && o.k !== 'pit') continue; const d = (r.x - o.x) ** 2 + (r.y - o.y) ** 2; if (d > (o.r + 16) ** 2) continue;
+            for (const r of racers) { if (gone) break; if (o.grace > 0 && r === o.owner) continue; if (r.slip > 0 || (r.hop > 0 && o.k !== 'pit')) continue; const d = (r.x - o.x) ** 2 + (r.y - o.y) ** 2; if (d > (o.r + 16) ** 2) continue;
               if (o.k === 'banana') { hit(r, 'spin', 1.2); gone = true; } else if (o.k === 'trap') { if (hit(r, 'spin', 1.6)) r.v *= 0.5; gone = true; }
               else if (o.k === 'pit') { if (r.air <= 0 && !(r.hop > 0) && !o.fell.has(r) && hit(r, 'spin', 1.1)) { r.v *= 0.35; o.fell.add(r); } } // 구멍: 한 번씩 빠진다(점프 중엔 넘어간다)
               else if (o.k === 'oil') { if (r.stun <= 0 && hit(r, 'spin', 0.9)) { r.vx *= 1.1; } o.life -= dt * 2; }
@@ -523,7 +537,7 @@
             const a = racers[i], b = racers[j], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01;
             if (d >= 34) continue;
             if (T.v3d && Math.abs(hOf(a) - hOf(b)) > 45) continue; // 다리 위아래는 부딪히지 않는다
-            if (a.hop > 0 || b.hop > 0) continue; // 점프 중인 차는 다른 차 위를 지나간다
+            if (a.hop > 0 || b.hop > 0 || a.slip > 0 || b.slip > 0) continue; // 점프 중인 차는 다른 차 위를 지나간다
             const nx = dx / d, ny = dy / d, ov = 34 - d, wa = b.mass / (a.mass + b.mass), wb = a.mass / (a.mass + b.mass);
             if (a.plow !== b.plow && (a.plow || b.plow)) { // 코끼리: 부딪쳐도 안 멈추고 상대를 밀치며 돌파한다
               const e = a.plow ? a : b, o = a.plow ? b : a, sg = a.plow ? 1 : -1, ex = nx * sg, ey = ny * sg; // e → o 방향
@@ -560,6 +574,7 @@
           else if (car.id === 'horn') { c.fillStyle = '#f5ecd0'; c.fillRect(22, -13, 7, 3); c.fillRect(22, 10, 7, 3); c.fillRect(24, -1.5, 7, 3); }
           else if (car.id === 'aqua') { c.fillStyle = '#e8792b'; c.fillRect(-20, -3, 34, 6); c.fillStyle = '#f7b267'; for (let i = -16; i < 12; i += 8) c.fillRect(i, -3, 3, 6); }
           else if (car.id === 'spike') { c.fillStyle = '#f0883e'; for (let i = -20; i < 18; i += 8) c.fillRect(i, -3, 5, 6); }
+          else if (car.id === 'snake') { c.strokeStyle = '#ffe45c'; c.lineWidth = 3; c.lineJoin = 'round'; c.beginPath(); c.moveTo(-22, -4); for (let i = 0; i < 6; i++) c.lineTo(-15 + i * 7, i % 2 ? -5 : 5); c.stroke(); c.fillStyle = '#e8483f'; c.fillRect(24, -1, 4, 2); }
           else if (car.id === 'claw') { c.fillStyle = '#222'; c.fillRect(-22, -10, 14, 3); c.fillRect(-22, -1.5, 14, 3); c.fillRect(-22, 7, 14, 3); }
           else if (car.id === 'fire') { c.fillStyle = '#ffd24a'; c.fillRect(-23, -2, 38, 4); c.fillStyle = '#eee'; for (let i = -22; i < 12; i += 6) c.fillRect(i, -9, 2, 18); }
           else { c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(-22, -2, 10, 4); }
@@ -632,9 +647,10 @@
             if (r.isPlayer) { ctx.save(); const pu = 0.5 + 0.5 * Math.sin(t * 6); ctx.shadowColor = 'rgba(255,225,77,.95)'; ctx.shadowBlur = 14; ctx.strokeStyle = 'rgba(255,225,77,' + (0.75 + 0.25 * pu) + ')'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.ellipse(0, 3, 40 + pu * 3, 27 + pu * 2, 0, 0, TAU); ctx.stroke(); ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,225,77,.22)'; ctx.fill(); ctx.restore(); } // 내 차: 노란 빛 고리
             if (r.boost > 0) { ctx.save(); ctx.rotate(r.dh); ctx.fillStyle = '#ff9f1c'; ctx.beginPath(); ctx.moveTo(-24, -9); ctx.lineTo(-24 - 18 - rnd() * 10, 0); ctx.lineTo(-24, 9); ctx.fill(); ctx.restore(); }
             ctx.save(); ctx.rotate(rot); ctx.translate(5 + r.zair * 0.12, 8 + r.zair * 0.3); ctx.rotate(r.dh + r.spin - rot); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.roundRect(-25, -15, 50, 30, 9); ctx.fill(); ctx.restore(); // 차 그림자(점프하면 멀어진다)
-            ctx.save(); ctx.rotate(r.dh + r.spin); ctx.drawImage(kartSpr(r.car, r.col), -30, -20, 60, 40); ctx.restore();
+            ctx.save(); ctx.rotate(r.dh + r.spin + (r.slip > 0 ? Math.sin(t * 20) * 0.24 : 0)); ctx.drawImage(kartSpr(r.car, r.col), -30, -20, 60, 40); ctx.restore(); // 스르륵 피하는 중에는 뱀처럼 꿈틀꿈틀
             ctx.save(); ctx.rotate(rot); ctx.fillStyle = 'rgba(0,0,0,.26)'; ctx.beginPath(); ctx.arc(2.5, 3.5, 15, 0, TAU); ctx.fill(); stamp(ctx, r.ch.e, 26); if (r.hat) { ctx.translate(0, -15); stamp(ctx, r.hat, 17); }
             if (r.shield > 0) { ctx.strokeStyle = 'rgba(80,220,255,.9)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 30 + Math.sin(t * 10) * 2, 0, TAU); ctx.stroke(); }
+            if (r.slip > 0) { ctx.strokeStyle = 'rgba(120,230,90,.9)'; ctx.lineWidth = 3; ctx.setLineDash([7, 7]); ctx.lineDashOffset = -t * 60; ctx.beginPath(); ctx.arc(0, 0, 31, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
             if (r.frozen > 0) { ctx.globalAlpha = 0.85; stamp(ctx, '🧊', 44); ctx.globalAlpha = 1; }
             ctx.restore(); ctx.restore();
           }
