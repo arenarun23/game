@@ -1,4 +1,4 @@
-// 레이싱 데이터: 캐릭터 13(동물 8 + 공룡 5), 차 13, 경기장(이지·하드 각 35) + 트랙 만들기
+// 레이싱 데이터: 캐릭터 14(동물 9 + 공룡 5), 차 14, 경기장(이지·하드 각 35) + 트랙 만들기
 (function () {
   'use strict';
   const TAU = Math.PI * 2;
@@ -13,6 +13,7 @@
     { id: 'eleph', n: '코코', e: '🐘', color: 'sky', trait: '앞 차를 밀치며 돌파해요', skill: { id: 'pit', tag: '구멍', n: '땅 구멍', e: '🕳️', d: '뒤에 구멍을 잠시 만들어 빠뜨려요', cd: 12 }, mod: { acc: 0.9, max: 1, turn: 0.85, mass: 1.6, off: 0.1, plow: true } },
     { id: 'chee', n: '치타', e: '🐆', color: 'lemon', trait: '엄청 빨라요', skill: { id: 'sprint', tag: '질주', n: '번개 질주', e: '⚡', d: '잠깐 번개처럼 달려요', cd: 9 }, mod: { acc: 1.1, max: 1.07, turn: 0.95, mass: 0.8, off: 0 } },
     { id: 'tiger', n: '호랑이', e: '🐯', color: 'orange', trait: '힘이 세고 안 흔들려요', skill: { id: 'claw', tag: '발톱', n: '발톱 할퀴기', e: '🐾', d: '앞에 있는 가까운 차를 할퀴어 빙글 돌려요', cd: 10 }, mod: { acc: 1, max: 1.03, turn: 1, mass: 1.3, off: 0.08 } },
+    { id: 'moa', n: '모아뱀', e: '🐍', color: 'mint', trait: '요리조리 잘 피해 다녀요', skill: { id: 'slither', tag: '스르륵', n: '스르륵 피하기', e: '🌀', d: '3초 동안 다른 차와 함정을 스르륵 피해 지나가요', cd: 11 }, mod: { acc: 1.05, max: 1, turn: 1.18, mass: 0.82, off: 0.05 } },
     { id: 'trex', n: '티라노', e: '🦖', color: 'mint', trait: '공룡 왕! 힘이 제일 세요', skill: { id: 'roar', tag: '포효', n: '티라노 포효', e: '📣', d: '앞에 있는 차들이 무서워서 빙글 돌아요', cd: 11 }, mod: { acc: 0.9, max: 1.05, turn: 0.92, mass: 1.4, off: 0.05 } },
     { id: 'tricera', n: '트리케라', e: '🦏', color: 'peach', trait: '뿔 방패로 안 밀려요', skill: { id: 'shield', tag: '뿔방패', n: '뿔 방패', e: '🛡️', d: '3초 동안 공격을 막아요', cd: 12 }, mod: { acc: 0.92, max: 1, turn: 0.95, mass: 1.35, off: 0.1 } },
     { id: 'spino', n: '스피노', e: '🐊', color: 'sky', trait: '풀밭도 물길도 쌩쌩 달려요', skill: { id: 'splash', tag: '물보라', n: '물보라', e: '💦', d: '앞에 있는 차들을 물로 밀어 느리게 해요', cd: 12 }, mod: { acc: 1, max: 1.04, turn: 1, mass: 1.1, off: 0.15 } },
@@ -30,6 +31,7 @@
     { id: 'hop', n: '폴짝이', e: '🚕', color: '#1abc9c', ui: 'mint', trait: '점프해서 앞 차를 넘어가요', skill: { id: 'hop', tag: '점프', n: '점프 추월', e: '🦘', d: '폴짝 뛰어 다른 차 위를 넘어가요', cd: 9 }, st: { speed: 1.0, acc: 1.05, turn: 1.05, mass: 0.85, off: 0 }, bars: [3, 4, 4, 1] },
     { id: 'cop', n: '순찰이', e: '🚓', color: '#5b6fe0', ui: 'sky', trait: '핸들이 좋고 든든해요', skill: { id: 'siren', tag: '사이렌', n: '사이렌', e: '🚨', d: '바로 뒤 차들이 놀라서 빙글 돌아요', cd: 11 }, st: { speed: 1.0, acc: 1.0, turn: 1.12, mass: 1.15, off: 0.05 }, bars: [3, 3, 4, 3] },
     { id: 'fire', n: '소방이', e: '🚒', color: '#b5281c', ui: 'peach', trait: '튼튼하고 힘이 좋아요', skill: { id: 'splash', tag: '물대포', n: '물대포', e: '💦', d: '앞에 있는 차들을 물로 밀어 느리게 해요', cd: 12 }, st: { speed: 0.98, acc: 0.95, turn: 0.92, mass: 1.35, off: 0.12 }, bars: [3, 2, 3, 4] },
+    { id: 'snake', n: '꿈틀이', e: '🛵', color: '#7cb342', ui: 'mint', trait: '차 사이를 요리조리 빠져나가요', skill: { id: 'zig', tag: '쏙쏙', n: '지그재그 질주', e: '〰️', d: '차 사이를 쏙쏙 빠져나가며 빨리 달려요', cd: 10 }, st: { speed: 1.0, acc: 1.08, turn: 1.3, mass: 0.8, off: 0.05 }, bars: [3, 4, 5, 1] },
     { id: 'rex', n: '쿵쿵이', e: '🚛', color: '#2e8b57', ui: 'mint', trait: '아주 무거워서 끄떡없어요', skill: { id: 'wave', tag: '쿵쿵', n: '쿵쿵 발구르기', e: '🦶', d: '주변 차를 밀어내요', cd: 13 }, st: { speed: 1.02, acc: 0.88, turn: 0.82, mass: 1.55, off: 0.1 }, bars: [3, 2, 2, 5] },
     { id: 'horn', n: '뿔뿔이', e: '🚜', color: '#d2822f', ui: 'peach', trait: '뿔로 앞 차를 밀며 달려요', skill: { id: 'express', tag: '뿔돌진', n: '뿔 돌진', e: '💢', d: '방패를 쓰고 쌩 달려요', cd: 13 }, st: { speed: 0.96, acc: 0.95, turn: 0.9, mass: 1.5, off: 0.15, plow: true }, bars: [2, 3, 3, 5] },
     { id: 'aqua', n: '물살이', e: '🚘', color: '#1f8fb5', ui: 'sky', trait: '풀밭도 물길도 잘 달려요', skill: { id: 'oil', tag: '웅덩이', n: '물웅덩이', e: '💧', d: '밟으면 미끄러져요', cd: 10 }, st: { speed: 1.05, acc: 1.0, turn: 1.05, mass: 1.0, off: 0.2 }, bars: [4, 3, 4, 3] },
