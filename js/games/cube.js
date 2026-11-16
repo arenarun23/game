@@ -1,6 +1,7 @@
 // 큐브 맞추기 (3×3×3, 3D 입체)
 //  손가락으로 끌면 큐브가 360도 돌고, 색깔 면을 누르면 그 면이 돈다.
 //  섞은 뒤 "알려 줘!"를 누르면 맞추는 법을 한 번에 한 칸씩, 7단계로 따라 하게 해 준다.
+//  "내가 할래!"는 어느 면을 어느 쪽으로 돌릴지만 알려 주고, 아이가 직접 돌리면 맞았는지(⭕) 틀렸는지(❌) 확인해 준다.
 //  그림은 CSS 3D 로 직접 그린다(외부 라이브러리·에셋 없음).
 (function () {
   'use strict';
@@ -181,7 +182,11 @@
       const paint = () => { for (let i = 0; i < 54; i++) stickers[i].style.background = FACES[(st[i] / 9) | 0].color; };
       const setView = () => { cubeEl.style.transform = `matrix3d(${M[0]},${M[3]},${M[6]},0,${M[1]},${M[4]},${M[7]},0,${M[2]},${M[5]},${M[8]},0,0,0,0,1)`; };
 
-      const view = h('div', { class: 'cbview' }, cubeEl);
+      const scoreEl = h('div', { class: 'cbscore', hidden: true }), markEl = h('div', { class: 'cbmark', hidden: true });
+      const view = h('div', { class: 'cbview' }, cubeEl, scoreEl, markEl);
+      let markT = 0;
+      const mark = (ok) => { clearTimeout(markT); markEl.textContent = ok ? '⭕' : '❌'; markEl.hidden = true; void markEl.offsetWidth; markEl.hidden = false; markT = setTimeout(() => { markEl.hidden = true; }, ok ? 450 : 900); };
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       const steps = h('div', { class: 'cbsteps' }), title = h('div', { class: 'cbtitle' }), msg = h('div', { class: 'cbmsg' });
       const info = h('div', { class: 'cbinfo' }, steps, title, msg), ctl = h('div', { class: 'cbctl' });
       root.classList.add('cb'); root.append(info, view, ctl);
@@ -228,13 +233,13 @@
       const pushHist = (q) => { hist = toQuarters(hist.map(qm).concat(qm(q))); };
       const freeUi = () => {
         guide = null; auto = false; clearTimeout(autoT);
-        cubies.forEach((c) => c.el.classList.remove('dim')); arrow.hidden = true; steps.replaceChildren();
+        cubies.forEach((c) => c.el.classList.remove('dim')); arrow.hidden = true; steps.replaceChildren(); scoreEl.hidden = true;
         if (isSolved(st)) say('큐브를 돌려 보세요!', '손가락으로 끌면 큐브가 빙글 돌아요. 색깔 면을 콕 누르면 그 면이 돌아요.');
-        else say('큐브가 섞였어요!', '🎓 알려 줘! 를 누르면 맞추는 법을 하나씩 알려 줘요.');
+        else say('큐브가 섞였어요!', '🎓 알려 줘! 는 하나씩 보여 줘요. ✋ 내가 할래! 는 내가 돌리면 맞았는지 알려 줘요.');
         const dirBtn = btn(dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로', () => { G.sfx.tap(); dir = -dir; dirBtn.textContent = dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로'; });
         ctl.replaceChildren(
           btn('🐣 살짝 섞기', () => shuffle(3)), btn('🌀 많이 섞기', () => shuffle(20)), dirBtn,
-          btn('🎓 알려 줘!', startGuide, 'go'), btn('✨ 처음으로', reset));
+          btn('🎓 알려 줘!', () => startGuide(false), 'go'), btn('✋ 내가 할래!', () => startGuide(true), 'self'), btn('✨ 처음으로', reset));
       };
       const reset = () => { if (busy) return; G.sfx.tap(); st = solved(); hist = []; mixed = false; paint(); freeUi(); viewTo(poseFor(null, 1)); };
       const shuffle = async (n) => {
@@ -255,17 +260,42 @@
       };
 
       // ───── 맞추는 법 따라 하기 ─────
-      const startGuide = () => {
+      const startGuide = (self) => {
         if (busy) return; G.sfx.tap();
         if (isSolved(st)) { say('먼저 큐브를 섞어 보세요!', '🐣 살짝 섞기 나 🌀 많이 섞기 를 눌러요.'); G.speak('먼저 큐브를 섞어 보세요'); return; }
         let stages;
         if (hist.length && hist.length <= 6) stages = [{ id: 'back', up: 1, name: '거꾸로 돌려서 맞추기', say: '섞은 것을 거꾸로 돌리면 다시 맞춰져요.', moves: hist.slice().reverse().map((q) => ({ f: q.f, d: -q.d })) }];
         else { try { stages = solve(st).filter((s) => s.moves.length); } catch (e) { say('앗, 다시 해 볼까요?', '✨ 처음으로 를 누르고 다시 섞어 주세요.'); return; } }
-        guide = { stages, si: 0, mi: 0, easy: stages[0].id === 'back', intro: true };
-        window.aieduLog && aieduLog('use', guide.easy ? 'cube-back' : 'cube-guide');
-        ctl.replaceChildren(
+        guide = { stages, si: 0, mi: 0, easy: stages[0].id === 'back', intro: true, self, ok: 0, bad: 0, miss: 0, hint: false, total: stages.reduce((n, s) => n + s.moves.length, 0) };
+        window.aieduLog && aieduLog('use', self ? 'cube-self' : guide.easy ? 'cube-back' : 'cube-guide');
+        if (self) selfCtl(); else ctl.replaceChildren(
           btn('↩ 뒤로', back), btn('👉 돌리기', () => doStep(false), 'go big'),
           (guide.autoBtn = btn('▶ 자동', toggleAuto)), btn('✖ 그만', () => { if (busy) return; G.sfx.tap(); freeUi(); }));
+        showStep();
+      };
+      // ✋ 내가 할래!: 방향(왼쪽/오른쪽)을 고르고 면을 누르면 맞았는지 확인해 준다
+      const selfCtl = () => {
+        const g = guide; dir = 1;
+        const set = () => { L.setAttribute('aria-pressed', String(dir < 0)); R.setAttribute('aria-pressed', String(dir > 0)); };
+        const L = btn('↺ 왼쪽', () => { G.sfx.tap(); dir = -1; set(); }, 'big dirb'), R = btn('↻ 오른쪽', () => { G.sfx.tap(); dir = 1; set(); }, 'big dirb');
+        set();
+        ctl.replaceChildren(L, R,
+          btn('💡 힌트', () => { if (busy || guide !== g) return; G.sfx.tap(); g.hint = true; showStep(); }),
+          btn('✖ 그만', () => { if (busy) return; G.sfx.tap(); freeUi(); }));
+      };
+      const tryMove = async (f) => {
+        const g = guide; if (!g || !g.self || busy) return;
+        const q = g.stages[g.si].moves[g.mi];
+        if (f === q.f && dir === q.d) { if (!g.miss && !g.hint) g.ok++; g.miss = 0; g.hint = false; mark(true); doStep(false); return; }
+        busy = true; arrow.hidden = true; G.sfx.flip();
+        await turn({ f, d: dir }, 220); if (dead) return;
+        G.sfx.bad(); mark(false); g.bad++; g.miss++;
+        scoreEl.textContent = '⭕ ' + g.ok + '   ❌ ' + g.bad;
+        msg.replaceChildren(f !== q.f ? '앗, 다른 면이에요! 다시 돌려 놓을게요.' : '앗, 방향이 반대예요! 다시 돌려 놓을게요.');
+        await wait(700); if (dead) return;
+        await turn({ f, d: -dir }, 220); busy = false;
+        if (dead || guide !== g) return;
+        if (g.miss >= 2) g.hint = true;                              // 두 번 틀리면 화살표로 알려 준다
         showStep();
       };
       const showStep = async () => {
@@ -273,12 +303,15 @@
         const sg = g.stages[g.si], q = sg.moves[g.mi];
         steps.replaceChildren(...g.stages.map((s, i) => h('span', { class: 'cbstep' + (i < g.si ? ' done' : i === g.si ? ' on' : '') }, i < g.si ? '✓' : String(i + 1))));
         title.textContent = (g.stages.length > 1 ? (g.si + 1) + '단계 · ' : '') + sg.name + '  (' + (g.mi + 1) + '/' + sg.moves.length + ')';
-        msg.replaceChildren(chip(q.f), FACES[q.f].name + ' 면을 화살표처럼 돌려요');
-        cubies.forEach((c) => c.el.classList.toggle('dim', dot(c.p, FACES[q.f].n) !== 1));
+        const show = !g.self || g.hint;                              // 스스로 할 때는 힌트를 켰을 때만 화살표·밝은 면을 보여 준다
+        if (g.self) { msg.replaceChildren(chip(q.f), FACES[q.f].name + ' 면을 ', h('b', { class: 'cbdir' }, q.d > 0 ? '↻ 오른쪽' : '↺ 왼쪽'), '으로 돌려요'); scoreEl.textContent = '⭕ ' + g.ok + '   ❌ ' + g.bad; scoreEl.hidden = false; }
+        else msg.replaceChildren(chip(q.f), FACES[q.f].name + ' 면을 화살표처럼 돌려요');
+        cubies.forEach((c) => c.el.classList.toggle('dim', show && dot(c.p, FACES[q.f].n) !== 1));
         busy = true;
-        if (g.intro) { g.intro = false; G.speak(sg.say); await viewTo(poseFor(q.f, sg.up), 700); }
-        else if (ap(M, FACES[q.f].n)[2] < 0.3) await viewTo(poseFor(q.f, sg.up));
+        if (g.intro) { g.intro = false; G.speak(sg.say); await viewTo(poseFor(show ? q.f : null, sg.up), 700); }
+        else if (show && ap(M, FACES[q.f].n)[2] < 0.3) await viewTo(poseFor(q.f, sg.up));
         busy = false; if (dead || guide !== g) return;
+        if (!show) { arrow.hidden = true; return; }
         arrow.style.transform = FT[q.f] + ' translateZ(calc(var(--s) * 1.56))' + (q.d < 0 ? ' scaleX(-1)' : ''); arrow.hidden = false;
         if (auto) autoT = setTimeout(() => doStep(true), 350);
       };
@@ -292,7 +325,7 @@
         g.mi++;
         if (g.mi >= sg.moves.length) {
           g.si++; g.mi = 0; g.intro = true;
-          if (g.si >= g.stages.length) { mixed = false; hist = []; const easy = g.easy; freeUi(); viewTo(poseFor(null, 1), 600); G.win({ stars: easy ? 2 : 3, text: easy ? '거꾸로 돌려서 맞췄어요! 이번엔 🌀 많이 섞어 볼까요?' : '큐브를 끝까지 맞췄어요! 🧊', bonus: 0 }); return; }
+          if (g.si >= g.stages.length) { mixed = false; hist = []; const easy = g.easy; freeUi(); viewTo(poseFor(null, 1), 600); if (g.self) G.win({ stars: g.ok >= g.total ? 3 : g.ok >= g.total * 0.8 ? 2 : 1, text: g.total + '번 가운데 ' + g.ok + '번을 한 번에 맞혔어요! (❌ ' + g.bad + '번)', bonus: 0 }); else G.win({ stars: easy ? 2 : 3, text: easy ? '거꾸로 돌려서 맞췄어요! 이번엔 🌀 많이 섞어 볼까요?' : '큐브를 끝까지 맞췄어요! 🧊', bonus: 0 }); return; }
           G.sfx.ok();
         }
         showStep();
@@ -334,13 +367,14 @@
         if (!ptr || e.pointerId !== ptr.id) return;
         const p = ptr; ptr = null;
         if (e.type === 'pointercancel' || p.drag || p.f == null) return;
-        if (guide) { const q = guide.stages[guide.si].moves[guide.mi]; if (q && q.f === p.f && !arrow.hidden) doStep(false); }
+        if (guide && guide.self) tryMove(p.f);
+        else if (guide) { const q = guide.stages[guide.si].moves[guide.mi]; if (q && q.f === p.f && !arrow.hidden) doStep(false); }
         else freeTurn(p.f);
       };
       view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
 
       fit(); paint(); setView(); freeUi();
-      return () => { dead = true; delete document.documentElement.dataset.game; cancelAnimationFrame(raf); clearTimeout(autoT); if (ro) ro.disconnect(); else removeEventListener('resize', fit); };
+      return () => { dead = true; delete document.documentElement.dataset.game; cancelAnimationFrame(raf); clearTimeout(autoT); clearTimeout(markT); if (ro) ro.disconnect(); else removeEventListener('resize', fit); };
     },
   });
 })();
