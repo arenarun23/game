@@ -35,6 +35,11 @@
     { id: 'pent', name: '오각형', icon: '⬟', f: inPoly(reg(5, -Math.PI / 2)) },
     { id: 'hex', name: '육각형', icon: '⬢', f: inPoly(reg(6, 0)) },
     { id: 'heart', name: '하트', icon: '💖', f: (u, v) => { const x = (u - 0.5) * 2.7, y = (0.5 - v) * 2.6 + 0.15; return (x * x + y * y - 1) ** 3 - x * x * y ** 3 <= 0; } },
+    { id: 'star', name: '별', icon: '⭐', f: inPoly(Array.from({ length: 10 }, (_, k) => { const a = -Math.PI / 2 + (Math.PI * k) / 5, q = k % 2 ? 0.3 : 0.56; return [0.5 + q * Math.cos(a), 0.53 + q * Math.sin(a)]; })) },
+    { id: 'plus', name: '십자', icon: '➕', f: (u, v) => Math.abs(u - 0.5) <= 0.2 || Math.abs(v - 0.5) <= 0.2 },
+    { id: 'oct', name: '팔각형', icon: '🛑', f: (u, v) => Math.abs(u - 0.5) + Math.abs(v - 0.5) <= 0.72 },
+    { id: 'ring', name: '도넛', icon: '🍩', f: (u, v) => { const d = (u - 0.5) ** 2 + (v - 0.5) ** 2; return d <= 0.25 && d >= 0.026; } },
+    { id: 'moon', name: '달', icon: '🌙', f: (u, v) => (u - 0.5) ** 2 + (v - 0.5) ** 2 <= 0.25 && (u - 0.78) ** 2 + (v - 0.4) ** 2 > 0.115 },
   ];
   // 도형 안의 칸만 남기고, 떨어진 조각은 버린다(가장 큰 덩어리만). 너무 작으면 null
   function maskFor(shape, c, r) {
@@ -53,12 +58,27 @@
     return ins.map((row, j) => row.map((v, i) => v && comp[j][i] === best));
   }
 
-  // 미로 만드는 방식 3가지 (맵 모양이 매번 달라진다)
+  // 미로 만드는 방식 8가지 (맵 모양이 매번 달라진다)
   const KINDS = [
     { id: 'dfs', name: '구불구불 길' },     // 길고 깊게 굽이치는 길
     { id: 'prim', name: '갈래갈래 길' },    // 짧은 갈래가 많은 길
-    { id: 'rooms', name: '방방이 길' },     // 곧은 벽으로 방을 나눈 길
+    { id: 'rooms', name: '방방이 길', rectOnly: true },     // 곧은 벽으로 방을 나눈 길(사각형에서만)
+    { id: 'mix', name: '오락가락 길' },     // 굽이치다가 갑자기 갈래가 나오는 길
+    { id: 'jumble', name: '뒤죽박죽 길' },  // 길이가 제각각인 길이 고르게 섞인 길
+    { id: 'wide', name: '옆으로 긴 길' },   // 옆으로 길게 뻗은 길
+    { id: 'tall', name: '위아래 긴 길' },   // 위아래로 길게 뻗은 길
+    { id: 'spin', name: '빙글빙글 길' },    // 가운데를 둘러싸고 도는 길
   ];
+  // 벽마다 점수를 매겨 낮은 것부터 뚫는다(이미 이어진 두 칸 사이는 그대로 둔다). 점수에 따라 길의 결이 달라진다
+  const WEIGHT = {
+    jumble: () => Math.random(),
+    wide: (x, y, d) => Math.random() * (d === E ? 0.3 : 1),
+    tall: (x, y, d) => Math.random() * (d === S ? 0.3 : 1),
+    spin: (x, y, d, c, r) => {                                  // 가운데에서 같은 거리(같은 고리)에 있는 두 칸을 먼저 잇는다
+      const ringOf = (i, j) => Math.round(Math.max(Math.abs(i - (c - 1) / 2), Math.abs(j - (r - 1) / 2)));
+      return Math.random() * (ringOf(x, y) === ringOf(x + DX[d], y + DY[d]) ? 0.25 : 1);
+    },
+  };
   function build(c, r, kind, braid, ins) {
     const open = Array.from({ length: r }, () => new Array(c).fill(0));
     const inb = (x, y) => x >= 0 && y >= 0 && x < c && y < r && ins[y][x];
@@ -79,9 +99,27 @@
         }
       };
       divide(0, 0, c, r);
+    } else if (WEIGHT[kind]) {
+      const par = Array.from({ length: c * r }, (_, i) => i), find = (a) => { while (par[a] !== a) a = par[a] = par[par[a]]; return a; };
+      const edges = [];
+      for (let y = 0; y < r; y++) for (let x = 0; x < c; x++) if (ins[y][x]) for (const d of [E, S]) if (inb(x + DX[d], y + DY[d])) edges.push([WEIGHT[kind](x, y, d, c, r), x, y, d]);
+      edges.sort((a, b) => a[0] - b[0]);
+      for (const [, x, y, d] of edges) {
+        const a = find(y * c + x), b = find((y + DY[d]) * c + x + DX[d]);
+        if (a !== b) { par[a] = b; link(x, y, d); }
+      }
     } else {
       const seen = Array.from({ length: r }, () => new Array(c).fill(false));
-      if (kind === 'prim') {                                  // 방문한 칸의 가장자리 벽 중 아무거나 골라 뚫는다
+      if (kind === 'mix') {                                   // 자라는 나무: 절반은 맨 끝 칸에서, 절반은 아무 칸에서 뻗는다
+        const cells = []; for (let y = 0; y < r; y++) for (let x = 0; x < c; x++) if (ins[y][x]) cells.push([x, y]);
+        const s0 = G.pick(cells), act = [s0]; seen[s0[1]][s0[0]] = true;
+        while (act.length) {
+          const i = Math.random() < 0.5 ? act.length - 1 : (Math.random() * act.length) | 0, [x, y] = act[i];
+          const ds = [N, E, S, W].filter((d) => { const nx = x + DX[d], ny = y + DY[d]; return inb(nx, ny) && !seen[ny][nx]; });
+          if (!ds.length) { act.splice(i, 1); continue; }
+          const d = G.pick(ds); link(x, y, d); seen[y + DY[d]][x + DX[d]] = true; act.push([x + DX[d], y + DY[d]]);
+        }
+      } else if (kind === 'prim') {                                  // 방문한 칸의 가장자리 벽 중 아무거나 골라 뚫는다
         const cells = []; for (let y = 0; y < r; y++) for (let x = 0; x < c; x++) if (ins[y][x]) cells.push([x, y]);
         const [sx, sy] = G.pick(cells), fr = [];
         const add = (x, y) => { seen[y][x] = true; for (const d of [N, E, S, W]) if (inb(x + DX[d], y + DY[d])) fr.push([x, y, d]); };
@@ -197,7 +235,7 @@
           c = Math.min(c, Math.ceil(r * 1.8)); r = Math.min(r, Math.ceil(c * 1.8));   // 너무 길쭉한 미로는 피한다
           ins = Array.from({ length: r }, () => new Array(c).fill(true));
         }
-        const kinds = shape.id === 'rect' ? KINDS : KINDS.slice(0, 2);   // 방방이 길은 사각형에서만
+        const kinds = shape.id === 'rect' ? KINDS : KINDS.filter((k) => !k.rectOnly);   // 방방이 길은 사각형에서만
         kind = kinds[G.nextVariant('maze-kind' + kinds.length, kinds.length)];
         open = build(c, r, kind.id, L.braid, ins);
         const cells = []; for (let y = 0; y < r; y++) for (let x = 0; x < c; x++) if (ins[y][x]) cells.push([x, y]);
@@ -273,7 +311,13 @@
         }
         check();
       }
-      function check() { if (!done && now() >= inv && foes.some((f) => f.cell[0] === pos[0] && f.cell[1] === pos[1])) hit(); }
+      // 부딪힘은 화면에 보이는 자리로 따진다. 방해꾼은 칸을 미끄러져 가므로, 절반을 넘기 전에는 아직 떠나는 칸에 있는 것이다
+      // (옮겨 갈 칸으로 바로 따지면, 아직 한 칸 떨어져 보이는데도 부딪힌 것이 된다)
+      const slide = (f, t) => (reduce || !f.t0 ? 1 : Math.min(1, (t - f.t0) / (L.ms * 0.85)));
+      const same = (a, b) => a[0] === b[0] && a[1] === b[1];
+      const foeAt = (f, t) => (slide(f, t) < 0.5 ? f.prev : f.cell);
+      const foeNear = (p, t) => foes.some((f) => same(f.cell, p) || (slide(f, t) < 1 && same(f.prev, p)));   // 방해꾼이 있거나 지나가는 중인 칸
+      function check() { const t = now(); if (!done && t >= inv && foes.some((f) => same(foeAt(f, t), pos))) hit(); }
       function hit() {                                               // 부딪히면 처음부터 다시
         hits++; hitTag.textContent = '💥 ' + hits; G.sfx.bad();
         pos = start.slice(); trail = [start.slice()]; steps = 0; mv.textContent = '👣 0'; hintPath = null; drag = false;
@@ -282,7 +326,7 @@
         flash.hidden = false; clearTimeout(flashTimer); flashTimer = setTimeout(() => { flash.hidden = true; }, 900);
         draw();
       }
-      function loop() { raf = 0; if (done || !foes.length) return; draw(); raf = requestAnimationFrame(loop); }
+      function loop() { raf = 0; if (done || !foes.length) return; draw(); check(); raf = requestAnimationFrame(loop); }
 
       function draw() {
         if (!open) return;
@@ -321,7 +365,7 @@
         // 방해꾼(한 칸을 부드럽게 미끄러져 간다)
         const t = now();
         for (const f of foes) {
-          const u = reduce || !f.t0 ? 1 : Math.min(1, (t - f.t0) / (L.ms * 0.85));
+          const u = slide(f, t);
           const m = mid([f.prev[0] + (f.cell[0] - f.prev[0]) * u, f.prev[1] + (f.cell[1] - f.prev[1]) * u]);
           x.globalAlpha = t < inv ? 0.5 : 1;
           disc(m, '#ffd6d6', '#e53935', 0.4); x.fillText(FOE[f.kind], m[0], m[1] + cell * 0.03);
@@ -344,6 +388,7 @@
         if (!path || path.length > 5) return;
         for (let i = 1; i < path.length && !done && now() >= lock; i++) {
           const a = path[i - 1], b = path[i];
+          if (path.length > 2 && foeNear(b, now())) break;            // 벽을 돌아서 가는 길에 방해꾼이 있으면 그 앞에서 멈춘다(손가락이 벽 너머 칸에 닿았다고 방해꾼에게 걸어 들어가지 않게)
           step(DX[N] === b[0] - a[0] && DY[N] === b[1] - a[1] ? N : b[0] > a[0] ? E : b[0] < a[0] ? W : b[1] > a[1] ? S : N);
         }
       }
