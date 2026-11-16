@@ -491,8 +491,16 @@ html[data-game=race] .pickgrid.lt .pk:not(.trk) .ds .ln:first-child{display:bloc
 .cbctl .mode[aria-pressed=true]{background:#e8f6ff;border-color:#bcdcf5;color:var(--ink);box-shadow:0 3px 0 #bcdcf5}
 @media (min-aspect-ratio:11/10) and (min-width:560px){
   .cb{grid-template:"view info" minmax(0,1fr) "view ctl" auto / minmax(0,1fr) clamp(12rem,30vw,17rem);gap:.5rem .8rem}
-  .cbctl{flex-direction:column;align-items:stretch}
-  .cbctl .mode{width:100%}
+  .cbctl{display:grid;grid-template-columns:1fr 1fr}
+  .cbctl .mode{width:100%;min-width:0;padding-left:.2rem;padding-right:.2rem}
+  .cbctl .mode.big{font-size:max(15px,1.1rem)}
 }
 @media (max-height:460px){.cbinfo{min-height:0;gap:.15rem}.cbstep{width:1.5rem;height:1.5rem}.cbctl{gap:.3rem}.cbctl .mode{min-height:44px;padding:.1rem .6rem}.cbctl .mode.big{min-height:46px}}
 html[data-game=cube] #title{white-space:nowrap;font-size:clamp(1.05rem,4.6vw,1.5rem)}
+.cbctl .mode.self{background:#c9f2e0;border-color:#7fd3a8;box-shadow:0 3px 0 #7fd3a8}
+.cbctl .mode.dirb[aria-pressed=true]{background:var(--btn);color:#fff;border-color:var(--btn);box-shadow:0 3px 0 #d9822b}
+.cbscore{position:absolute;top:.4rem;right:.6rem;background:rgba(255,255,255,.9);border:2px solid var(--line);border-radius:1rem;padding:.1rem .7rem;font-size:max(15px,1.1rem);white-space:pre;pointer-events:none}
+.cbmark{position:absolute;inset:0;display:grid;place-items:center;font-size:min(6rem,26vmin);opacity:.9;pointer-events:none;animation:cbpop .3s}
+.cbscore[hidden],.cbmark[hidden]{display:none}
+.cbdir{font-weight:400;background:#fff;border:2px solid var(--line);border-radius:.6rem;padding:0 .4rem;white-space:nowrap}
+@keyframes cbpop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
