@@ -43,7 +43,7 @@
     start(root) {
       const h = G.h, calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
       let st = solved(), M = mul(TILT, rotAxis([0, 0, 1], Math.PI)), S = 40;   // 처음엔 하얀 면이 위
-      let gen = 0, busy = false, dead = false, dir = 1, hist = [], mixed = false, guide = null, auto = false, raf = 0, autoT = 0;
+      let freeMoves = 0, gen = 0, busy = false, dead = false, dir = 1, hist = [], mixed = false, guide = null, auto = false, raf = 0, autoT = 0;
 
       // 큐브 그리기: 작은 조각 27개 × 면 6개(안쪽 면은 까맣게), 바깥 면에만 색 스티커
       const cubeEl = h('div', { class: 'cbcube' }), stickers = new Array(54), cubies = [];
@@ -70,8 +70,10 @@
       helpBtn.addEventListener('pointerdown', (e) => e.stopPropagation());   // 큐브 돌리기(끌기)와 섞이지 않게
       const labBtn = h('button', { class: 'mode learn cbhelp lab', 'aria-label': '공식 연습', onclick: () => openLab() }, '🏋️ 공식');
       labBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
-      const corner = (hide) => { helpBtn.hidden = hide; labBtn.hidden = hide; };
-      const view = h('div', { class: 'cbview' }, cubeEl, scoreEl, markEl, helpBtn, labBtn);
+      const memBtn = h('button', { class: 'mode learn cbhelp mem', 'aria-label': '내 기록', onclick: () => openPan('free', 'slots') }, '📂 내 기록');
+      memBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+      const corner = (hide) => { helpBtn.hidden = hide; labBtn.hidden = hide; memBtn.hidden = hide; };
+      const view = h('div', { class: 'cbview' }, cubeEl, scoreEl, markEl, helpBtn, memBtn, labBtn);
       let markT = 0;
       const mark = (ok) => { clearTimeout(markT); markEl.textContent = ok ? '⭕' : '❌'; markEl.hidden = true; void markEl.offsetWidth; markEl.hidden = false; markT = setTimeout(() => { markEl.hidden = true; }, ok ? 450 : 900); };
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -194,6 +196,54 @@
         st = l.saved.st; hist = l.saved.hist; mixed = l.saved.mixed;
         cubies.forEach((c) => place(c)); paint(); setDim(null); pulseOff(); freeUi(); viewTo(poseFor(null, 1));
       };
+      // ───── 📂 내 기록: 저장 칸 10개(직접 하기 이어하기) + 맞추기 기록 ─────
+      // 이 기기(localStorage)에만 저장한다. 이용 기록(aieduLog)에는 보내지 않는다.
+      const SLOTS = 10;
+      const slotsGet = () => { const a = G.store.get('cube-slots', []) || []; return Array.from({ length: SLOTS }, (_, i) => a[i] || null); };
+      const recGet = () => G.store.get('cube-rec', []) || [];
+      const addRec = (r) => { try { G.store.set('cube-rec', recGet().concat(Object.assign({ t: Date.now() }, r)).slice(-100)); } catch (e) {} };
+      const fmt = (t) => { const d = new Date(t), p2 = (n) => String(n).padStart(2, '0'); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes()); };
+      const KIND = { self: '✋ 직접 맞춤', guide: '🎓 따라서 맞춤', back: '↩ 거꾸로 맞춤', free: '🧊 혼자 맞춤' };
+      let pan = null;
+      const closePan = () => { if (pan) { pan.remove(); pan = null; } };
+      const openPan = (mode, tab, after) => {            // mode: 'save'(저장할 칸 고르기) | 'free'(이어하기·기록 보기)
+        if (busy) return; closePan(); G.sfx.tap();
+        const head = h('div', { class: 'cbph' }), body = h('div', { class: 'cbpb' });
+        const me = pan = h('div', { class: 'cbpan' }, head, body); me.addEventListener('pointerdown', (e) => e.stopPropagation()); view.append(me);
+        const shut = () => { G.sfx.tap(); closePan(); };
+        const draw = (t) => {
+          head.replaceChildren(...(mode === 'save' ? [h('b', {}, '💾 저장할 칸을 골라요')] : [
+            h('button', { class: 'mode' + (t === 'slots' ? ' go' : ''), onclick: () => { G.sfx.tap(); draw('slots'); } }, '📂 이어하기'),
+            h('button', { class: 'mode' + (t === 'rec' ? ' go' : ''), onclick: () => { G.sfx.tap(); draw('rec'); } }, '📊 기록')]), h('button', { class: 'mode', onclick: shut }, '✖ 닫기'));
+          body.replaceChildren(...(t === 'rec' ? recView() : slotView()));
+        };
+        const sure = (b, label, fn) => { if (b.dataset.sure) { fn(); return; } b.dataset.sure = '1'; b.textContent = label; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; draw(me.tab); } }, 2500); };
+        const slotView = () => { me.tab = 'slots'; return slotsGet().map((sl, i) => {
+          const pct = sl ? Math.round(sl.done * 100 / Math.max(1, sl.total)) : 0;
+          const acts = mode === 'save'
+            ? [h('button', { class: 'mode go', onclick: (e) => { const go = () => { const a = slotsGet(); a[i] = saveNow(); G.store.set('cube-slots', a); G.sfx.ok(); closePan(); if (after) after(); }; if (sl) sure(e.currentTarget, '덮어쓸까요?', go); else go(); } }, sl ? '덮어쓰기' : '저장')]
+            : sl ? [h('button', { class: 'mode go', onclick: () => loadSlot(sl) }, '▶ 이어하기'), h('button', { class: 'mode', 'aria-label': '지우기', onclick: (e) => sure(e.currentTarget, '지울까요?', () => { const a = slotsGet(); a[i] = null; G.store.set('cube-slots', a); G.sfx.tap(); draw('slots'); }) }, '🗑')] : [];
+          return h('div', { class: 'cbslot' + (sl ? ' full' : '') }, h('b', {}, String(i + 1)),
+            h('span', { class: 'si' }, ...(sl ? [h('span', {}, fmt(sl.t) + ' · ' + pct + '% 했어요'), h('span', { class: 'sub' }, '⭕ ' + sl.ok + '  ❌ ' + sl.bad)] : ['비어 있어요'])), ...acts);
+        }); };
+        const recView = () => {
+          me.tab = 'rec'; const rs = recGet(), me2 = rs.filter((r) => r.k === 'self'), labDone = Object.values(G.store.get('cube-lab', {}) || {}).filter((v) => v >= 5).length;
+          const best = me2.length ? Math.max(...me2.map((r) => Math.round(r.ok * 100 / Math.max(1, r.n)))) : null;
+          const sum = h('div', { class: 'cbsum' }, h('span', {}, '🧊 맞춘 횟수 ' + rs.filter((r) => r.k !== 'lab').length + '번'), h('span', {}, '✋ 직접 ' + me2.length + '번'), h('span', {}, best == null ? '🎯 최고 정확도 -' : '🎯 최고 정확도 ' + best + '%'), h('span', {}, '🏋️ 익힌 공식 ' + labDone + '/' + G.cubeCore.FORMULAS.length));
+          const rows = rs.slice(-30).reverse().map((r) => h('div', { class: 'cbrec' }, h('span', { class: 'when' }, fmt(r.t)), h('b', {}, r.k === 'lab' ? '🏋️ ' + r.name : KIND[r.k] || '🧊'), h('span', {}, r.n + '번 돌림' + (r.k === 'self' ? ' · ⭕ ' + r.ok + ' ❌ ' + r.bad : r.k === 'lab' ? ' · ❌ ' + r.bad : ''))));
+          return [sum, ...(rows.length ? rows : [h('div', { class: 'cbsum' }, '아직 기록이 없어요. 큐브를 맞춰 보세요!')])];
+        };
+        me.draw = draw; draw(tab || 'slots');
+      };
+      // 지금 직접 하기를 저장할 내용(큐브 모양 + 몇 번째까지 했는지)
+      const saveNow = () => { const g = guide; return { t: Date.now(), st: st.slice(), ok: g.ok, bad: g.bad, done: g.stages.slice(0, g.si).reduce((n, x) => n + x.moves.length, 0) + g.mi, total: g.total }; };
+      const loadSlot = (sl) => {
+        if (busy) return; closePan(); guide = null; auto = false; G.sfx.tap();
+        st = sl.st.slice(); hist = []; mixed = true; cubies.forEach((c) => place(c)); paint();
+        window.aieduLog && aieduLog('use', 'cube-resume');
+        startGuide(true, sl);
+      };
+
       // ───── 🏋️ 공식 연습실(cube_lab.js) ─────
       let lab = null, labSaved = null;
       const openLab = () => {
@@ -206,6 +256,7 @@
           showArrow: (q) => { if (!q) { arrow.hidden = true; return; } arrow.style.transform = FT[q.f] + ' translateZ(calc(var(--s) * 1.56))' + (q.d < 0 ? ' scaleX(-1)' : ''); arrow.hidden = false; },
           scoreText: (t) => { if (t == null) { scoreEl.hidden = true; return; } scoreEl.textContent = t; scoreEl.hidden = false; },
           glowChanged: () => { let n = 0; stickers.forEach((el, i) => { const w = wrongAt(i); if (w) n++; el.classList.remove('d2'); el.classList.toggle('g', w); el.classList.toggle('d1', !w); }); return n; },
+          record: addRec,
           leave: () => { const l = labSaved; labSaved = null; if (!l) return; gen++; st = l.st; hist = l.hist; mixed = l.mixed; cubies.forEach((c) => place(c)); paint(); setDim(null); pulseOff(); arrow.hidden = true; scoreEl.hidden = true; freeUi(); viewTo(poseFor(null, 1)); },
         });
         labSaved = { st: st.slice(), hist: hist.slice(), mixed }; corner(true); guide = null; lab.open();
@@ -219,17 +270,17 @@
           last = f; const q = { f, d: Math.random() < 0.5 ? 1 : -1 };
           await turn(q, n > 5 ? 90 : 260); pushHist(q); G.sfx.flip();
         }
-        mixed = true; busy = false; if (!dead) freeUi();
+        mixed = true; freeMoves = 0; busy = false; if (!dead) freeUi();
       };
       const freeTurn = async (f) => {
         if (busy) return; busy = true; G.sfx.flip();
-        const q = { f, d: dir }; await turn(q, 240); pushHist(q); busy = false;
+        const q = { f, d: dir }; await turn(q, 240); pushHist(q); freeMoves++; busy = false;
         if (dead) return;
-        if (isSolved(st) && mixed) { mixed = false; hist = []; freeUi(); G.win({ stars: 3, text: '혼자서 큐브를 맞췄어요! 🧊', bonus: 0 }); } else if (!guide) freeUi();
+        if (isSolved(st) && mixed) { addRec({ k: 'free', n: freeMoves }); mixed = false; hist = []; freeUi(); G.win({ stars: 3, text: '혼자서 큐브를 맞췄어요! 🧊', bonus: 0 }); } else if (!guide) freeUi();
       };
 
       // ───── 맞추는 법 따라 하기 ─────
-      const startGuide = (self) => {
+      const startGuide = (self, resume) => {
         if (busy) return; G.sfx.tap();
         if (isSolved(st)) { say('먼저 큐브를 섞어 보세요!', '🐣 살짝 섞기 나 🌀 많이 섞기 를 눌러요.'); G.speak('먼저 큐브를 섞어 보세요'); return; }
         let stages;
@@ -237,6 +288,7 @@
         else { try { stages = solve(st).filter((s) => s.moves.length); } catch (e) { say('앗, 다시 해 볼까요?', '✨ 처음으로 를 누르고 다시 섞어 주세요.'); return; } }
         corner(true);
         guide = { stages, si: 0, mi: 0, easy: stages[0].id === 'back', intro: true, self, ok: 0, bad: 0, miss: 0, hint: false, total: stages.reduce((n, s) => n + s.moves.length, 0) };
+        if (resume) { guide.ok = resume.ok; guide.bad = resume.bad; guide.total += resume.done; }
         window.aieduLog && aieduLog('use', self ? 'cube-self' : guide.easy ? 'cube-back' : 'cube-guide');
         if (self) selfCtl(); else ctl.replaceChildren(
           btn('↩ 뒤로', back), btn('👉 돌리기', () => doStep(false), 'go big'),
@@ -251,7 +303,13 @@
         set();
         ctl.replaceChildren(L, R,
           btn('💡 힌트', () => { if (busy || guide !== g) return; G.sfx.tap(); g.hint = true; showStep(); }),
-          btn('✖ 그만', () => { if (busy) return; G.sfx.tap(); freeUi(); }));
+          btn('✖ 그만', askStop));
+      };
+      // 직접 하다가 그만둘 때: 저장하고 그만 / 그냥 그만 / 계속
+      const askStop = () => {
+        const g = guide; if (busy || !g) return; G.sfx.tap(); arrow.hidden = true;
+        title.textContent = '그만할까요?'; msg.replaceChildren('저장해 두면 다음에 이어서 할 수 있어요.');
+        ctl.replaceChildren(btn('💾 저장하고 그만', () => openPan('save', null, () => freeUi()), 'go big'), btn('그냥 그만', () => { G.sfx.tap(); freeUi(); }), btn('↩ 계속 하기', () => { G.sfx.tap(); selfCtl(); showStep(); }));
       };
       const tryMove = async (f) => {
         const g = guide; if (!g || !g.self || busy) return;
@@ -295,7 +353,7 @@
         g.mi++;
         if (g.mi >= sg.moves.length) {
           g.si++; g.mi = 0; g.intro = true;
-          if (g.si >= g.stages.length) { mixed = false; hist = []; const easy = g.easy; freeUi(); viewTo(poseFor(null, 1), 600); if (g.self) G.win({ stars: g.ok >= g.total ? 3 : g.ok >= g.total * 0.8 ? 2 : 1, text: g.total + '번 가운데 ' + g.ok + '번을 한 번에 맞혔어요! (❌ ' + g.bad + '번)', bonus: 0 }); else G.win({ stars: easy ? 2 : 3, text: easy ? '거꾸로 돌려서 맞췄어요! 이번엔 🌀 많이 섞어 볼까요?' : '큐브를 끝까지 맞췄어요! 🧊', bonus: 0 }); return; }
+          if (g.si >= g.stages.length) { mixed = false; hist = []; const easy = g.easy; freeUi(); viewTo(poseFor(null, 1), 600); addRec(g.self ? { k: 'self', n: g.total, ok: g.ok, bad: g.bad } : { k: easy ? 'back' : 'guide', n: g.total }); if (g.self) G.win({ stars: g.ok >= g.total ? 3 : g.ok >= g.total * 0.8 ? 2 : 1, text: g.total + '번 가운데 ' + g.ok + '번을 한 번에 맞혔어요! (❌ ' + g.bad + '번)', bonus: 0 }); else G.win({ stars: easy ? 2 : 3, text: easy ? '거꾸로 돌려서 맞췄어요! 이번엔 🌀 많이 섞어 볼까요?' : '큐브를 끝까지 맞췄어요! 🧊', bonus: 0 }); return; }
           G.sfx.ok();
         }
         showStep();
@@ -345,7 +403,7 @@
       view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
 
       fit(); paint(); setView(); freeUi();
-      return () => { dead = true; if (lab) lab.close(false); delete document.documentElement.dataset.game; cancelAnimationFrame(raf); clearTimeout(autoT); clearTimeout(markT); if (ro) ro.disconnect(); else removeEventListener('resize', fit); };
+      return () => { dead = true; closePan(); if (lab) lab.close(false); delete document.documentElement.dataset.game; cancelAnimationFrame(raf); clearTimeout(autoT); clearTimeout(markT); if (ro) ro.disconnect(); else removeEventListener('resize', fit); };
     },
   });
 })();
