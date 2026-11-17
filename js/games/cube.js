@@ -194,7 +194,8 @@
       root.classList.add('cb'); root.append(info, view, ctl);
       document.documentElement.dataset.game = 'cube';   // 좁은 화면에서 제목이 두 줄이 되지 않게
 
-      const fit = () => { const r = view.getBoundingClientRect(), m = Math.min(r.width, r.height) || 300; S = Math.max(18, m / 5.9); cubeEl.style.setProperty('--s', S + 'px'); view.style.perspective = S * 13 + 'px'; cubies.forEach((c) => place(c)); };
+      // 큐브 크기: 가만히 있을 때 칸의 88% 안팎(조각 한 변 S 기준 가로 4.4S·세로 4.55S). 돌리다가 모서리가 아주 조금 넘으면 칸 밖은 잘린다
+      const fit = () => { const r = view.getBoundingClientRect(); S = Math.max(18, Math.min((r.width || 300) / 5.0, (r.height || 300) / 5.1)); cubeEl.style.setProperty('--s', S + 'px'); view.style.perspective = S * 13 + 'px'; cubies.forEach((c) => place(c)); };
       const ro = 'ResizeObserver' in window ? new ResizeObserver(fit) : null; if (ro) ro.observe(view); else addEventListener('resize', fit);
 
       const ease = (t) => t * t * (3 - 2 * t);
