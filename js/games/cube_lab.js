@@ -136,6 +136,7 @@
       }
       A.pulseOff(); A.msg.replaceChildren(h('span', { class: 'ln' }, '큐브가 고쳐졌어요! 🎉'));
       const stars = r.bad === 0 ? 3 : r.bad <= 3 ? 2 : 1, F = r.F;
+      A.record && A.record({ k: 'lab', name: F.name, n: r.qs.length, ok: r.ok, bad: r.bad });
       if (cur < FORMULAS.length - 1) cur++;
       menu();
       G.win({ stars, text: '「' + F.name + '」 공식을 익혔어요! (' + r.qs.length + '번 돌리기, ❌ ' + r.bad + '번)', bonus: 0 });
