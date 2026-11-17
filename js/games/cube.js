@@ -1,6 +1,7 @@
 // 큐브 맞추기 (3×3×3, 3D 입체)
 //  손가락으로 끌면 큐브가 360도 돌고, 색깔 면을 누르면 그 면이 돈다.
 //  섞은 뒤 "알려 줘!"를 누르면 맞추는 법을 한 번에 한 칸씩, 7단계로 따라 하게 해 준다.
+//  "원리 보기"는 실제 큐브가 움직이며 보여 주는 5장(가운데 색·한 줄이 같이 움직임·한 층씩·공식·해 보기).
 //  "내가 할래!"는 어느 면을 어느 쪽으로 돌릴지만 알려 주고, 아이가 직접 돌리면 맞았는지(⭕) 틀렸는지(❌) 확인해 준다.
 //  그림은 CSS 3D 로 직접 그린다(외부 라이브러리·에셋 없음).
 (function () {
@@ -162,7 +163,7 @@
     start(root) {
       const h = G.h, calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
       let st = solved(), M = mul(TILT, rotAxis([0, 0, 1], Math.PI)), S = 40;   // 처음엔 하얀 면이 위
-      let busy = false, dead = false, dir = 1, hist = [], mixed = false, guide = null, auto = false, raf = 0, autoT = 0;
+      let gen = 0, busy = false, dead = false, dir = 1, hist = [], mixed = false, guide = null, auto = false, raf = 0, autoT = 0;
 
       // 큐브 그리기: 작은 조각 27개 × 면 6개(안쪽 면은 까맣게), 바깥 면에만 색 스티커
       const cubeEl = h('div', { class: 'cbcube' }), stickers = new Array(54), cubies = [];
@@ -185,7 +186,9 @@
       const setView = () => { cubeEl.style.transform = `matrix3d(${M[0]},${M[3]},${M[6]},0,${M[1]},${M[4]},${M[7]},0,${M[2]},${M[5]},${M[8]},0,0,0,0,1)`; };
 
       const scoreEl = h('div', { class: 'cbscore', hidden: true }), markEl = h('div', { class: 'cbmark', hidden: true });
-      const view = h('div', { class: 'cbview' }, cubeEl, scoreEl, markEl);
+      const helpBtn = h('button', { class: 'mode learn cbhelp', 'aria-label': '원리 보기', onclick: () => startLearn() }, '📖 원리');
+      helpBtn.addEventListener('pointerdown', (e) => e.stopPropagation());   // 큐브 돌리기(끌기)와 섞이지 않게
+      const view = h('div', { class: 'cbview' }, cubeEl, scoreEl, markEl, helpBtn);
       let markT = 0;
       const mark = (ok) => { clearTimeout(markT); markEl.textContent = ok ? '⭕' : '❌'; markEl.hidden = true; void markEl.offsetWidth; markEl.hidden = false; markT = setTimeout(() => { markEl.hidden = true; }, ok ? 450 : 900); };
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -199,15 +202,16 @@
       const ro = 'ResizeObserver' in window ? new ResizeObserver(fit) : null; if (ro) ro.observe(view); else addEventListener('resize', fit);
 
       const ease = (t) => t * t * (3 - 2 * t);
-      const tween = (ms, fn) => new Promise((done) => {
+      const tween = (ms, fn, tok) => new Promise((done) => {
         if (calm || ms <= 0) { fn(1); done(); return; }
-        const t0 = performance.now(), tick = (now) => { if (dead) return; const t = Math.min(1, (now - t0) / ms); fn(ease(t)); if (t < 1) raf = requestAnimationFrame(tick); else done(); };
+        const t0 = performance.now(), tick = (now) => { if (dead) return; if (tok !== undefined && tok !== gen) { done(); return; } const t = Math.min(1, (now - t0) / ms); fn(ease(t)); if (t < 1) raf = requestAnimationFrame(tick); else done(); };
         raf = requestAnimationFrame(tick);
       });
       // 면 하나를 돌린다(그림 → 끝나면 상태를 바꾸고 다시 칠한다)
-      const turn = (q, ms) => {
+      const turn = (q, ms, tok) => {
         const n = FACES[q.f].n, layer = cubies.filter((c) => dot(c.p, n) === 1);
-        return tween(ms, (t) => layer.forEach((c) => place(c, `rotate3d(${n[0]},${n[1]},${n[2]},${q.d * 90 * t}deg) `))).then(() => {
+        return tween(ms, (t) => layer.forEach((c) => place(c, `rotate3d(${n[0]},${n[1]},${n[2]},${q.d * 90 * t}deg) `)), tok).then(() => {
+          if (tok !== undefined && tok !== gen) { layer.forEach((c) => place(c)); return; }   // 슬라이드를 넘겼으면 상태는 바꾸지 않는다
           st = applyM(st, qm(q)); layer.forEach((c) => place(c)); paint();
         });
       };
@@ -237,13 +241,75 @@
       const pushHist = (q) => { hist = toQuarters(hist.map(qm).concat(qm(q))); };
       const freeUi = () => {
         guide = null; auto = false; clearTimeout(autoT);
-        setDim(null); arrow.hidden = true; steps.replaceChildren(); scoreEl.hidden = true;
+        setDim(null); arrow.hidden = true; steps.replaceChildren(); scoreEl.hidden = true; helpBtn.hidden = false;
         if (isSolved(st)) say('큐브를 돌려 보세요!', '손가락으로 끌면 큐브가 빙글 돌아요. 색깔 면을 콕 누르면 그 면이 돌아요.');
         else say('큐브가 섞였어요!', '🎓 알려 줘! 는 하나씩 보여 줘요. ✋ 내가 할래! 는 내가 돌리면 맞았는지 알려 줘요.');
         const dirBtn = btn(dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로', () => { G.sfx.tap(); dir = -dir; dirBtn.textContent = dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로'; });
         ctl.replaceChildren(
           btn('🐣 살짝 섞기', () => shuffle(3)), btn('🌀 많이 섞기', () => shuffle(20)), dirBtn,
           btn('🎓 알려 줘!', () => startGuide(false), 'go'), btn('✋ 내가 할래!', () => startGuide(true), 'self'), btn('✨ 처음으로', reset));
+      };
+      // ───── 📖 원리 보기: 실제 큐브가 움직이며 보여 주는 5장 ─────
+      let learn = null;
+      const lsay = (...ls) => msg.replaceChildren(...ls.map((x) => h('span', { class: 'ln' }, x)));
+      const pulseOff = () => stickers.forEach((el) => el.classList.remove('pulse', 'g'));
+      const lit = (pred) => stickers.forEach((el, i) => { el.classList.remove('d1'); el.classList.toggle('d2', !pred(i)); });
+      const demoReset = () => { st = solved(); cubies.forEach((c) => place(c)); paint(); setDim(null); pulseOff(); };
+      const wrongAt = (i) => ((st[i] / 9) | 0) !== ((i / 9) | 0);
+      const LSL = [
+        { t: '가운데 색이 면의 이름이에요', say: '가운데 칸은 움직이지 않아요. 빨간 가운데가 있으면 빨간 면이에요.',
+          run: async (tok) => { demoReset(); lsay('가운데 칸은 절대 움직이지 않아요.', '빨간 가운데가 있으면 빨간 면이에요!'); await viewTo(poseFor(null, 1), 500); if (tok !== gen) return; lit((i) => stickers[i].classList.contains('ctr')); stickers.forEach((el) => { if (el.classList.contains('ctr')) el.classList.add('pulse'); }); } },
+        { t: '한 면을 돌리면 옆 줄도 같이 움직여요', say: '한 면을 돌리면 옆 줄도 같이 움직여요. 맞춘 것이 흩어질 수 있어요.', again: true,
+          run: async (tok) => {
+            demoReset(); lsay('한 면을 돌려 볼게요. 잘 보세요!');
+            await viewTo(poseFor(4, 1), 500); await wait(500); if (tok !== gen) return;
+            setDim({ f: 4, d: 1 }); await turn({ f: 4, d: 1 }, 800, tok); if (tok !== gen) return;
+            lsay('돌렸더니 옆 줄도 같이 움직였어요.', '맞춘 것이 흩어질 수 있어요!');
+          } },
+        { t: '한 층씩 맞춰요', say: '한 층씩 맞춰요. 맞춘 층은 건드리지 않아요.',
+          run: async (tok) => {
+            demoReset(); await viewTo(poseFor(null, 1), 500);
+            const L = [['① 하얀 층', '하얀 십자가와 하얀 모서리', 1], ['② 가운데 줄', '가운데 줄', 0], ['③ 노란 층', '노란 면 맞추기', -1]];
+            for (let k = 0; tok === gen; k = (k + 1) % 3) { lit((i) => FL[i].p[1] === L[k][2]); lsay(L[k][0] + ' — ' + L[k][1], '맞춘 층은 건드리지 않아요!'); await wait(2200); }
+          } },
+        { t: '공식은 돌렸다가 되돌려요', say: '공식은 돌렸다가 되돌려요. 그러면 몇 칸만 바뀌어요.', again: true,
+          run: async (tok) => {
+            demoReset(); lsay('공식 하나를 해 볼게요.', '오른쪽 → 위 → 오른쪽 되돌리기');
+            await viewTo(poseFor(4, 0), 600); await wait(600); if (tok !== gen) return;
+            for (const [q, t] of [[{ f: 4, d: 1 }, '① 오른쪽 면을 돌려요 ↻'], [{ f: 0, d: 1 }, '② 위 면을 돌려요 ↻'], [{ f: 4, d: -1 }, '③ 오른쪽 면을 되돌려요 ↺']]) {
+              if (tok !== gen) return; lsay(t); setDim(q); await turn(q, 700, tok); await wait(250);
+            }
+            if (tok !== gen) return;
+            const n = st.filter((v, i) => wrongAt(i)).length;
+            stickers.forEach((el, i) => { el.classList.remove('d2'); el.classList.toggle('g', wrongAt(i)); el.classList.toggle('d1', !wrongAt(i)); });   // 안 바뀐 칸은 조금만 흐리게(구멍처럼 안 보이게)
+            lsay('겨우 세 번 돌렸어요!', '바뀐 칸은 반짝이는 ' + n + '칸뿐이에요.', '나머지는 그대로예요!');
+          } },
+        { t: '이제 해 볼까요?', say: '이제 해 볼까요?',
+          run: async (tok) => { demoReset(); lsay('이제 해 볼까요?', '🎓 알려 줘! 는 한 칸씩 알려 줘요.', '✋ 내가 할래! 는 내가 돌리면 맞았는지 알려 줘요.'); await viewTo(poseFor(null, 1), 500); } },
+      ];
+      const learnCtl = () => {
+        const l = learn, S = LSL[l.i], last = l.i === LSL.length - 1, prev = btn('◀ 이전', () => { if (l.i > 0) { G.sfx.tap(); l.i--; showLearn(); } });
+        prev.disabled = l.i === 0;
+        ctl.replaceChildren(prev,
+          last ? btn('✔ 해 보러 가기', exitLearn, 'go big') : btn('다음 ▶', () => { G.sfx.tap(); l.i++; showLearn(); }, 'go big'),
+          ...(S.again ? [btn('🔁 다시 보기', () => { G.sfx.tap(); showLearn(); })] : []), btn('✖ 닫기', exitLearn));
+      };
+      const showLearn = async () => {
+        const l = learn; if (!l) return; const tok = ++gen, S = LSL[l.i];
+        steps.replaceChildren(...LSL.map((_, i) => h('span', { class: 'cbstep' + (i < l.i ? ' done' : i === l.i ? ' on' : '') }, i < l.i ? '✓' : String(i + 1))));
+        title.textContent = (l.i + 1) + '/' + LSL.length + ' · ' + S.t;
+        learnCtl(); G.speak && G.speak(S.say);
+        await S.run(tok);
+      };
+      const startLearn = () => {
+        if (busy) return; G.sfx.tap(); window.aieduLog && aieduLog('use', 'cube-learn');
+        helpBtn.hidden = true; learn = { i: 0, saved: { st: st.slice(), hist: hist.slice(), mixed } };
+        showLearn();
+      };
+      const exitLearn = () => {                                   // 보기 전의 큐브(섞어 둔 것)를 그대로 되돌린다
+        const l = learn; if (!l) return; G.sfx.tap(); gen++; learn = null;
+        st = l.saved.st; hist = l.saved.hist; mixed = l.saved.mixed;
+        cubies.forEach((c) => place(c)); paint(); setDim(null); pulseOff(); freeUi(); viewTo(poseFor(null, 1));
       };
       const reset = () => { if (busy) return; G.sfx.tap(); st = solved(); hist = []; mixed = false; paint(); freeUi(); viewTo(poseFor(null, 1)); };
       const shuffle = async (n) => {
@@ -270,6 +336,7 @@
         let stages;
         if (hist.length && hist.length <= 6) stages = [{ id: 'back', up: 1, name: '거꾸로 돌려서 맞추기', say: '섞은 것을 거꾸로 돌리면 다시 맞춰져요.', moves: hist.slice().reverse().map((q) => ({ f: q.f, d: -q.d })) }];
         else { try { stages = solve(st).filter((s) => s.moves.length); } catch (e) { say('앗, 다시 해 볼까요?', '✨ 처음으로 를 누르고 다시 섞어 주세요.'); return; } }
+        helpBtn.hidden = true;
         guide = { stages, si: 0, mi: 0, easy: stages[0].id === 'back', intro: true, self, ok: 0, bad: 0, miss: 0, hint: false, total: stages.reduce((n, s) => n + s.moves.length, 0) };
         window.aieduLog && aieduLog('use', self ? 'cube-self' : guide.easy ? 'cube-back' : 'cube-guide');
         if (self) selfCtl(); else ctl.replaceChildren(
@@ -370,7 +437,7 @@
       const up = (e) => {
         if (!ptr || e.pointerId !== ptr.id) return;
         const p = ptr; ptr = null;
-        if (e.type === 'pointercancel' || p.drag || p.f == null) return;
+        if (e.type === 'pointercancel' || p.drag || p.f == null || learn) return;
         if (guide && guide.self) tryMove(p.f);
         else if (guide) { const q = guide.stages[guide.si].moves[guide.mi]; if (q && q.f === p.f && !arrow.hidden) doStep(false); }
         else freeTurn(p.f);
