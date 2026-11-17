@@ -7,127 +7,7 @@
 (function () {
   'use strict';
 
-  // ───────── 모델 ─────────
-  // 좌표는 화면(CSS)과 같다: x 오른쪽, y 아래, z 보는 사람 쪽.
-  // 이 좌표에서는 "축 n 을 중심으로 +90도"가 그 면을 바깥에서 볼 때 시계 방향이다.
-  const FACES = [
-    { k: 'U', n: [0, -1, 0], color: '#ffd400', name: '노란' },
-    { k: 'D', n: [0, 1, 0], color: '#ffffff', name: '하얀' },
-    { k: 'F', n: [0, 0, 1], color: '#19b35a', name: '초록' },
-    { k: 'B', n: [0, 0, -1], color: '#2f6fe4', name: '파란' },
-    { k: 'R', n: [1, 0, 0], color: '#ff8a1e', name: '주황' },
-    { k: 'L', n: [-1, 0, 0], color: '#e5332a', name: '빨간' },
-  ];
-  const KEYS = 'UDFBRL';
-  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-  // 3×3 행렬(행 우선 9칸)
-  const mul = (A, B) => { const C = []; for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) C.push(A[r * 3] * B[c] + A[r * 3 + 1] * B[3 + c] + A[r * 3 + 2] * B[6 + c]); return C; };
-  const ap = (M, v) => [M[0] * v[0] + M[1] * v[1] + M[2] * v[2], M[3] * v[0] + M[4] * v[1] + M[5] * v[2], M[6] * v[0] + M[7] * v[1] + M[8] * v[2]];
-  const tr = (M) => [M[0], M[3], M[6], M[1], M[4], M[7], M[2], M[5], M[8]];
-  const rotAxis = (n, a) => {
-    const c = Math.cos(a), s = Math.sin(a), t = 1 - c, x = n[0], y = n[1], z = n[2];
-    return [t * x * x + c, t * x * y - s * z, t * x * z + s * y, t * x * y + s * z, t * y * y + c, t * y * z - s * x, t * x * z - s * y, t * y * z + s * x, t * z * z + c];
-  };
-
-  // 스티커 자리 54개: 면마다 9개. 자리 번호 / 9 = 면 번호
-  const FL = [], FI = {};
-  FACES.forEach((F, f) => { for (const y of [-1, 0, 1]) for (const x of [-1, 0, 1]) for (const z of [-1, 0, 1]) { const p = [x, y, z]; if (dot(p, F.n) === 1) { FI[p + '|' + f] = FL.length; FL.push({ p, f }); } } });
-  const faceOfN = (n) => FACES.findIndex((F) => F.n[0] === n[0] && F.n[1] === n[1] && F.n[2] === n[2]);
-  // 면 f 를 시계 방향으로 한 번 돌렸을 때: 자리 i 의 스티커가 Q[f][i] 로 간다
-  const Q = FACES.map((F) => {
-    const R = rotAxis(F.n, Math.PI / 2).map(Math.round);
-    return FL.map((s, i) => (dot(s.p, F.n) === 1 ? FI[ap(R, s.p).map((v) => v + 0) + '|' + faceOfN(ap(R, FACES[s.f].n))] : i));
-  });
-  // 움직임 번호 m = 면×3 + (1번·2번·3번 돌리기 − 1)
-  const PERM = [];
-  Q.forEach((q) => { const q2 = q.map((j) => q[j]), q3 = q2.map((j) => q[j]); PERM.push(q, q2, q3); });
-  const solved = () => FL.map((_, i) => i);
-  const applyM = (st, m) => { const p = PERM[m], ns = new Array(54); for (let i = 0; i < 54; i++) ns[p[i]] = st[i]; return ns; };
-  const isSolved = (st) => st.every((v, i) => ((v / 9) | 0) === ((i / 9) | 0));
-
-  const parse = (s) => s.split(' ').map((t) => KEYS.indexOf(t[0]) * 3 + (t[1] === "'" ? 2 : t[1] === '2' ? 1 : 0));
-  const YMAP = { F: 'R', R: 'B', B: 'L', L: 'F' };
-  const yrot = (s, k) => { for (; k > 0; k--) s = s.replace(/[FRBL]/g, (c) => YMAP[c]); return s; };
-  const macro = (s) => { const moves = parse(s), perm = FL.map((_, i) => moves.reduce((l, m) => PERM[m][l], i)); return { perm, moves }; };
-  // 면 a 에 붙은 스티커 자리(가장자리·모서리 조각은 나머지 면 이름도 준다)
-  const fl = (...ks) => { const fs = ks.map((k) => KEYS.indexOf(k)), p = [0, 0, 0]; fs.forEach((f) => FACES[f].n.forEach((v, i) => { p[i] += v; })); return FI[p + '|' + fs[0]]; };
-
-  // 따라가는 스티커 몇 개의 자리만 가지고 너비 우선 탐색 → 가장 짧은 방법
-  function bfs(start, macros, goal) {
-    const key = (a) => a.reduce((k, l) => k * 54 + l, 0);
-    if (goal(start)) return [];
-    const seen = new Map([[key(start), null]]);
-    let frontier = [start];
-    while (frontier.length) {
-      const next = [];
-      for (const s of frontier) for (let i = 0; i < macros.length; i++) {
-        const p = macros[i].perm, t = s.map((l) => p[l]), k = key(t);
-        if (seen.has(k)) continue;
-        seen.set(k, [s, i]);
-        if (goal(t)) { const out = []; let c = t; for (;;) { const e = seen.get(key(c)); if (!e) break; out.unshift(...macros[e[1]].moves); c = e[0]; } return out; }
-        next.push(t);
-      }
-      frontier = next;
-    }
-    return null;
-  }
-
-  // 한 칸 돌리기({f, d: +1 시계 / −1 반시계}) 목록으로 풀고, 이어진 같은 면은 합친다
-  const toQuarters = (moves) => {
-    const out = [];
-    for (const m of moves) { const f = (m / 3) | 0, t = m % 3; if (t === 2) out.push({ f, d: -1 }); else for (let i = 0; i <= t; i++) out.push({ f, d: 1 }); }
-    const st = [];
-    for (const q of out) {
-      st.push(q);
-      let n = 0, sum = 0; while (n < st.length && st[st.length - 1 - n].f === q.f) { sum += st[st.length - 1 - n].d; n++; }
-      st.length -= n; sum = ((sum % 4) + 4) % 4;
-      if (sum === 1) st.push({ f: q.f, d: 1 }); else if (sum === 3) st.push({ f: q.f, d: -1 }); else if (sum === 2) st.push({ f: q.f, d: 1 }, { f: q.f, d: 1 });
-    }
-    return st;
-  };
-  const qm = (q) => q.f * 3 + (q.d > 0 ? 0 : 2);
-
-  const UM = ['U', "U'", 'U2'].map(macro);
-  const ALL = PERM.map((p, m) => ({ perm: p, moves: [m] }));
-  const SLOT = [0, 1, 2, 3].map((k) => ({
-    corner: fl('D', 'RBLF'[k], 'FRBL'[k]), edge: fl('RBLF'[k], 'FRBL'[k]),
-    cm: ["R U R'", "R U' R'", "R U2 R'", "F' U' F", "F' U F", "F' U2 F"].map((s) => macro(yrot(s, k))),
-    em: ["U R U' R' U' F' U F", "U' F' U F U R U' R'"].map((s) => macro(yrot(s, k))),
-  }));
-  const UE = [fl('U', 'F'), fl('U', 'R'), fl('U', 'B'), fl('U', 'L')];
-  const UC = [fl('U', 'F', 'R'), fl('U', 'R', 'B'), fl('U', 'B', 'L'), fl('U', 'L', 'F')];
-  const onU = (a) => a.every((l) => l < 9);
-  const STAGES = [
-    { id: 'cross', up: 1, name: '하얀 십자가 만들기', say: '하얀 면에 십자가 모양을 만들어요.' },
-    { id: 'corner', up: 0, name: '하얀 모서리 채우기', say: '큐브를 뒤집어요! 하얀 모서리 조각을 아래층에 넣어요.' },
-    { id: 'middle', up: 0, name: '가운데 줄 맞추기', say: '가운데 줄에 조각을 넣어요.' },
-    { id: 'ycross', up: 0, name: '노란 십자가 만들기', say: '위쪽 노란 면에 십자가 모양을 만들어요.' },
-    { id: 'yface', up: 0, name: '노란 면 다 채우기', say: '노란 면을 모두 노랗게 만들어요.' },
-    { id: 'ycorner', up: 0, name: '노란 모서리 자리 찾기', say: '노란 모서리 조각을 제자리로 보내요.' },
-    { id: 'last', up: 0, name: '마지막 조각 맞추기', say: '거의 다 됐어요! 마지막 조각을 맞춰요.' },
-  ];
-
-  // 초보자 방법(한 층씩)으로 푸는 길을 단계별로 돌려준다: [{ ...STAGES[i], moves: [{f,d}] }]
-  function solve(st0) {
-    let st = st0.slice();
-    const res = [];
-    const step = (si, tracked, macros, goal) => {
-      const mv = bfs(tracked.map((id) => st.indexOf(id)), macros, goal || ((a) => a.every((l, i) => l === tracked[i])));
-      if (!mv) throw new Error('cube: no path at ' + STAGES[si].id);
-      for (const m of mv) st = applyM(st, m);
-      res[si] = (res[si] || []).concat(mv);
-    };
-    step(0, [fl('D', 'F'), fl('D', 'R'), fl('D', 'B'), fl('D', 'L')], ALL);
-    for (let k = 0; k < 4; k++) step(1, [SLOT[k].corner], UM.concat(...SLOT.slice(k).map((s) => s.cm)));
-    for (let k = 0; k < 4; k++) step(2, [SLOT[k].edge], UM.concat(...SLOT.slice(k).map((s) => s.em)));
-    step(3, UE, UM.concat(macro("F R U R' U' F'")), onU);
-    step(4, UC, UM.concat(macro("R U R' U R U2 R'")), onU);
-    step(5, UC, UM.concat(macro("R' F R' B2 R F' R' B2 R2")));
-    step(6, UE.concat(UC), UM.concat(macro("R U' R U R U R U' R' U' R2")));
-    return STAGES.map((S, i) => Object.assign({}, S, { moves: toQuarters(res[i] || []) }));
-  }
-
-  G.cubeCore = { FACES, solved, applyM, isSolved, solve, toQuarters, qm, parse };   // 시험용
+  const { FACES, FL, FI, dot, mul, ap, tr, rotAxis, solved, applyM, isSolved, solve, toQuarters, qm } = G.cubeCore;
 
   // ───────── 화면 ─────────
   const TILT = mul(rotAxis([1, 0, 0], -0.44), rotAxis([0, 1, 0], -0.6));           // 위·앞·오른쪽 세 면이 보이는 기울기
@@ -188,7 +68,10 @@
       const scoreEl = h('div', { class: 'cbscore', hidden: true }), markEl = h('div', { class: 'cbmark', hidden: true });
       const helpBtn = h('button', { class: 'mode learn cbhelp', 'aria-label': '원리 보기', onclick: () => startLearn() }, '📖 원리');
       helpBtn.addEventListener('pointerdown', (e) => e.stopPropagation());   // 큐브 돌리기(끌기)와 섞이지 않게
-      const view = h('div', { class: 'cbview' }, cubeEl, scoreEl, markEl, helpBtn);
+      const labBtn = h('button', { class: 'mode learn cbhelp lab', 'aria-label': '공식 연습', onclick: () => openLab() }, '🏋️ 공식');
+      labBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+      const corner = (hide) => { helpBtn.hidden = hide; labBtn.hidden = hide; };
+      const view = h('div', { class: 'cbview' }, cubeEl, scoreEl, markEl, helpBtn, labBtn);
       let markT = 0;
       const mark = (ok) => { clearTimeout(markT); markEl.textContent = ok ? '⭕' : '❌'; markEl.hidden = true; void markEl.offsetWidth; markEl.hidden = false; markT = setTimeout(() => { markEl.hidden = true; }, ok ? 450 : 900); };
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -241,7 +124,7 @@
       const pushHist = (q) => { hist = toQuarters(hist.map(qm).concat(qm(q))); };
       const freeUi = () => {
         guide = null; auto = false; clearTimeout(autoT);
-        setDim(null); arrow.hidden = true; steps.replaceChildren(); scoreEl.hidden = true; helpBtn.hidden = false;
+        setDim(null); arrow.hidden = true; steps.replaceChildren(); scoreEl.hidden = true; corner(false);
         if (isSolved(st)) say('큐브를 돌려 보세요!', '손가락으로 끌면 큐브가 빙글 돌아요. 색깔 면을 콕 누르면 그 면이 돌아요.');
         else say('큐브가 섞였어요!', '🎓 알려 줘! 는 하나씩 보여 줘요. ✋ 내가 할래! 는 내가 돌리면 맞았는지 알려 줘요.');
         const dirBtn = btn(dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로', () => { G.sfx.tap(); dir = -dir; dirBtn.textContent = dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로'; });
@@ -303,13 +186,29 @@
       };
       const startLearn = () => {
         if (busy) return; G.sfx.tap(); window.aieduLog && aieduLog('use', 'cube-learn');
-        helpBtn.hidden = true; learn = { i: 0, saved: { st: st.slice(), hist: hist.slice(), mixed } };
+        corner(true); learn = { i: 0, saved: { st: st.slice(), hist: hist.slice(), mixed } };
         showLearn();
       };
       const exitLearn = () => {                                   // 보기 전의 큐브(섞어 둔 것)를 그대로 되돌린다
         const l = learn; if (!l) return; G.sfx.tap(); gen++; learn = null;
         st = l.saved.st; hist = l.saved.hist; mixed = l.saved.mixed;
         cubies.forEach((c) => place(c)); paint(); setDim(null); pulseOff(); freeUi(); viewTo(poseFor(null, 1));
+      };
+      // ───── 🏋️ 공식 연습실(cube_lab.js) ─────
+      let lab = null, labSaved = null;
+      const openLab = () => {
+        if (busy || !G.cubeLab) return; G.sfx.tap();
+        if (!lab) lab = G.cubeLab({
+          h, btn, chip, nameOf, steps, title, msg, ctl, sfx: G.sfx, speak: (t) => { if (t) G.speak(t); },
+          bump: () => ++gen, gen: () => gen, dead: () => dead, wait, turn, viewTo, poseFor, setDim, pulseOff, mark,
+          getSt: () => st, setSt: (a) => { st = a.slice(); cubies.forEach((c) => place(c)); paint(); },
+          visible: (f) => ap(M, FACES[f].n)[2] >= 0.3,
+          showArrow: (q) => { if (!q) { arrow.hidden = true; return; } arrow.style.transform = FT[q.f] + ' translateZ(calc(var(--s) * 1.56))' + (q.d < 0 ? ' scaleX(-1)' : ''); arrow.hidden = false; },
+          scoreText: (t) => { if (t == null) { scoreEl.hidden = true; return; } scoreEl.textContent = t; scoreEl.hidden = false; },
+          glowChanged: () => { let n = 0; stickers.forEach((el, i) => { const w = wrongAt(i); if (w) n++; el.classList.remove('d2'); el.classList.toggle('g', w); el.classList.toggle('d1', !w); }); return n; },
+          leave: () => { const l = labSaved; labSaved = null; if (!l) return; gen++; st = l.st; hist = l.hist; mixed = l.mixed; cubies.forEach((c) => place(c)); paint(); setDim(null); pulseOff(); arrow.hidden = true; scoreEl.hidden = true; freeUi(); viewTo(poseFor(null, 1)); },
+        });
+        labSaved = { st: st.slice(), hist: hist.slice(), mixed }; corner(true); guide = null; lab.open();
       };
       const reset = () => { if (busy) return; G.sfx.tap(); st = solved(); hist = []; mixed = false; paint(); freeUi(); viewTo(poseFor(null, 1)); };
       const shuffle = async (n) => {
@@ -336,7 +235,7 @@
         let stages;
         if (hist.length && hist.length <= 6) stages = [{ id: 'back', up: 1, name: '거꾸로 돌려서 맞추기', say: '섞은 것을 거꾸로 돌리면 다시 맞춰져요.', moves: hist.slice().reverse().map((q) => ({ f: q.f, d: -q.d })) }];
         else { try { stages = solve(st).filter((s) => s.moves.length); } catch (e) { say('앗, 다시 해 볼까요?', '✨ 처음으로 를 누르고 다시 섞어 주세요.'); return; } }
-        helpBtn.hidden = true;
+        corner(true);
         guide = { stages, si: 0, mi: 0, easy: stages[0].id === 'back', intro: true, self, ok: 0, bad: 0, miss: 0, hint: false, total: stages.reduce((n, s) => n + s.moves.length, 0) };
         window.aieduLog && aieduLog('use', self ? 'cube-self' : guide.easy ? 'cube-back' : 'cube-guide');
         if (self) selfCtl(); else ctl.replaceChildren(
@@ -438,6 +337,7 @@
         if (!ptr || e.pointerId !== ptr.id) return;
         const p = ptr; ptr = null;
         if (e.type === 'pointercancel' || p.drag || p.f == null || learn) return;
+        if (lab && lab.active()) { lab.tap(p.f); return; }
         if (guide && guide.self) tryMove(p.f);
         else if (guide) { const q = guide.stages[guide.si].moves[guide.mi]; if (q && q.f === p.f && !arrow.hidden) doStep(false); }
         else freeTurn(p.f);
@@ -445,7 +345,7 @@
       view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
 
       fit(); paint(); setView(); freeUi();
-      return () => { dead = true; delete document.documentElement.dataset.game; cancelAnimationFrame(raf); clearTimeout(autoT); clearTimeout(markT); if (ro) ro.disconnect(); else removeEventListener('resize', fit); };
+      return () => { dead = true; if (lab) lab.close(false); delete document.documentElement.dataset.game; cancelAnimationFrame(raf); clearTimeout(autoT); clearTimeout(markT); if (ro) ro.disconnect(); else removeEventListener('resize', fit); };
     },
   });
 })();
