@@ -55,6 +55,7 @@
         const h = G.h('div', { class: 'hole' }, G.h('div', { class: 'm' }, ''), G.h('button', { class: 'hit', 'aria-label': '구멍' }));
         h.querySelector('.hit').addEventListener('pointerdown', (e) => {
           e.preventDefault();
+          h.classList.add('press'); clearTimeout(h._press); h._press = setTimeout(() => h.classList.remove('press'), 140); // 누르는 느낌(구멍이 살짝 내려앉음)
           if (!running || !h.classList.contains('up')) return;
           const m = h.querySelector('.m'), good = h._t;
           h.classList.remove('up');

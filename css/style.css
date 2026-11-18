@@ -580,3 +580,22 @@ html[data-game=cube]{font-size:clamp(14px,min(3.7vh,4.9vw),30px)}
 .round{box-shadow:0 3px 0 color-mix(in srgb,var(--line) 68%,#000)}
 .round,.btn,.mode{transition:transform .14s ease-out,box-shadow .14s ease-out}
 .round:active,.btn:active,.mode:active{transition-duration:0s}
+/* 게임 안 버튼도 같은 느낌: 색칠 물감·분류 물건·두더지 구멍·레이싱 보상 고르기·조종 버튼·아이템 카드 */
+.sw{box-shadow:0 0 0 2px var(--line),0 4px 0 2px color-mix(in srgb,var(--line) 62%,#000);transition:transform .14s ease-out,box-shadow .14s ease-out}
+.sw[aria-pressed=true]{box-shadow:0 0 0 4px var(--ink),0 4px 0 4px color-mix(in srgb,var(--ink) 70%,#000)}
+.sw:active{transform:translateY(3px);box-shadow:0 0 0 2px var(--line),0 1px 0 2px color-mix(in srgb,var(--line) 62%,#000);transition-duration:0s}
+.sw[aria-pressed=true]:active{transform:translateY(3px) scale(1.12);box-shadow:0 0 0 4px var(--ink),0 1px 0 4px color-mix(in srgb,var(--ink) 70%,#000)}
+.it{box-shadow:0 4px 0 color-mix(in srgb,var(--line) 68%,#000)}
+.it:active:not(.drag){transform:translateY(3px);box-shadow:0 1px 0 color-mix(in srgb,var(--line) 68%,#000);transition-duration:0s}
+.hole{box-shadow:0 5px 0 #6a9f52;transition:transform .14s ease-out,box-shadow .14s ease-out}
+.hole:active,.hole.press{transform:translateY(4px);box-shadow:0 1px 0 #6a9f52;transition-duration:0s}
+.rwc{box-shadow:0 4px 0 color-mix(in srgb,var(--line) 68%,#000);transition:transform .14s ease-out,box-shadow .14s ease-out}
+.rwc[aria-pressed=true]{box-shadow:0 0 0 3px var(--btn),0 5px 0 2px #d9822b}
+.rwc:active{transform:translateY(3px);box-shadow:0 1px 0 color-mix(in srgb,var(--line) 68%,#000);transition-duration:0s}
+.rwc[aria-pressed=true]:active{box-shadow:0 0 0 3px var(--btn),0 2px 0 2px #d9822b}
+.rbtn{box-shadow:0 5px 0 rgba(0,0,0,.28);transition:transform .1s ease-out,box-shadow .1s ease-out,background-color .1s}
+.rbtn.act.ready{box-shadow:0 5px 0 #c98f00}
+.rbtn.on,.rbtn:active{transform:translateY(4px) scale(.97);box-shadow:0 1px 0 rgba(0,0,0,.28);transition-duration:0s}
+.rcard{box-shadow:0 4px 0 rgba(0,0,0,.2);transition:transform .14s ease-out,box-shadow .14s ease-out}
+.rcard.ready{box-shadow:0 4px 0 #c98f00}
+.rcard:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.2);transition-duration:0s}
