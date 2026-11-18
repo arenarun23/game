@@ -614,3 +614,5 @@ html[data-game=cube]{font-size:clamp(14px,min(3.7vh,4.9vw),30px)}
 /* 경기장 고르기(세로): 탭·선수 수·우주 옵션 줄 사이를 띄워 버튼이 겹치지 않게(버튼 아래 입체 그림자 자리) */
 .trkopts{display:flex;flex-direction:column;align-items:center;gap:.45rem;margin-bottom:.15rem}
 .trkopts .optrow{row-gap:.45rem}
+/* 큐브: 좁은 폰에서는 위쪽 줄에 ⛶ 버튼이 더해져도 안 넘치게 동그라미 버튼·제목을 조금 줄인다(버튼 44px 이상). 넓은 화면은 그대로 */
+@media (max-width:420px){html[data-game=cube] #bar{gap:.3rem}html[data-game=cube] #bar .round{width:44px;height:44px;min-width:44px}html[data-game=cube] #title{font-size:clamp(.9rem,4vw,1.2rem)}}
