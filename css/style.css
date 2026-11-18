@@ -605,3 +605,9 @@ html[data-game=cube]{font-size:clamp(14px,min(3.7vh,4.9vw),30px)}
 .gtoast{position:fixed;left:50%;bottom:max(1.2rem,env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:2000;background:rgba(40,30,20,.88);color:#fff;border-radius:1.4rem;padding:.55rem 1.3rem;font-size:max(16px,1.1rem);white-space:nowrap;pointer-events:none;box-shadow:0 4px 0 rgba(0,0,0,.25);animation:gtin .18s ease-out}
 .gtoast.out{opacity:0;transition:opacity .35s}
 @keyframes gtin{from{transform:translate(-50%,12px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+
+/* 큐브 위 메뉴 버튼(원리·내 기록·공식)은 큐브 위에 띄우지 않고 안내 칸 안에 가로로 둔다 */
+.cbtools{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap}
+.cbtools[hidden]{display:none}
+.cbtools .cbhelp,.cbtools .cbhelp.lab,.cbtools .cbhelp.mem{position:static;left:auto;right:auto;top:auto;transform:none}
+.cbmsg:empty{display:none}
