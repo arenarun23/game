@@ -21,6 +21,8 @@ a.addEventListener('pointermove',function(e){if(Math.abs(e.clientX-sx)>8||Math.a
 a.addEventListener('pointercancel',function(){bad=true},{passive:true});
 a.addEventListener('click',function(e){if(bad||Date.now()-born<1000){e.preventDefault();bad=false}});
 a.draggable=false;})();
+/* 아이폰·아이패드(사파리)에서도 누르는 동안 버튼이 내려앉아 보이게(:active 켜기) */
+document.addEventListener('touchstart',function(){},{passive:true});
 </script>
 <div id="app">
   <header id="bar">

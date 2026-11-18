@@ -140,9 +140,9 @@ body[data-view=home] #btnHome{visibility:hidden}
 .grid .it{width:var(--s);height:var(--s);font-size:calc(var(--s)*.58)}
 .bin .st{font-size:1.5rem}
 /* AIEDU 허브로 가는 아이콘 — 모든 서비스 공통 모양·위치: 페이지 왼쪽 위(body 첫 요소). 앱마다 이 자리를 비워 둔다 */
-.aiedu-home{position:absolute;left:max(8px,env(safe-area-inset-left,0px));top:max(8px,env(safe-area-inset-top,0px));z-index:1000;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:linear-gradient(160deg,#ffe58f,#ffb08e);border:2px solid #fff;box-shadow:0 2px 0 rgba(74,52,38,.22);text-decoration:none;-webkit-tap-highlight-color:transparent}
+.aiedu-home{position:absolute;left:max(8px,env(safe-area-inset-left,0px));top:max(8px,env(safe-area-inset-top,0px));z-index:1000;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:linear-gradient(160deg,#ffe58f,#ffb08e);border:2px solid #fff;box-shadow:0 4px 0 #e2916b,0 5px 8px rgba(74,52,38,.16);transition:transform .14s ease-out,box-shadow .14s ease-out;text-decoration:none;-webkit-tap-highlight-color:transparent}
 .aiedu-home svg{width:30px;height:30px;display:block}
-.aiedu-home:active{transform:translateY(2px);box-shadow:none}
+.aiedu-home:active{transform:translateY(3px);box-shadow:0 1px 0 #e2916b;transition-duration:0s}
 .aiedu-home:focus-visible{outline:3px solid #f08a00;outline-offset:2px}
 #bar{padding-left:calc(.7rem + 46px)}
 
@@ -557,3 +557,26 @@ html[data-game=cube]{font-size:clamp(14px,min(3.7vh,4.9vw),30px)}
 .optrow{display:flex;flex-wrap:wrap;gap:.35rem .8rem;justify-content:center;align-items:center}
 .hint.must.withnr{display:flex!important;margin-top:0!important;margin-bottom:.15rem!important;align-items:center;justify-content:center;gap:.6rem;flex-wrap:nowrap}
 .hint.must.withnr .nropt{flex-wrap:nowrap;gap:.25rem}
+
+/* 누르는 느낌(입체 버튼): 아래쪽 두꺼운 그림자(테두리)가 있고, 누르면 그만큼 내려앉는다 */
+.tab,.tile,.rchip,.card{--d:3px;--e:color-mix(in srgb,var(--line) 68%,#000);box-shadow:0 var(--d) 0 var(--e);transition:transform .14s ease-out,box-shadow .14s ease-out,background-color .15s}
+.tile{--d:4px}
+.card{--d:5px}
+.card.c-pink{--e:color-mix(in srgb,var(--pink) 74%,#000)}
+.card.c-sky{--e:color-mix(in srgb,var(--sky) 74%,#000)}
+.card.c-orange{--e:color-mix(in srgb,var(--orange) 74%,#000)}
+.card.c-mint{--e:color-mix(in srgb,var(--mint) 74%,#000)}
+.card.c-lemon{--e:color-mix(in srgb,var(--lemon) 74%,#000)}
+.card.c-lilac{--e:color-mix(in srgb,var(--lilac) 74%,#000)}
+.card.c-peach{--e:color-mix(in srgb,var(--peach) 74%,#000)}
+.tab[aria-pressed=true]{--e:#d9822b}
+.rchip[aria-pressed=true]{--e:#1abc9c}
+.rchip.static{box-shadow:none}
+:is(.tab,.tile,.rchip,.card):active:not(:disabled){transform:translateY(calc(var(--d) - 1px));box-shadow:0 1px 0 var(--e);transition-duration:0s}
+.tile:active:not(:disabled){transform:translateY(calc(var(--d) - 1px)) scale(.97)}
+.mcard{--d:4px;--e:color-mix(in srgb,var(--lilac) 66%,#000);box-shadow:0 var(--d) 0 var(--e);transition:transform .14s ease-out,box-shadow .14s ease-out}
+.mcard.open,.mcard.done{--e:color-mix(in srgb,var(--line) 68%,#000)}
+.mcard:active{transform:translateY(calc(var(--d) - 1px));box-shadow:0 1px 0 var(--e);transition-duration:0s}
+.round{box-shadow:0 3px 0 color-mix(in srgb,var(--line) 68%,#000)}
+.round,.btn,.mode{transition:transform .14s ease-out,box-shadow .14s ease-out}
+.round:active,.btn:active,.mode:active{transition-duration:0s}
