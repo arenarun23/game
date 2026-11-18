@@ -549,3 +549,6 @@ html[data-game=cube]{font-size:clamp(14px,min(3.7vh,4.9vw),30px)}
 .cbrec{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.25rem .6rem;border:2px solid var(--line);border-radius:.7rem;background:#fff;font-size:1rem}
 .cbrec .when{opacity:.6;font-size:.9rem}
 .cbrec b{font-weight:400}
+/* 레이싱 그래픽 바꾸기 버튼: 좁은 세로 화면에서는 그림만 */
+@media (max-width:600px) and (orientation:portrait){html[data-game=race] .palette:has(.gfx){gap:.25rem}html[data-game=race] .palette:has(.gfx) .btn{padding-left:.5rem;padding-right:.5rem}html[data-game=race] .palette .gfx{min-width:44px;padding-left:.35rem;padding-right:.35rem}.palette .gfx .gt{display:none}}
+@media (max-width:340px) and (orientation:portrait){html[data-game=race] .palette:has(.gfx){gap:.15rem}}
