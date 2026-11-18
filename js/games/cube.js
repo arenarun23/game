@@ -72,13 +72,14 @@
       labBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
       const memBtn = h('button', { class: 'mode learn cbhelp mem', 'aria-label': '내 기록', onclick: () => openPan('free', 'slots') }, '📂 내 기록');
       memBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
-      const corner = (hide) => { helpBtn.hidden = hide; labBtn.hidden = hide; memBtn.hidden = hide; };
-      const view = h('div', { class: 'cbview' }, cubeEl, scoreEl, markEl, helpBtn, memBtn, labBtn);
+      const corner = (hide) => { helpBtn.hidden = hide; labBtn.hidden = hide; memBtn.hidden = hide; tools.hidden = hide; };
+      const view = h('div', { class: 'cbview' }, cubeEl, scoreEl, markEl);
+      const tools = h('div', { class: 'cbtools' }, helpBtn, memBtn, labBtn);   // 큐브 위가 아니라 안내 칸 안에 둔다(큐브와 겹치지 않게)
       let markT = 0;
       const mark = (ok) => { clearTimeout(markT); markEl.textContent = ok ? '⭕' : '❌'; markEl.hidden = true; void markEl.offsetWidth; markEl.hidden = false; markT = setTimeout(() => { markEl.hidden = true; }, ok ? 450 : 900); };
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       const steps = h('div', { class: 'cbsteps' }), title = h('div', { class: 'cbtitle' }), msg = h('div', { class: 'cbmsg' });
-      const info = h('div', { class: 'cbinfo' }, steps, title, msg), ctl = h('div', { class: 'cbctl' });
+      const info = h('div', { class: 'cbinfo' }, steps, title, msg, tools), ctl = h('div', { class: 'cbctl' });
       root.classList.add('cb'); root.append(info, view, ctl);
       document.documentElement.dataset.game = 'cube';   // 좁은 화면에서 제목이 두 줄이 되지 않게
 
@@ -127,8 +128,8 @@
       const freeUi = () => {
         guide = null; auto = false; clearTimeout(autoT);
         setDim(null); arrow.hidden = true; steps.replaceChildren(); scoreEl.hidden = true; corner(false);
-        if (isSolved(st)) say('큐브를 돌려 보세요!', '손가락으로 끌면 큐브가 빙글 돌아요. 색깔 면을 콕 누르면 그 면이 돌아요.');
-        else say('큐브가 섞였어요!', '🎓 알려 줘! 는 하나씩 보여 줘요. ✋ 내가 할래! 는 내가 돌리면 맞았는지 알려 줘요.');
+        if (isSolved(st)) say('끌면 빙글, 누르면 그 면이 돌아요', []);
+        else say('큐브가 섞였어요! 🎓 보여 줘요 · ✋ 내가 해 봐요', []);
         const dirBtn = btn(dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로', () => { G.sfx.tap(); dir = -dir; dirBtn.textContent = dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로'; });
         ctl.replaceChildren(
           btn('🐣 살짝 섞기', () => shuffle(3)), btn('🌀 많이 섞기', () => shuffle(20)), dirBtn,
