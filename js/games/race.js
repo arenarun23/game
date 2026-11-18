@@ -138,6 +138,13 @@
       // 폰을 가로·세로로 돌리거나 창 크기가 바뀌면, 고르기 화면을 새 크기에 맞게 다시 만든다(처음 그릴 때의 배치가 남지 않게)
       const onResize = () => { clearTimeout(rzT); rzT = setTimeout(() => { if (pickRedo && document.body.contains(root)) pickRedo(); }, 160); };
       addEventListener('resize', onResize); addEventListener('orientationchange', onResize);
+      // 그래픽: 새 그래픽(three.js, race_gl.js) / 예전 그래픽(캔버스 그림, race.js 2D·race3d.js). 예전 것은 그대로 보관해 언제든 고를 수 있다
+      const glOK = () => !!(window.RaceGL && window.RaceGL.ok()), gfxNew = () => G.store.get('race:gfx', 'new') !== 'old';
+      const gfxBtn = () => { // 좁은 화면에서는 그림(✨/🖼️)만 보인다
+        const ic = G.h('span', { class: 'gi' }), tx = G.h('span', { class: 'gt' }), b = G.h('button', { class: 'btn alt gfx' }, ic, tx);
+        const show = () => { const nw = gfxNew(); ic.textContent = nw ? '✨' : '🖼️'; tx.textContent = nw ? ' 새 그래픽' : ' 예전 그래픽'; b.setAttribute('aria-label', nw ? '지금 새 그래픽. 누르면 예전 그래픽' : '지금 예전 그래픽. 누르면 새 그래픽'); b.title = b.getAttribute('aria-label'); };
+        b.onclick = () => { G.sfx.tap(); G.store.set('race:gfx', gfxNew() ? 'old' : 'new'); show(); }; show(); return b;
+      };
       const goFirst = () => G.start(G.games.find((x) => x.id === 'race')); // 그만두면 놀이터가 아니라 레이싱 첫 화면으로
       const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
@@ -154,7 +161,8 @@
         const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), extra || null, G.h('div', { class: 'fitbox' }, grid)];
         kids.push(G.h('div', { class: 'palette' }, onBack ? G.h('button', { class: 'btn alt', onclick: onBack }, '◀ 이전') : null,
           G.h('button', { class: 'btn alt', onclick: () => helpOverlay(root, D.CHARS[sel.ch], D.CARS[sel.car]) }, '❓ 사용법'),
-          G.h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); showRewards(step === 1 ? showChars : step === 2 ? showCars : showTracks); } }, '🏅 내 보상')));
+          G.h('button', { class: 'btn alt', onclick: () => { G.sfx.tap(); showRewards(step === 1 ? showChars : step === 2 ? showCars : showTracks); } }, '🏅 내 보상'),
+          step === 3 && glOK() ? gfxBtn() : null));
         pickRedo = step === 1 ? showChars : step === 2 ? showCars : showTracks; // 화면을 돌리면 이 화면을 다시 그린다
         root.replaceChildren(...kids.filter(Boolean));
       }
@@ -364,7 +372,11 @@
 
         // 3D: 선수의 높이(길 높이 + 점프 높이). 평면 경기장은 0
         const hOf = (r) => { if (!T.v3d) return 0; const pm = ((r.prog % M) + M) % M, i0 = Math.floor(pm); return T.hgt[i0] + (T.hgt[(i0 + 1) % M] - T.hgt[i0]) * (pm - i0) + r.zair; };
-        const env = { wall: WALL, ctx: null, W: 0, H: 0, T, th, racers, objs, boxT, me, hOf, yaw: 0, t: 0, alpha: 0, dt: 0.016, lowQ: false };
+        const env = { wall: WALL, ctx: null, W: 0, H: 0, T, th, racers, objs, boxT, me, hOf, yaw: 0, t: 0, alpha: 0, dt: 0.016, lowQ: false, fx };
+        // 새 그래픽(three.js): 만들 수 없으면(WebGL 없음·오류) 예전 그림으로 그린다
+        let gl = null;
+        if (gfxNew() && glOK()) { try { gl = window.RaceGL.create({ T, th, racers, me, wall: WALL }); wrap.insertBefore(gl.canvas, cv); cv.style.display = 'none'; gl.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); if (gl) { const g0 = gl; gl = null; try { g0.dispose(); } catch (er) {} cv.style.display = ''; } }); } catch (e) { console.warn('새 그래픽을 못 써서 예전 그래픽으로 그려요', e); if (gl) try { gl.dispose(); } catch (er) {} gl = null; cv.style.display = ''; } }
+        dbg.gl = () => !!gl;
         // 아이템·스킬
         const randItem = (r) => { const k = rank(r), pool = k >= 4 ? ['boost', 'boost', 'missile', 'shield', 'banana'] : k >= 2 ? ['boost', 'missile', 'shield', 'banana'] : ['shield', 'banana', 'banana', 'boost']; return G.pick(pool); };
         function hit(r, kind, dur) {
@@ -587,6 +599,7 @@
         function draw() {
           const zoom = Math.max(H / 680, 0.5 * dpr) * (W > H * 1.05 ? 1.3 : 1); const camY = W > H * 1.05 ? 0.66 : 0.72; // 가로 화면은 내 차를 조금 위로 올려 출발 때 뒷줄 차도 보이게 // 가로 화면은 30% 확대(폰 가로에서 차가 작아 보이던 문제)
           for (const r of racers) { r.dx = r.px + (r.x - r.px) * alpha; r.dy = r.py + (r.y - r.py) * alpha; r.dh = r.ph + angDiff(r.h, r.ph) * alpha; }
+          if (gl) { Object.assign(env, { W, H, yaw: pcamH + angDiff(camH, pcamH) * alpha, t, alpha, lowQ, state, stormN }); gl.draw(env); return; }
           if (T.v3d) { Object.assign(env, { ctx, W, H, yaw: pcamH + angDiff(camH, pcamH) * alpha, t, alpha, lowQ, state, stormN }); window.Race3D.draw(env); return; }
           const px = me.dx, py = me.dy, rot = Math.PI / 2 + pcamH + angDiff(camH, pcamH) * alpha;
           ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = th.bg; ctx.fillRect(0, 0, W, H);
@@ -740,7 +753,7 @@
           }
         }
         raf = requestAnimationFrame(frame);
-        stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); stopTilt(); stopSensors(); G.music.stop(); G.music.release('help'); G.music.release('pause'); bPause.remove(); bFull.remove(); delete document.documentElement.dataset.racing; document.removeEventListener('visibilitychange', onVis); document.querySelectorAll('.rhelp').forEach((e) => e.remove()); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
+        stopFn = () => { cancelAnimationFrame(raf); ro.disconnect(); if (gl) { try { gl.dispose(); } catch (e) {} gl = null; } stopTilt(); stopSensors(); G.music.stop(); G.music.release('help'); G.music.release('pause'); bPause.remove(); bFull.remove(); delete document.documentElement.dataset.racing; document.removeEventListener('visibilitychange', onVis); document.querySelectorAll('.rhelp').forEach((e) => e.remove()); removeEventListener('keydown', kd); removeEventListener('keyup', ku); if (G.raceDebug === dbg) G.raceDebug = null; };
       }
 
       if (pendingTrack !== null) { sel.tr = pendingTrack; pendingTrack = null; G.store.set('race:sel', sel); G.navPush(showTracks); startRace(); } else showChars();
