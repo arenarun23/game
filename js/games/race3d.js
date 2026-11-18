@@ -147,6 +147,16 @@
     } else if (kind === 'belt') { // 소행성들이 하늘에 둥둥
       for (let i = 0; i < 9; i++) { const r = H * (0.012 + ((i * 37) % 11) * 0.0045), cx = wrap(W * (((i * 71) % 100) / 100) - yaw * F * (0.05 + (i % 3) * 0.03)), cy = hy * (0.12 + ((i * 53) % 70) / 100); ctx.fillStyle = i % 2 ? '#8c857d' : '#6e6862'; ctx.beginPath(); ctx.ellipse(cx, cy, r * 1.3, r, i * 0.7, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.ellipse(cx - r * 0.3, cy - r * 0.3, r * 0.5, r * 0.35, 0, 0, TAU); ctx.fill(); }
       const r = H * 0.05, cx = wrap(W * 0.2 - yaw * F * 0.06), cy = hy * 0.55; ctx.fillStyle = '#ffe9a8'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,233,168,.2)'; ctx.beginPath(); ctx.arc(cx, cy, r * 1.9, 0, TAU); ctx.fill(); // 멀리 작은 해
+    } else if (kind === 'neptune') { // 트리톤 하늘의 해왕성
+      const r = H * 0.2, cx = wrap(W * 0.7 - yaw * F * 0.08), cy = hy * 0.5; if (cx < -r || cx > W + r) return;
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); const g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r); g.addColorStop(0, '#8fc4ff'); g.addColorStop(0.6, '#3a6fe0'); g.addColorStop(1, '#1a2f8a'); ctx.fillStyle = g; ctx.fill(); ctx.clip();
+      ctx.fillStyle = 'rgba(200,225,255,.22)'; for (const [y, h] of [[-0.4, 0.08], [-0.1, 0.05], [0.27, 0.11]]) ctx.fillRect(cx - r, cy + y * r, 2 * r, h * r);
+      ctx.fillStyle = 'rgba(0,0,20,.4)'; ctx.beginPath(); ctx.arc(cx + r * 0.42, cy + r * 0.28, r * 1.05, 0, TAU); ctx.fill(); ctx.restore();
+    } else if (kind === 'charon') { // 명왕성 하늘의 카론
+      const r = H * 0.12, cx = wrap(W * 0.68 - yaw * F * 0.08), cy = hy * 0.45; if (cx < -r || cx > W + r) return;
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); const g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r); g.addColorStop(0, '#d9d4cf'); g.addColorStop(1, '#7c7670'); ctx.fillStyle = g; ctx.fill(); ctx.clip();
+      ctx.fillStyle = 'rgba(120,50,40,.75)'; ctx.beginPath(); ctx.ellipse(cx, cy - r * 0.85, r * 0.6, r * 0.32, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,20,.4)'; ctx.beginPath(); ctx.arc(cx + r * 0.42, cy + r * 0.3, r * 1.05, 0, TAU); ctx.fill(); ctx.restore();
     } else if (kind === 'phobos') {
       for (const [fx, fy, rr, c] of [[0.3, 0.4, 0.045, '#8d7d70'], [0.62, 0.28, 0.028, '#a59686']]) { const r = H * rr, cx = wrap(W * fx - yaw * F * 0.09), cy = hy * fy; ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(cx, cy, r * 1.25, r, 0.4, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(cx + r * 0.3, cy + r * 0.1, r * 0.5, r * 0.4, 0, 0, TAU); ctx.fill(); }
     }
@@ -181,7 +191,7 @@
     if (SPC && th.sun && sunF > 0.15 && hy > 20) { // 태양(눈부심)
       const da = Math.atan2(sunR, sunF), gx = cxs + F * Math.tan(clamp(da, -1.3, 1.3)), gy = hy - F * Math.tan(th.sun.el) / Math.max(0.35, Math.cos(da));
       if (gy < hy) { const rg = Math.min(W, H) * 0.42, g2 = ctx.createRadialGradient(gx, gy, 0, gx, gy, rg); g2.addColorStop(0, 'rgba(255,250,235,.95)'); g2.addColorStop(0.08, 'rgba(255,244,215,.55)'); g2.addColorStop(0.35, 'rgba(255,230,190,.12)'); g2.addColorStop(1, 'rgba(255,230,190,0)'); ctx.fillStyle = g2; ctx.fillRect(gx - rg, gy - rg, 2 * rg, 2 * rg);
-        ctx.fillStyle = '#fffdf2'; ctx.beginPath(); ctx.arc(gx, gy, Math.min(W, H) * 0.022, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#fffdf2'; ctx.beginPath(); ctx.arc(gx, gy, Math.min(W, H) * 0.022 * (th.sunK || 1), 0, TAU); ctx.fill();
         for (const [t2, r2, a2] of [[0.35, 0.03, 0.16], [0.7, 0.05, 0.1], [1.15, 0.025, 0.14]]) { const fx2 = gx + (cxs - gx) * t2, fy2 = gy + (cys - gy) * t2; ctx.fillStyle = `rgba(255,235,200,${a2})`; ctx.beginPath(); ctx.arc(fx2, fy2, Math.min(W, H) * r2, 0, TAU); ctx.fill(); } }
     }
     if (SPC && th.planet && hy > 20) drawPlanet(ctx, th.planet, W, hy, F, yaw, H);

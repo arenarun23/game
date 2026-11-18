@@ -148,6 +148,14 @@
         b.onclick = () => { G.sfx.tap(); G.store.set('race:gfx', gfxNew() ? 'old' : 'new'); show(); }; show(); return b;
       };
       const goFirst = () => G.start(G.games.find((x) => x.id === 'race')); // 그만두면 놀이터가 아니라 레이싱 첫 화면으로
+      // 🔄 새로 하기: 고르기 화면(캐릭터·차·경기장)에서는 고른 것을 처음 상태로 되돌리고 1단계부터 다시 고른다(완주 기록은 그대로).
+      // 예전엔 1단계에서 같은 화면을 다시 그리기만 해서 반응이 없어 보였다. 경기 중에는 기본 동작(레이싱 첫 화면으로).
+      G.onRefresh(() => {
+        if (!pickRedo) return false;
+        sel.ch = 0; sel.car = 0; sel.tr = 0; G.store.set('race:sel', sel);
+        goFirst(); G.toast('🔄 처음부터 다시 골라요');
+        return true;
+      });
       const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
       // ───────── 고르기 화면 3단계 ─────────

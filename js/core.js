@@ -13,6 +13,14 @@
   G.$ = (s, r = document) => r.querySelector(s);
 
   // 누르는 느낌: 누르자마자 화면이 바뀌는 버튼은 눌린 모양(.picked)을 잠깐 보여 준 뒤 넘어간다(두 번 눌림 방지)
+  // 짧은 알림(화면 아래 가운데, 1.6초): 버튼을 눌렀는데 화면이 크게 바뀌지 않을 때 반응을 보여 준다
+  G.toast = (msg, sec = 1.6) => {
+    const old = document.querySelector('.gtoast'); if (old) old.remove();
+    const t = G.h('div', { class: 'gtoast', role: 'status' }, msg); document.body.append(t);
+    setTimeout(() => t.classList.add('out'), sec * 1000); setTimeout(() => t.remove(), sec * 1000 + 400);
+  };
+  // 게임이 '🔄 새로 하기'를 직접 처리하고 싶으면 G.onRefresh(fn) — fn 이 true 를 돌려주면 기본 동작(게임 다시 시작)을 하지 않는다
+  let refreshHook = null; G.onRefresh = (fn) => { refreshHook = fn; };
   G.pressThen = (btn, fn, ms = 170) => {
     const grp = (btn && btn.parentNode) || btn; // 같은 줄의 다른 카드도 그동안 막는다
     if (!btn || grp._pressing) return; grp._pressing = true; btn.classList.add('picked');
@@ -151,8 +159,9 @@
     const mode = (hard, kid, label) => G.h('button', { class: 'mode', 'aria-pressed': String(hard ? G.hard : kid ? kidOn : !G.hard && !kidOn),
       onclick: () => { if ((hard ? G.hard : kid ? kidOn : !G.hard && !kidOn)) return; G.hard = hard; G.kid = kid; G.store.set('hard', hard); G.store.set('kid', kid); G.sfx.tap(); G.start(g); } }, label);
     const sub = G.h('div', { class: 'subbar' }, g.kid ? mode(false, true, '🐣 아주 쉬워요') : null, mode(false, false, '🙂 쉬워요'), mode(true, false, '🔥 어려워요'),
-      G.h('button', { class: 'mode refresh', 'aria-label': '새 문제', onclick: () => { G.sfx.tap(); G.start(g); } }, '🔄', G.h('span', { class: 'lbl' }, ' 새로 하기')));
+      G.h('button', { class: 'mode refresh', 'aria-label': '새 문제', onclick: () => { G.sfx.tap(); if (refreshHook && refreshHook() === true) return; G.start(g); } }, '🔄', G.h('span', { class: 'lbl' }, ' 새로 하기')));
     stage().replaceChildren(...(g.noSub ? [root] : [sub, root]));
+    refreshHook = null; // 게임마다 새로 정한다
     const n = g.variants || 1, v = forceV != null ? forceV : G.nextVariant(g.id, n);
     stop = g.start(root, { hard: G.hard, kid: kidOn, v, n }) || null;
   }

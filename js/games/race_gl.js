@@ -277,7 +277,7 @@ function create(o) {
   if (SPC && th.sun) {
     const gc = canvas(256, 256, (g) => { const gr = g.createRadialGradient(128, 128, 0, 128, 128, 128); gr.addColorStop(0, 'rgba(255,253,242,1)'); gr.addColorStop(0.08, 'rgba(255,248,225,.9)'); gr.addColorStop(0.3, 'rgba(255,230,190,.2)'); gr.addColorStop(1, 'rgba(255,230,190,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); });
     const sm = new THREE.SpriteMaterial({ map: tex(gc), fog: false, depthWrite: false, blending: THREE.AdditiveBlending }); toDispose.push(sm);
-    const sp = new THREE.Sprite(sm); sp.scale.set(2400, 2400, 1); sp.position.set(mx + sunDir.x * 9000, gz + sunDir.y * 9000, mz + sunDir.z * 9000); scene.add(sp);
+    const sp = new THREE.Sprite(sm); const sk = 2400 * (th.sunK || 1); sp.scale.set(sk, sk, 1); sp.position.set(mx + sunDir.x * 9000, gz + sunDir.y * 9000, mz + sunDir.z * 9000); scene.add(sp);
   }
 
   // ───── 차 ─────
@@ -475,6 +475,16 @@ function drawPlanet(g, kind) {
     g.strokeStyle = 'rgba(240,215,165,.85)'; g.lineWidth = r * 0.22; g.beginPath(); g.ellipse(0, 0, r * 2.2, r * 0.56, 0, 0, Math.PI); g.stroke(); g.restore();
   } else if (kind === 'belt') {
     const r = rand(3); for (let i = 0; i < 14; i++) { const x = r() * 512, y = 80 + r() * 300, s = 8 + r() * 26; g.fillStyle = i % 2 ? '#8c857d' : '#6e6862'; g.beginPath(); g.ellipse(x, y, s * 1.3, s, r() * 3, 0, TAU); g.fill(); }
+  } else if (kind === 'neptune') { // 트리톤 하늘의 해왕성(파란 줄무늬)
+    const r = 220; g.save(); g.beginPath(); g.arc(C, C, r, 0, TAU); const gr = g.createRadialGradient(C - 70, C - 70, 20, C, C, r); gr.addColorStop(0, '#8fc4ff'); gr.addColorStop(0.6, '#3a6fe0'); gr.addColorStop(1, '#1a2f8a'); g.fillStyle = gr; g.fill(); g.clip();
+    g.fillStyle = 'rgba(200,225,255,.22)'; for (const [y, h] of [[-90, 18], [-20, 10], [60, 24], [130, 12]]) g.fillRect(C - r, C + y, 2 * r, h);
+    g.fillStyle = '#1e2f86'; g.beginPath(); g.ellipse(C - 60, C + 40, 40, 20, 0, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(0,0,20,.4)'; g.beginPath(); g.arc(C + 90, C + 60, 230, 0, TAU); g.fill(); g.restore();
+  } else if (kind === 'charon') { // 명왕성 하늘의 카론(회색, 붉은 북극)
+    const r = 170; g.save(); g.beginPath(); g.arc(C, C, r, 0, TAU); const gr = g.createRadialGradient(C - 50, C - 50, 15, C, C, r); gr.addColorStop(0, '#d9d4cf'); gr.addColorStop(1, '#7c7670'); g.fillStyle = gr; g.fill(); g.clip();
+    g.fillStyle = 'rgba(120,50,40,.75)'; g.beginPath(); g.ellipse(C, C - r * 0.85, r * 0.6, r * 0.32, 0, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(0,0,0,.18)'; for (const [x, y, rr] of [[-40, 30, 22], [50, -10, 16], [10, 80, 12]]) { g.beginPath(); g.arc(C + x, C + y, rr, 0, TAU); g.fill(); }
+    g.fillStyle = 'rgba(0,0,20,.4)'; g.beginPath(); g.arc(C + 70, C + 50, 180, 0, TAU); g.fill(); g.restore();
   } else if (kind === 'phobos') {
     for (const [x, y, s, c] of [[180, 260, 60, '#8d7d70'], [360, 170, 36, '#a59686']]) { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, s * 1.25, s, 0.4, 0, TAU); g.fill(); g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.arc(x + s * 0.3, y + s * 0.1, s * 0.25, 0, TAU); g.fill(); }
   }

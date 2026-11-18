@@ -601,3 +601,7 @@ html[data-game=cube]{font-size:clamp(14px,min(3.7vh,4.9vw),30px)}
 .rcard:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.2);transition-duration:0s}
 /* 누르자마자 다음 화면으로 넘어가는 카드(게임 고르기·레이싱 캐릭터/차/경기장)는 눌린 모양을 잠깐 유지(G.pressThen) */
 .card.picked{transform:translateY(calc(var(--d) - 1px));box-shadow:0 1px 0 var(--e);transition-duration:0s}
+/* 짧은 알림(G.toast) */
+.gtoast{position:fixed;left:50%;bottom:max(1.2rem,env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:2000;background:rgba(40,30,20,.88);color:#fff;border-radius:1.4rem;padding:.55rem 1.3rem;font-size:max(16px,1.1rem);white-space:nowrap;pointer-events:none;box-shadow:0 4px 0 rgba(0,0,0,.25);animation:gtin .18s ease-out}
+.gtoast.out{opacity:0;transition:opacity .35s}
+@keyframes gtin{from{transform:translate(-50%,12px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
