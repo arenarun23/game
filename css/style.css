@@ -611,3 +611,6 @@ html[data-game=cube]{font-size:clamp(14px,min(3.7vh,4.9vw),30px)}
 .cbtools[hidden]{display:none}
 .cbtools .cbhelp,.cbtools .cbhelp.lab,.cbtools .cbhelp.mem{position:static;left:auto;right:auto;top:auto;transform:none}
 .cbmsg:empty{display:none}
+/* 경기장 고르기(세로): 탭·선수 수·우주 옵션 줄 사이를 띄워 버튼이 겹치지 않게(버튼 아래 입체 그림자 자리) */
+.trkopts{display:flex;flex-direction:column;align-items:center;gap:.45rem;margin-bottom:.15rem}
+.trkopts .optrow{row-gap:.45rem}
