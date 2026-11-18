@@ -147,6 +147,9 @@
         const show = () => { const nw = gfxNew(); ic.textContent = nw ? '✨' : '🖼️'; tx.textContent = nw ? ' 새 그래픽' : ' 예전 그래픽'; b.setAttribute('aria-label', nw ? '지금 새 그래픽. 누르면 예전 그래픽' : '지금 예전 그래픽. 누르면 새 그래픽'); b.title = b.getAttribute('aria-label'); };
         b.onclick = () => { G.sfx.tap(); G.store.set('race:gfx', gfxNew() ? 'old' : 'new'); show(); }; show(); return b;
       };
+      // 폰·태블릿 세로 화면: 카드를 처음 누를 때 전체 화면으로(주소창·아래 막대가 사라져 넓어진다). 브라우저가 허락할 때만 되고, 아이폰 사파리는 안 된다
+      let fullTried = false;
+      const portraitFull = () => { if (fullTried || innerWidth >= innerHeight || !document.fullscreenEnabled || document.fullscreenElement) return; fullTried = true; try { const p = document.documentElement.requestFullscreen({ navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); } catch (e) {} };
       const goFirst = () => G.start(G.games.find((x) => x.id === 'race')); // 그만두면 놀이터가 아니라 레이싱 첫 화면으로
       // 🔄 새로 하기: 고르기 화면(캐릭터·차·경기장)에서는 고른 것을 처음 상태로 되돌리고 1단계부터 다시 고른다(완주 기록은 그대로).
       // 예전엔 1단계에서 같은 화면을 다시 그리기만 해서 반응이 없어 보였다. 경기 중에는 기본 동작(레이싱 첫 화면으로).
@@ -164,9 +167,9 @@
         clearTabs();
         const land = innerWidth > innerHeight * 1.05, n = items.length;
         const dense = !land && step <= 2 && n > 9, c = dense ? 2 : land ? (n <= 4 ? n : n <= 10 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 ? 3 : 2), r = Math.ceil(n / c);
-        const rowMode = !land && step <= 2, many = !land && (step === 3 ? n > 12 : n > 5); // 폰 세로에서 경기장이 8개를 넘으면 2열로 두고 아래로 넘겨 본다 // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
+        const rowMode = !land && step <= 2, many = !land && (step === 3 ? n > ((extra && extra.querySelectorAll && extra.querySelectorAll('.spopt').length >= 2) ? 8 : 12) : n > 5); // 세로 우주 탭(옵션 줄이 둘): 8개 넘으면 2열로 넘겨 본다 // 폰 세로에서 경기장이 8개를 넘으면 2열로 두고 아래로 넘겨 본다 // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
         const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : '') + (dense ? ' dense' : '') + (land && n > 10 ? ' lt' : '') + (many ? ' many' : ''), style: rowMode ? (dense ? `--c:2;--r:${r}` : `--c:1;--r:${n}`) : `--c:${c};--r:${r}` }, items.map((it, i) =>
-          G.h('button', { class: 'card pk c-' + it.color + (typeof it.ic === 'string' ? '' : ' trk'), 'aria-pressed': String(i === cur), onclick: (e) => { G.sfx.tap(); const me = e.currentTarget; me.parentNode.querySelectorAll('.pk').forEach((x) => x.setAttribute('aria-pressed', String(x === me))); G.pressThen(me, () => onPick(i)); } },
+          G.h('button', { class: 'card pk c-' + it.color + (typeof it.ic === 'string' ? '' : ' trk'), 'aria-pressed': String(i === cur), onclick: (e) => { G.sfx.tap(); portraitFull(); const me = e.currentTarget; me.parentNode.querySelectorAll('.pk').forEach((x) => x.setAttribute('aria-pressed', String(x === me))); G.pressThen(me, () => onPick(i)); } },
             G.h('span', { class: 'ic' + (typeof it.ic === 'string' && FACES[it.ic] ? ' face' : '') }, typeof it.ic === 'string' && FACES[it.ic] ? faceImg(it.ic) : it.ic), G.h('span', Object.assign({ class: 'nm' }, typeof it.ic === 'string' && !FACES[it.ic] ? { 'data-e': it.ic } : {}), it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
         const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), extra || null, G.h('div', { class: 'fitbox' }, grid)];
         kids.push(G.h('div', { class: 'palette' }, onBack ? G.h('button', { class: 'btn alt', onclick: onBack }, '◀ 이전') : null,
@@ -220,7 +223,7 @@
         const spOne = tab === 2 ? spaceOptions(showTracks) : null, land3 = innerWidth > innerHeight * 1.05;
         const spExtra = land3 ? spOne : spOne ? G.h('div', { class: 'optrow' }, nrRow, spOne) : nrRow; // 가로 화면은 선수 수를 제목 줄에 붙여 경기장 칸을 넓게
         pick(3, (hard ? '🔥 어려운 ' : kid ? '🐣 아주 쉬운 ' : '') + `경기장을 골라요 · ${hard ? 3 : kid ? 1 : 2}바퀴`, idxs.map((i) => { const t = TRACKS[i]; return { ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky', 'lemon', 'mint'][idxs.indexOf(i) % 10], ds: [br('▶ ' + t.shape), br(t.gim)] }; }), idxs.indexOf(sel.tr),
-          (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); G.navPush(showTracks); startRace(); }, () => G.navBack(showCars), land3 ? spExtra : (spExtra ? G.h('div', {}, tabs, spExtra) : tabs));
+          (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); G.navPush(showTracks); startRace(); }, () => G.navBack(showCars), land3 ? spExtra : (spExtra ? G.h('div', { class: 'trkopts' }, tabs, spExtra) : tabs));
         if (innerWidth > innerHeight * 1.05) { const sb = document.querySelector('.subbar'); if (sb) sb.append(tabs); const hn = root.querySelector('.hint.must'); if (hn) { hn.classList.add('withnr'); hn.append(nrRow); } }
       }
 
