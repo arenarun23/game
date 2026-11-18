@@ -85,6 +85,13 @@
       // 게임 카드를 누른 직후가 아니면 거절될 수 있어 첫 터치 때 한 번 더 시도한다. 나가면 원래대로.
       const goFull = () => { if (!document.fullscreenEnabled || document.fullscreenElement) return; try { const pr = document.documentElement.requestFullscreen({ navigationUI: 'hide' }); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {} };
       goFull(); root.addEventListener('pointerdown', goFull, { once: true });
+      // 위쪽 줄의 ⛶ 버튼: 전체 화면 켜기/끄기(아이가 껐다가 다시 켤 수 있게)
+      const topRight = document.querySelector('#bar .right'); let bFull = null;
+      if (document.fullscreenEnabled && topRight) {
+        bFull = h('button', { class: 'round rfull', 'aria-label': '전체 화면' }, '⛶');
+        bFull.addEventListener('click', () => { G.sfx.tap(); try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch (e) {} });
+        topRight.insertBefore(bFull, topRight.firstChild);
+      }
       document.documentElement.dataset.game = 'cube';   // 좁은 화면에서 제목이 두 줄이 되지 않게
 
       // 큐브 크기: 가만히 있을 때 칸의 88% 안팎(조각 한 변 S 기준 가로 4.4S·세로 4.55S). 돌리다가 모서리가 아주 조금 넘으면 칸 밖은 잘린다
@@ -408,7 +415,7 @@
       view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
 
       fit(); paint(); setView(); freeUi();
-      return () => { dead = true; try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} closePan(); if (lab) lab.close(false); delete document.documentElement.dataset.game; cancelAnimationFrame(raf); clearTimeout(autoT); clearTimeout(markT); if (ro) ro.disconnect(); else removeEventListener('resize', fit); };
+      return () => { dead = true; if (bFull) bFull.remove(); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} closePan(); if (lab) lab.close(false); delete document.documentElement.dataset.game; cancelAnimationFrame(raf); clearTimeout(autoT); clearTimeout(markT); if (ro) ro.disconnect(); else removeEventListener('resize', fit); };
     },
   });
 })();
