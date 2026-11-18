@@ -12,6 +12,12 @@
   G.register = (g) => G.games.push(g);
   G.$ = (s, r = document) => r.querySelector(s);
 
+  // 누르는 느낌: 누르자마자 화면이 바뀌는 버튼은 눌린 모양(.picked)을 잠깐 보여 준 뒤 넘어간다(두 번 눌림 방지)
+  G.pressThen = (btn, fn, ms = 170) => {
+    const grp = (btn && btn.parentNode) || btn; // 같은 줄의 다른 카드도 그동안 막는다
+    if (!btn || grp._pressing) return; grp._pressing = true; btn.classList.add('picked');
+    setTimeout(() => { grp._pressing = false; btn.classList.remove('picked'); fn(); }, ms);
+  };
   G.h = (tag, attrs, ...kids) => {
     const e = document.createElement(tag);
     for (const k in attrs || {}) {
@@ -183,7 +189,7 @@
     const tabs = G.h('div', { class: 'tabs' }, G.cats.map((c) =>
       G.h('button', { class: 'tab', 'aria-pressed': String(c.id === cat), onclick: () => { G.sfx.tap(); G.store.set('cat', c.id); renderHome(c.id); } }, c.icon + ' ' + c.name)));
     const cards = G.h('div', { class: 'cards' }, list.map((g) =>
-      G.h('button', { class: 'card c-' + g.color, onclick: () => { G.sfx.tap(); G.start(g); } },
+      G.h('button', { class: 'card c-' + g.color, onclick: (e) => { G.sfx.tap(); G.pressThen(e.currentTarget, () => G.start(g)); } },
         G.h('span', { class: 'ic' }, g.icon), G.h('span', { class: 'nm' }, g.name), G.h('span', { class: 'ds' }, g.desc))));
     stage().replaceChildren(G.h('div', { class: 'home' }, tabs, cards));
     layoutCards(cards, list.length);

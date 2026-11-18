@@ -158,7 +158,7 @@
         const dense = !land && step <= 2 && n > 9, c = dense ? 2 : land ? (n <= 4 ? n : n <= 10 ? Math.ceil(n / 2) : Math.ceil(n / 3)) : (n > 8 ? 3 : 2), r = Math.ceil(n / c);
         const rowMode = !land && step <= 2, many = !land && (step === 3 ? n > 12 : n > 5); // 폰 세로에서 경기장이 8개를 넘으면 2열로 두고 아래로 넘겨 본다 // 폰 세로: 캐릭터·차는 카드를 한 줄씩(왼쪽 그림, 오른쪽 글자)으로 넓게
         const grid = G.h('div', { class: 'pickgrid' + (rowMode ? ' row' : '') + (dense ? ' dense' : '') + (land && n > 10 ? ' lt' : '') + (many ? ' many' : ''), style: rowMode ? (dense ? `--c:2;--r:${r}` : `--c:1;--r:${n}`) : `--c:${c};--r:${r}` }, items.map((it, i) =>
-          G.h('button', { class: 'card pk c-' + it.color + (typeof it.ic === 'string' ? '' : ' trk'), 'aria-pressed': String(i === cur), onclick: () => { G.sfx.tap(); onPick(i); } },
+          G.h('button', { class: 'card pk c-' + it.color + (typeof it.ic === 'string' ? '' : ' trk'), 'aria-pressed': String(i === cur), onclick: (e) => { G.sfx.tap(); const me = e.currentTarget; me.parentNode.querySelectorAll('.pk').forEach((x) => x.setAttribute('aria-pressed', String(x === me))); G.pressThen(me, () => onPick(i)); } },
             G.h('span', { class: 'ic' + (typeof it.ic === 'string' && FACES[it.ic] ? ' face' : '') }, typeof it.ic === 'string' && FACES[it.ic] ? faceImg(it.ic) : it.ic), G.h('span', Object.assign({ class: 'nm' }, typeof it.ic === 'string' && !FACES[it.ic] ? { 'data-e': it.ic } : {}), it.nm), G.h('span', { class: 'ds' }, ...it.ds))));
         const kids = [G.h('div', { class: 'hint must' }, `🏁 ${step}/3 · ${title}`), extra || null, G.h('div', { class: 'fitbox' }, grid)];
         kids.push(G.h('div', { class: 'palette' }, onBack ? G.h('button', { class: 'btn alt', onclick: onBack }, '◀ 이전') : null,
