@@ -552,3 +552,8 @@ html[data-game=cube]{font-size:clamp(14px,min(3.7vh,4.9vw),30px)}
 /* 레이싱 그래픽 바꾸기 버튼: 좁은 세로 화면에서는 그림만 */
 @media (max-width:600px) and (orientation:portrait){html[data-game=race] .palette:has(.gfx){gap:.25rem}html[data-game=race] .palette:has(.gfx) .btn{padding-left:.5rem;padding-right:.5rem}html[data-game=race] .palette .gfx{min-width:44px;padding-left:.35rem;padding-right:.35rem}.palette .gfx .gt{display:none}}
 @media (max-width:340px) and (orientation:portrait){html[data-game=race] .palette:has(.gfx){gap:.15rem}}
+/* 레이싱: 선수 수(2·4·6명) 고르기 줄 */
+.nropt .nrl{font-weight:700;margin-right:.1rem;white-space:nowrap}
+.optrow{display:flex;flex-wrap:wrap;gap:.35rem .8rem;justify-content:center;align-items:center}
+.hint.must.withnr{display:flex!important;margin-top:0!important;margin-bottom:.15rem!important;align-items:center;justify-content:center;gap:.6rem;flex-wrap:nowrap}
+.hint.must.withnr .nropt{flex-wrap:nowrap;gap:.25rem}

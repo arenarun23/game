@@ -13,9 +13,11 @@
   // 이모지·차는 한 번만 그려 두고 이미지로 찍는다(회전해도 비용이 일정). 글자를 매 프레임 회전해 그리면 글자 캐시가 계속 빗나가서 끊긴다.
   const spr = new Map();
   function sprite(key, w, h, fn) { let c = spr.get(key); if (!c) { c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); spr.set(key, c); } return c; }
-  const NR = 6; // 한 경기에 달리는 선수 수(나 + 컴퓨터 5)
+  // 한 경기에 달리는 선수 수(나 포함): 경기장 고르기에서 2·4·6명 중 고른다(모든 경기장 공통, 기본 6)
+  const NRS = [2, 4, 6], nrOf = () => { const v = +G.store.get('race:nr', 6); return NRS.includes(v) ? v : 6; };
   let startBag = [], lastStart = -1;
-  function nextStart() { if (!startBag.length) { startBag = G.shuffle([...Array(NR).keys()]); if (startBag[startBag.length - 1] === lastStart) startBag.unshift(startBag.pop()); } return (lastStart = startBag.pop()); }
+  let bagN = 0;
+  function nextStart(NR) { if (bagN !== NR) { bagN = NR; startBag = []; lastStart = -1; } if (!startBag.length) { startBag = G.shuffle([...Array(NR).keys()]); if (startBag[startBag.length - 1] === lastStart) startBag.unshift(startBag.pop()); } return (lastStart = startBag.pop()); }
   // 치타·코끼리는 이모지가 온몸이라(다른 친구는 얼굴) 얼굴만 직접 그린다. 이모지 글자(🐆 🐘)를 이 그림으로 바꿔 찍는다.
   const circ = (g, x, y, r, col) => { g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); };
   const ellp = (g, x, y, rx, ry, col, rot) => { g.fillStyle = col; g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, TAU); g.fill(); };
@@ -205,10 +207,13 @@
         const cnt = (g) => groupIdx(g).filter((i) => doneSet.has(i)).length;
         const tabs = G.h('div', { class: 'tabs' }, [[0, '🗺️ 2D'], [1, '🧊 3D'], [2, '🚀 우주']].map(([g, label]) =>
           G.h('button', { class: 'tab', 'aria-pressed': String(g === tab), onclick: () => { G.sfx.tap(); tab = g; showTracks(); } }, innerWidth > innerHeight * 1.05 ? label : [label + ' ', G.h('span', { class: 'cnt' }, `(${cnt(g)}/${groupIdx(g).length})`)])));
-        const spExtra = tab === 2 ? spaceOptions(showTracks) : null, land3 = innerWidth > innerHeight * 1.05;
+        const nr = nrOf(), nrRow = G.h('div', { class: 'spopt nropt', role: 'group', 'aria-label': '함께 달리는 선수 수' }, G.h('span', { class: 'nrl' }, '👥 선수'),
+          ...NRS.map((v) => G.h('button', { class: 'tab sp', 'aria-pressed': String(v === nr), onclick: () => { G.sfx.tap(); G.store.set('race:nr', v); showTracks(); } }, v + '명')));
+        const spOne = tab === 2 ? spaceOptions(showTracks) : null, land3 = innerWidth > innerHeight * 1.05;
+        const spExtra = land3 ? spOne : spOne ? G.h('div', { class: 'optrow' }, nrRow, spOne) : nrRow; // 가로 화면은 선수 수를 제목 줄에 붙여 경기장 칸을 넓게
         pick(3, (hard ? '🔥 어려운 ' : kid ? '🐣 아주 쉬운 ' : '') + `경기장을 골라요 · ${hard ? 3 : kid ? 1 : 2}바퀴`, idxs.map((i) => { const t = TRACKS[i]; return { ic: thumb(t, seedOf(i)), nm: (doneSet.has(i) ? '✅ ' : '') + t.e + ' ' + t.n, color: ['lemon', 'orange', 'sky', 'mint', 'pink', 'lilac', 'peach', 'sky', 'lemon', 'mint'][idxs.indexOf(i) % 10], ds: [br('▶ ' + t.shape), br(t.gim)] }; }), idxs.indexOf(sel.tr),
           (k) => { sel.tr = idxs[k]; G.store.set('race:sel', sel); G.navPush(showTracks); startRace(); }, () => G.navBack(showCars), land3 ? spExtra : (spExtra ? G.h('div', {}, tabs, spExtra) : tabs));
-        if (innerWidth > innerHeight * 1.05) { const sb = document.querySelector('.subbar'); if (sb) sb.append(tabs); }
+        if (innerWidth > innerHeight * 1.05) { const sb = document.querySelector('.subbar'); if (sb) sb.append(tabs); const hn = root.querySelector('.hint.must'); if (hn) { hn.classList.add('withnr'); hn.append(nrRow); } }
       }
 
       // ───────── 경기 ─────────
@@ -244,8 +249,9 @@
         fit(); const ro = new ResizeObserver(fit); ro.observe(wrap);
 
         // 선수
+        const NR = nrOf();
         const orderN = (() => { const others = G.shuffle(D.CHARS.map((_, i) => i).filter((i) => i !== sel.ch)).slice(0, NR - 1), cars = G.shuffle(D.CARS.map((_, i) => i)); return [sel.ch, ...others].map((c, i) => [c, i === 0 ? sel.car : cars[i]]); })();
-        const mySlot = nextStart(), slots = [mySlot, ...G.shuffle([...Array(NR).keys()].filter((x) => x !== mySlot))]; // 내 출발 칸(1~6번): 가방에서 뽑아 6판에 한 번씩 골고루, 같은 칸이 연달아 나오지 않게
+        const mySlot = nextStart(NR), slots = [mySlot, ...G.shuffle([...Array(NR).keys()].filter((x) => x !== mySlot))]; // 내 출발 칸(1~6번): 가방에서 뽑아 6판에 한 번씩 골고루, 같은 칸이 연달아 나오지 않게
         const racers = orderN.map(([ci, cr], i) => mk(ci, cr, i === 0, slots[i]));
         const me = racers[0];
         function mk(ci, cr, isPlayer, slot) {
@@ -378,7 +384,7 @@
         if (gfxNew() && glOK()) { try { gl = window.RaceGL.create({ T, th, racers, me, wall: WALL }); wrap.insertBefore(gl.canvas, cv); cv.style.display = 'none'; gl.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); if (gl) { const g0 = gl; gl = null; try { g0.dispose(); } catch (er) {} cv.style.display = ''; } }); } catch (e) { console.warn('새 그래픽을 못 써서 예전 그래픽으로 그려요', e); if (gl) try { gl.dispose(); } catch (er) {} gl = null; cv.style.display = ''; } }
         dbg.gl = () => !!gl;
         // 아이템·스킬
-        const randItem = (r) => { const k = rank(r), pool = k >= 4 ? ['boost', 'boost', 'missile', 'shield', 'banana'] : k >= 2 ? ['boost', 'missile', 'shield', 'banana'] : ['shield', 'banana', 'banana', 'boost']; return G.pick(pool); };
+        const randItem = (r) => { const k = rank(r), pos = NR > 1 ? (k - 1) / (NR - 1) : 0, pool = pos >= 0.5 ? ['boost', 'boost', 'missile', 'shield', 'banana'] : pos > 0 ? ['boost', 'missile', 'shield', 'banana'] : ['shield', 'banana', 'banana', 'boost']; return G.pick(pool); };
         function hit(r, kind, dur) {
           if (r.fin != null) return false;
           if (r.slip > 0) return false; // 스르륵 피하는 중
