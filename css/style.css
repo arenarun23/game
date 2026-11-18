@@ -441,11 +441,11 @@ html[data-game=race] .rbtn small{font-size:max(12px,clamp(.6rem,2.4vmin,.85rem))
 .hrow b .faceimg{width:1.15em;height:1.15em}
 
 /* 폰 세로: 캐릭터·차가 10개를 넘으면 2열로 두고 그림 + 이름만 보여 준다(설명은 사용법·고른 뒤 화면에서) */
-.pickgrid.row.dense{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(var(--r),minmax(0,1fr));gap:.3rem}
+.pickgrid.row.dense{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(var(--r),minmax(0,1fr));gap:.6rem .35rem;padding:2px 0 7px;box-sizing:border-box} /* 줄 사이·맨 아래에 카드 그림자(4px) 자리를 남겨 잘리지 않게 */
 .pickgrid.row.dense .card.pk{grid-template-columns:38% 1fr;grid-template-rows:1fr;padding:.15rem .35rem;column-gap:.25rem}
 .pickgrid.row.dense .pk .ic{grid-row:1;font-size:clamp(1.8rem,62cqh,3rem)}
 .pickgrid.row.dense .pk .nm{grid-row:1;align-self:center}
-html[data-game=race] .pickgrid.row.dense .pk .nm{font-size:max(15px,clamp(.9rem,26cqh,1.15rem))}
+html[data-game=race] .pickgrid.row.dense .pk .nm{font-size:max(19px,clamp(1.15rem,30cqh,1.4rem));line-height:1.1} /* 이름 글자 3pt(4px) 크게 */
 html[data-game=race] .pickgrid.row.dense .pk .ds{display:none!important}
 /* 조종 방식 버튼을 눈에 띄게(기울여서 안내) */
 .nudge{outline:4px solid #ff9f1c;outline-offset:2px;animation:nudge .6s ease-in-out infinite alternate}
