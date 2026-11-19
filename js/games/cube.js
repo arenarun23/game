@@ -62,6 +62,9 @@
       const place = (c, extra) => { c.el.style.transform = (extra || '') + `translate3d(${c.p[0] * S}px,${c.p[1] * S}px,${c.p[2] * S}px)`; };
       // 돌릴 면(q)의 스티커는 그대로, 같은 층의 옆 면 스티커는 d1(조금 흐리게), 나머지는 d2(많이 흐리게)
       const setDim = (q) => stickers.forEach((el, i) => { const n = q && FACES[q.f].n, on = q && ((i / 9) | 0) !== q.f; el.classList.toggle('d1', !!(on && dot(FL[i].p, n) === 1)); el.classList.toggle('d2', !!(q && ((i / 9) | 0) !== q.f && dot(FL[i].p, n) !== 1)); });
+      // 직접 하기: 콕 누른 면을 표시(고른 다음 방향 버튼을 누르면 그때 돌린다)
+      let sel = null;
+      const pick = (f) => { sel = f; for (let i = 0; i < 54; i++) stickers[i].classList.toggle('pick', f != null && ((i / 9) | 0) === f); };
       const paint = () => { for (let i = 0; i < 54; i++) stickers[i].style.background = FACES[(st[i] / 9) | 0].color; };
       const setView = () => { cubeEl.style.transform = `matrix3d(${M[0]},${M[3]},${M[6]},0,${M[1]},${M[4]},${M[7]},0,${M[2]},${M[5]},${M[8]},0,0,0,0,1)`; };
 
@@ -141,7 +144,7 @@
       const pushHist = (q) => { hist = toQuarters(hist.map(qm).concat(qm(q))); };
       const freeUi = () => {
         guide = null; auto = false; clearTimeout(autoT);
-        setDim(null); arrow.hidden = true; steps.replaceChildren(); scoreEl.hidden = true; corner(false);
+        setDim(null); arrow.hidden = true; steps.replaceChildren(); scoreEl.hidden = true; corner(false); pick(null);
         if (isSolved(st)) say('끌면 빙글, 누르면 그 면이 돌아요', []);
         else say('큐브가 섞였어요! 🎓 보여 줘요 · ✋ 내가 해 봐요', []);
         const dirBtn = btn(dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로', () => { G.sfx.tap(); dir = -dir; dirBtn.textContent = dir > 0 ? '↻ 오른쪽으로' : '↺ 왼쪽으로'; });
@@ -271,7 +274,7 @@
           showArrow: (q) => { if (!q) { arrow.hidden = true; return; } arrow.style.transform = FT[q.f] + ' translateZ(calc(var(--s) * 1.56))' + (q.d < 0 ? ' scaleX(-1)' : ''); arrow.hidden = false; },
           scoreText: (t) => { if (t == null) { scoreEl.hidden = true; return; } scoreEl.textContent = t; scoreEl.hidden = false; },
           glowChanged: () => { let n = 0; stickers.forEach((el, i) => { const w = wrongAt(i); if (w) n++; el.classList.remove('d2'); el.classList.toggle('g', w); el.classList.toggle('d1', !w); }); return n; },
-          record: addRec,
+          record: addRec, pick, nudge,
           leave: () => { const l = labSaved; labSaved = null; if (!l) return; gen++; st = l.st; hist = l.hist; mixed = l.mixed; cubies.forEach((c) => place(c)); paint(); setDim(null); pulseOff(); arrow.hidden = true; scoreEl.hidden = true; freeUi(); viewTo(poseFor(null, 1)); },
         });
         labSaved = { st: st.slice(), hist: hist.slice(), mixed }; corner(true); guide = null; lab.open();
@@ -312,10 +315,9 @@
       };
       // ✋ 내가 할래!: 방향(왼쪽/오른쪽)을 고르고 면을 누르면 맞았는지 확인해 준다
       const selfCtl = () => {
-        const g = guide; dir = 1;
-        const set = () => { L.setAttribute('aria-pressed', String(dir < 0)); R.setAttribute('aria-pressed', String(dir > 0)); };
-        const L = btn('↺ 왼쪽', () => { G.sfx.tap(); dir = -1; set(); }, 'big dirb'), R = btn('↻ 오른쪽', () => { G.sfx.tap(); dir = 1; set(); }, 'big dirb');
-        set();
+        const g = guide; pick(null);
+        // 면을 먼저 콕 누르고 → 방향 버튼을 누르면 그 순간 돌리고 맞았는지 본다(예전엔 방향을 미리 골라 두는 방식이라 순서가 바뀌면 틀렸다고 했다)
+        const L = btn('↺ 왼쪽', () => turnSel(-1), 'big dirb'), R = btn('↻ 오른쪽', () => turnSel(1), 'big dirb');
         ctl.replaceChildren(L, R,
           btn('💡 힌트', () => { if (busy || guide !== g) return; G.sfx.tap(); g.hint = true; showStep(); }),
           btn('✖ 그만', askStop));
@@ -326,17 +328,29 @@
         title.textContent = '그만할까요?'; msg.replaceChildren('저장해 두면 다음에 이어서 할 수 있어요.');
         ctl.replaceChildren(btn('💾 저장하고 그만', () => openPan('save', null, () => freeUi()), 'go big'), btn('그냥 그만', () => { G.sfx.tap(); freeUi(); }), btn('↩ 계속 하기', () => { G.sfx.tap(); selfCtl(); showStep(); }));
       };
-      const tryMove = async (f) => {
+      // 면을 안 고르고 방향 버튼을 누르면: 안내 글을 살짝 흔들고 말로 알려 준다(글을 바꾸면 큐브 칸 크기가 들썩여서)
+      const nudge = () => { G.sfx.tap(); G.speak('먼저 돌릴 면을 콕 눌러요'); msg.classList.remove('nudge'); void msg.offsetWidth; msg.classList.add('nudge'); };
+      const selectFace = (f) => {
+        const g = guide; if (!g || !g.self || busy) return;
+        G.sfx.tap(); pick(f);
+        // 안내 글은 그대로 두고(글 길이가 바뀌면 큐브 칸이 들썩인다) 고른 면에 굵은 테두리만 보여 준다
+      };
+      const turnSel = (d) => {
+        const g = guide; if (!g || !g.self || busy) return;
+        if (sel == null) { nudge(); return; }
+        const f = sel; pick(null); tryMove(f, d);
+      };
+      const tryMove = async (f, d) => {
         const g = guide; if (!g || !g.self || busy) return;
         const q = g.stages[g.si].moves[g.mi];
-        if (f === q.f && dir === q.d) { if (!g.miss && !g.hint) g.ok++; g.miss = 0; g.hint = false; mark(true); doStep(false); return; }
+        if (f === q.f && d === q.d) { if (!g.miss && !g.hint) g.ok++; g.miss = 0; g.hint = false; mark(true); doStep(false); return; }
         busy = true; arrow.hidden = true; G.sfx.flip();
-        await turn({ f, d: dir }, 220); if (dead) return;
+        await turn({ f, d }, 220); if (dead) return;
         G.sfx.bad(); mark(false); g.bad++; g.miss++;
         scoreEl.textContent = '⭕ ' + g.ok + '   ❌ ' + g.bad;
         msg.replaceChildren(f !== q.f ? '앗, 그건 ' + nameOf(f) + '이에요! ' + nameOf(q.f) + '을 찾아요.' : '앗, 방향이 반대예요! 다시 돌려 놓을게요.');
         await wait(700); if (dead) return;
-        await turn({ f, d: -dir }, 220); busy = false;
+        await turn({ f, d: -d }, 220); busy = false;                  // 돌린 방향을 기억해 두었다가 되돌린다(그 사이 버튼을 눌러도 안 꼬이게)
         if (dead || guide !== g) return;
         if (g.miss >= 2) g.hint = true;                              // 두 번 틀리면 화살표로 알려 준다
         showStep();
@@ -347,7 +361,7 @@
         steps.replaceChildren(...g.stages.map((s, i) => h('span', { class: 'cbstep' + (i < g.si ? ' done' : i === g.si ? ' on' : '') }, i < g.si ? '✓' : String(i + 1))));
         title.textContent = (g.stages.length > 1 ? (g.si + 1) + '단계 · ' : '') + sg.name + '  (' + (g.mi + 1) + '/' + sg.moves.length + ')';
         const show = !g.self || g.hint;                              // 스스로 할 때는 힌트를 켰을 때만 화살표·밝은 면을 보여 준다
-        if (g.self) { msg.replaceChildren(chip(q.f), nameOf(q.f) + '을 ', h('b', { class: 'cbdir' }, q.d > 0 ? '↻ 오른쪽' : '↺ 왼쪽'), '으로 돌려요'); scoreEl.textContent = '⭕ ' + g.ok + '   ❌ ' + g.bad; scoreEl.hidden = false; }
+        if (g.self) { pick(null); msg.replaceChildren(chip(q.f), nameOf(q.f) + '을 콕 → ', h('b', { class: 'cbdir' }, q.d > 0 ? '↻ 오른쪽' : '↺ 왼쪽'), ' 버튼'); scoreEl.textContent = '⭕ ' + g.ok + '   ❌ ' + g.bad; scoreEl.hidden = false; }
         else msg.replaceChildren(chip(q.f), nameOf(q.f) + '을 화살표처럼 돌려요');
         setDim(show ? q : null);
         busy = true;
@@ -411,7 +425,7 @@
         const p = ptr; ptr = null;
         if (e.type === 'pointercancel' || p.drag || p.f == null || learn) return;
         if (lab && lab.active()) { lab.tap(p.f); return; }
-        if (guide && guide.self) tryMove(p.f);
+        if (guide && guide.self) selectFace(p.f);
         else if (guide) { const q = guide.stages[guide.si].moves[guide.mi]; if (q && q.f === p.f && !arrow.hidden) doStep(false); }
         else freeTurn(p.f);
       };

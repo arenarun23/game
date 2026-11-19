@@ -13,7 +13,7 @@
 
   G.cubeLab = (A) => {
     const h = A.h;
-    let on = false, cur = 0, run = null, busy = false, dir = 1;
+    let on = false, cur = 0, run = null, busy = false;
     const prog = () => G.store.get('cube-lab', {}) || {};
     const done = (id) => prog()[id] || 0;
     const save = (id, n) => { const p = prog(); if ((p[id] || 0) < n) { p[id] = n; G.store.set('cube-lab', p); } };
@@ -65,11 +65,13 @@
       busy = false; if (A.gen() !== tok || A.dead()) return;
       show();
     };
-    const dirCtl = () => {
-      dir = 1;
-      const L = btn('↺ 왼쪽', () => { A.sfx.tap(); dir = -1; set(); }, 'big dirb'), R = btn('↻ 오른쪽', () => { A.sfx.tap(); dir = 1; set(); }, 'big dirb');
-      const set = () => { L.setAttribute('aria-pressed', String(dir < 0)); R.setAttribute('aria-pressed', String(dir > 0)); };
-      set(); return [L, R];
+    // 면을 먼저 콕 → 방향 버튼을 누르면 그때 돌리고 맞았는지 본다
+    let sel = null;
+    const dirCtl = () => { sel = null; A.pick(null); return [btn('↺ 왼쪽', () => turnSel(-1), 'big dirb'), btn('↻ 오른쪽', () => turnSel(1), 'big dirb')]; };
+    const turnSel = (d) => {
+      const r = run; if (!on || !r || r.pi === 0 || busy) return;
+      if (sel == null) { A.nudge(); return; }
+      const f = sel; sel = null; A.pick(null); doTurn(f, d);
     };
     const hint = () => { if (busy || !run || run.pi === 0) return; A.sfx.tap(); run.hint = true; show(); };
 
@@ -97,7 +99,8 @@
     const show = async () => {
       const r = run; if (!r || A.dead()) return;
       const q = r.qs[r.mi], pi = r.pi, arrowOn = pi === 1 || r.hint;
-      if (pi === 1) A.msg.replaceChildren(A.chip(q.f), A.nameOf(q.f) + '을 ', h('b', { class: 'cbdir' }, dirTxt(q.d)), '으로 돌려요', seq(r.qs, r.mi));
+      sel = null; A.pick(null);
+      if (pi === 1) A.msg.replaceChildren(A.chip(q.f), A.nameOf(q.f) + '을 콕 → ', h('b', { class: 'cbdir' }, dirTxt(q.d)), ' 버튼', seq(r.qs, r.mi));
       else if (pi === 2) A.msg.replaceChildren(h('span', { class: 'ln' }, '순서대로 돌려요'), seq(r.qs, r.mi), ...(r.hint ? [h('span', { class: 'ln' }, A.nameOf(q.f) + ' ' + dirTxt(q.d))] : []));
       else A.msg.replaceChildren(h('span', { class: 'ln' }, pi === 4 ? '공식으로 큐브를 고쳐요' : '외워서 해 봐요'), dots(r.qs.length, r.mi), ...(r.hint ? [h('span', { class: 'ln' }, A.nameOf(q.f) + ' ' + dirTxt(q.d))] : []));
       A.scoreText('⭕ ' + r.ok + '   ❌ ' + r.bad);
@@ -105,22 +108,27 @@
       if (!vis(q.f)) { busy = true; await A.viewTo(A.poseFor(q.f, 0)); busy = false; if (run !== r || A.dead()) return; }
       A.showArrow(arrowOn ? q : null);
     };
-    const tap = async (f) => {
+    const tap = (f) => {
+      const r = run; if (!on || !r || r.pi === 0 || busy) return;
+      A.sfx.tap(); sel = f; A.pick(f);
+      // 안내 글은 그대로 두고(글 길이가 바뀌면 큐브 칸이 들썩인다) 고른 면에 굵은 테두리만 보여 준다
+    };
+    const doTurn = async (f, d) => {
       const r = run; if (!on || !r || r.pi === 0 || busy) return;
       const q = r.qs[r.mi];
       busy = true; A.showArrow(null); A.sfx.flip();
-      if (f === q.f && dir === q.d) {
+      if (f === q.f && d === q.d) {
         if (!r.miss && !r.hint) r.ok++; r.miss = 0; r.hint = false; A.mark(true);
         await A.turn(q, 240); busy = false; if (run !== r || A.dead()) return;
         r.mi++;
         if (r.mi >= r.qs.length) return finish(r);
         return show();
       }
-      await A.turn({ f, d: dir }, 220); if (A.dead()) return;
+      await A.turn({ f, d }, 220); if (A.dead()) return;
       A.sfx.bad(); A.mark(false); r.bad++; r.miss++; A.scoreText('⭕ ' + r.ok + '   ❌ ' + r.bad);
       A.msg.replaceChildren(f !== q.f ? '앗, 그건 ' + A.nameOf(f) + '이에요! 다시 돌려 놓을게요.' : '앗, 방향이 반대예요! 다시 돌려 놓을게요.');
       await A.wait(700); if (A.dead() || run !== r) return;
-      await A.turn({ f, d: -dir }, 220); busy = false; if (run !== r || A.dead()) return;
+      await A.turn({ f, d: -d }, 220); busy = false; if (run !== r || A.dead()) return;
       if (r.miss >= 2) r.hint = true;                                  // 두 번 틀리면 화살표로 알려 준다
       show();
     };
@@ -147,7 +155,7 @@
       const d = FORMULAS.findIndex((F) => done(F.id) < 5); cur = d < 0 ? 0 : d;     // 아직 안 익힌 첫 공식부터
       menu();
     };
-    const close = (restore) => { if (!on) return; on = false; run = null; busy = false; A.bump(); if (restore) A.leave(); };
+    const close = (restore) => { if (!on) return; on = false; run = null; busy = false; sel = null; A.pick(null); A.bump(); if (restore) A.leave(); };
     return { open, close, tap, active: () => on };
   };
 })();
