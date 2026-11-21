@@ -621,3 +621,15 @@ html[data-game=cube]{font-size:clamp(14px,min(3.7vh,4.9vw),30px)}
 .cbmsg.nudge{animation:cbnudge .45s ease-in-out 2}
 @keyframes cbnudge{0%,100%{transform:none}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 @media (prefers-reduced-motion:reduce){.cbmsg.nudge{animation:none;outline:3px solid var(--btn);border-radius:.5rem}}
+/* 큐브: 위쪽 줄 동그라미 버튼이 찌그러지지 않게(줄어들지 않는 정사각형), 별 개수는 한 줄, 제목만 줄어든다 */
+html[data-game=cube] #bar .round{flex:none;width:clamp(44px,2.4rem,58px);height:clamp(44px,2.4rem,58px);min-width:0;min-height:0;padding:0}
+html[data-game=cube] #bar .right{display:flex;align-items:center;gap:.3rem;flex:none}
+html[data-game=cube] #stars{white-space:nowrap;flex:none}
+html[data-game=cube] #title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 큐브: 아래 버튼은 같은 폭 두 칸 격자 — 글자가 바뀌어도(↻ 오른쪽으로 ↔ ↺ 왼쪽으로) 크기·자리가 그대로 */
+@media not ((min-aspect-ratio:11/10) and (min-width:560px)){
+  .cbctl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:min(100%,34rem);justify-self:center;margin:0 auto}
+  .cbctl .mode{width:100%;min-width:0;padding-left:.3rem;padding-right:.3rem;overflow:hidden;text-overflow:ellipsis}
+}
+.cbctl .mode:last-child:nth-child(odd){grid-column:1/-1}
+@media (max-width:480px){html[data-game=cube] #bar{gap:.25rem;padding-right:.4rem}html[data-game=cube] #title{font-size:min(1.15rem,3.6vw)}html[data-game=cube] #stars{padding-left:.45rem;padding-right:.45rem;font-size:min(1.1rem,4.4vw)}html[data-game=cube] #bar .right{gap:.25rem}}
