@@ -86,10 +86,9 @@
       root.classList.add('cb'); root.append(info, view, ctl);
       // 들어오면 전체 화면으로(주소창·아래 막대가 사라져 넓어진다). 허락한 브라우저에서만 되고(아이폰 사파리는 안 됨),
       // 게임 카드를 누른 직후가 아니면 거절될 수 있어 첫 터치 때 한 번 더 시도한다. 나가면 원래대로.
-      // 스마트폰이면 전체 화면이 된 뒤 가로로 돌려 고정한다(화면 잠금은 안드로이드 크롬 등에서 전체 화면일 때만 허락된다. 아이폰은 안 됨)
-      const isPhone = () => matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 600;
-      const lockLand = () => { try { if (isPhone() && screen.orientation && screen.orientation.lock) { const pr = screen.orientation.lock('landscape'); if (pr && pr.catch) pr.catch(() => {}); } } catch (e) {} };
-      const goFull = () => { if (!document.fullscreenEnabled || document.fullscreenElement) return; try { const pr = document.documentElement.requestFullscreen({ navigationUI: 'hide' }); if (pr && pr.then) pr.then(lockLand, () => {}); } catch (e) {} };
+      // 화면 방향은 고정하지 않는다: 폰을 가로로 들면 가로, 세로로 들면 세로(기기 센서·자동 회전 설정을 따른다). 예전 가로 고정이 남아 있으면 푼다.
+      const freeRot = () => { try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {} };
+      const goFull = () => { if (!document.fullscreenEnabled || document.fullscreenElement) return; try { const pr = document.documentElement.requestFullscreen({ navigationUI: 'hide' }); if (pr && pr.then) pr.then(freeRot, () => {}); } catch (e) {} };
       goFull(); root.addEventListener('pointerdown', goFull, { once: true });
       // 위쪽 줄의 ⛶ 버튼: 전체 화면 켜기/끄기(아이가 껐다가 다시 켤 수 있게)
       const topRight = document.querySelector('#bar .right'); let bFull = null;
