@@ -633,3 +633,8 @@ html[data-game=cube] #title{flex:1;min-width:0;overflow:hidden;text-overflow:ell
 }
 .cbctl .mode:last-child:nth-child(odd){grid-column:1/-1}
 @media (max-width:480px){html[data-game=cube] #bar{gap:.25rem;padding-right:.4rem}html[data-game=cube] #title{font-size:min(1.15rem,3.6vw)}html[data-game=cube] #stars{padding-left:.45rem;padding-right:.45rem;font-size:min(1.1rem,4.4vw)}html[data-game=cube] #bar .right{gap:.25rem}}
+/* 삼성 인터넷 어두운 모드 안내(큐브 칸 위) */
+.cbdark{position:absolute;left:.5rem;right:.5rem;bottom:.5rem;z-index:6;display:flex;flex-direction:column;gap:.25rem;padding:.5rem .7rem;border-radius:.9rem;background:#fff;border:2px solid var(--btn);box-shadow:0 3px 0 var(--line);font-size:max(14px,.9rem);line-height:1.35;text-align:left}
+.cbdark b{font-weight:400;font-size:max(15px,1rem)}
+.cbdark .row{display:flex;gap:.4rem;justify-content:flex-end;flex-wrap:wrap}
+.cbdark .mode{min-height:44px}
