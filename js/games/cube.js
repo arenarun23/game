@@ -65,7 +65,16 @@
       // 직접 하기: 콕 누른 면을 표시(고른 다음 방향 버튼을 누르면 그때 돌린다)
       let sel = null;
       const pick = (f) => { sel = f; for (let i = 0; i < 54; i++) stickers[i].classList.toggle('pick', f != null && ((i / 9) | 0) === f); };
-      const paint = () => { for (let i = 0; i < 54; i++) stickers[i].style.background = FACES[(st[i] / 9) | 0].color; };
+      // 스티커 색은 작은 캔버스로 칠한다: 삼성 인터넷 '어둡게 보기'(강제 다크)는 배경색은 어둡게 바꾸지만 캔버스 그림은 건드리지 않는다.
+      // (배경색도 같이 넣어 두어 캔버스가 안 될 때도 색이 보인다)
+      const colorBox = (el, color) => {
+        el.style.background = color;
+        let cv = el.firstElementChild;
+        if (!cv || cv.tagName !== 'CANVAS') { cv = document.createElement('canvas'); cv.width = cv.height = 4; cv.className = 'cbcv'; el.prepend(cv); }
+        if (cv.dataset.c === color) return;
+        const x = cv.getContext('2d'); if (!x) return; x.fillStyle = color; x.fillRect(0, 0, 4, 4); cv.dataset.c = color;
+      };
+      const paint = () => { for (let i = 0; i < 54; i++) colorBox(stickers[i], FACES[(st[i] / 9) | 0].color); };
       const setView = () => { cubeEl.style.transform = `matrix3d(${M[0]},${M[3]},${M[6]},0,${M[1]},${M[4]},${M[7]},0,${M[2]},${M[5]},${M[8]},0,0,0,0,1)`; };
 
       const scoreEl = h('div', { class: 'cbscore', hidden: true }), markEl = h('div', { class: 'cbmark', hidden: true });
@@ -100,23 +109,10 @@
       document.documentElement.dataset.game = 'cube';   // 좁은 화면에서 제목이 두 줄이 되지 않게
       // 어두운 모드에서도 큐브 색(특히 하얀색)이 그대로 보이게:
       // ① 크롬·엣지 등은 color-scheme 'only light'(CSS + meta)를 지켜 자동 어둡게를 하지 않는다.
-      // ② 삼성 인터넷은 기본 설정에서 웹사이트가 막을 방법이 없다(삼성 공식 답변) → 어두운 모드일 때 한 번 바꾸는 법을 알려 준다.
+      // ② 삼성 인터넷 '어둡게 보기'는 이 표시를 무시한다 → 스티커 색을 캔버스로 칠해(colorBox) 색이 바뀌지 않게 한다.
       let csMeta = document.querySelector('meta[name=color-scheme]'), csOld = csMeta ? csMeta.content : null;
       if (!csMeta) { csMeta = document.createElement('meta'); csMeta.name = 'color-scheme'; document.head.appendChild(csMeta); }
       csMeta.content = 'only light';
-      const samsungDark = /SamsungBrowser/i.test(navigator.userAgent) && matchMedia('(prefers-color-scheme: dark)').matches;
-      let darkTip = null;
-      if (samsungDark && !G.store.get('cube-darktip-off', false)) {
-        darkTip = h('div', { class: 'cbdark', role: 'note' },
-          h('b', {}, '🌙 큐브 색이 어둡게 보이나요?'),
-          h('span', {}, '삼성 인터넷이 화면을 어둡게 바꿔서 하얀색이 회색으로 보여요.'),
-          h('span', {}, '고치는 법: 아래 ☰ 메뉴 → ⚙️ 설정 → 실험실(Labs) → 「웹사이트 어두운 테마 사용」 켜기 (또는 ☰ 메뉴에서 「어두운 모드」 끄기)'),
-          h('span', { class: 'row' },
-            h('button', { class: 'mode go', onclick: () => { G.sfx.tap(); darkTip.remove(); darkTip = null; } }, '알겠어요'),
-            h('button', { class: 'mode', onclick: () => { G.sfx.tap(); G.store.set('cube-darktip-off', true); darkTip.remove(); darkTip = null; } }, '다시 안 보기')));
-        darkTip.addEventListener('pointerdown', (e) => e.stopPropagation());
-        view.append(darkTip);
-      }
 
       // 큐브 크기: 가만히 있을 때 칸의 88% 안팎(조각 한 변 S 기준 가로 4.4S·세로 4.55S). 돌리다가 모서리가 아주 조금 넘으면 칸 밖은 잘린다
       const fit = () => { const r = view.getBoundingClientRect(); S = Math.max(18, Math.min((r.width || 300) / 5.0, (r.height || 300) / 5.1)); cubeEl.style.setProperty('--s', S + 'px'); view.style.perspective = S * 13 + 'px'; cubies.forEach((c) => place(c)); };
@@ -156,7 +152,7 @@
 
       // ───── 자유롭게 돌리기 ─────
       const say = (t, s) => { title.textContent = t; msg.replaceChildren(...[].concat(s)); };
-      const chip = (f) => { const m = h('span', { class: 'cbmini', 'aria-hidden': 'true' }); for (let i = 0; i < 9; i++) m.append(h('i', i === 4 ? { style: 'background:' + FACES[f].color } : null)); return m; };
+      const chip = (f) => { const m = h('span', { class: 'cbmini', 'aria-hidden': 'true' }); for (let i = 0; i < 9; i++) { const c = h('i'); if (i === 4) colorBox(c, FACES[f].color); m.append(c); } return m; };
       const nameOf = (f) => '가운데가 ' + FACES[f].name + ' 면';
       const btn = (label, fn, cls) => h('button', { class: 'mode ' + (cls || ''), onclick: fn }, label);
       const pushHist = (q) => { hist = toQuarters(hist.map(qm).concat(qm(q))); };
@@ -450,7 +446,7 @@
       view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
 
       fit(); paint(); setView(); freeUi();
-      return () => { dead = true; if (darkTip) darkTip.remove(); if (csOld == null) csMeta.remove(); else csMeta.content = csOld; if (bFull) bFull.remove(); try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {} try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} closePan(); if (lab) lab.close(false); delete document.documentElement.dataset.game; cancelAnimationFrame(raf); clearTimeout(autoT); clearTimeout(markT); if (ro) ro.disconnect(); else removeEventListener('resize', fit); };
+      return () => { dead = true; if (csOld == null) csMeta.remove(); else csMeta.content = csOld; if (bFull) bFull.remove(); try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {} try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} closePan(); if (lab) lab.close(false); delete document.documentElement.dataset.game; cancelAnimationFrame(raf); clearTimeout(autoT); clearTimeout(markT); if (ro) ro.disconnect(); else removeEventListener('resize', fit); };
     },
   });
 })();
