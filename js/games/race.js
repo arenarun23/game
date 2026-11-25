@@ -13,8 +13,8 @@
   // 이모지·차는 한 번만 그려 두고 이미지로 찍는다(회전해도 비용이 일정). 글자를 매 프레임 회전해 그리면 글자 캐시가 계속 빗나가서 끊긴다.
   const spr = new Map();
   function sprite(key, w, h, fn) { let c = spr.get(key); if (!c) { c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); spr.set(key, c); } return c; }
-  // 한 경기에 달리는 선수 수(나 포함): 경기장 고르기에서 2·4·6명 중 고른다(모든 경기장 공통, 기본 6)
-  const NRS = [2, 4, 6], nrOf = () => { const v = +G.store.get('race:nr', 6); return NRS.includes(v) ? v : 6; };
+  // 한 경기에 달리는 선수 수(나 포함): 경기장 고르기에서 2·4·6·8명 중 고른다(모든 경기장 공통, 기본 6)
+  const NRS = [2, 4, 6, 8], nrOf = () => { const v = +G.store.get('race:nr', 6); return NRS.includes(v) ? v : 6; };
   let startBag = [], lastStart = -1;
   let bagN = 0;
   function nextStart(NR) { if (bagN !== NR) { bagN = NR; startBag = []; lastStart = -1; } if (!startBag.length) { startBag = G.shuffle([...Array(NR).keys()]); if (startBag[startBag.length - 1] === lastStart) startBag.unshift(startBag.pop()); } return (lastStart = startBag.pop()); }
@@ -262,7 +262,7 @@
         // 선수
         const NR = nrOf();
         const orderN = (() => { const others = G.shuffle(D.CHARS.map((_, i) => i).filter((i) => i !== sel.ch)).slice(0, NR - 1), cars = G.shuffle(D.CARS.map((_, i) => i)); return [sel.ch, ...others].map((c, i) => [c, i === 0 ? sel.car : cars[i]]); })();
-        const mySlot = nextStart(NR), slots = [mySlot, ...G.shuffle([...Array(NR).keys()].filter((x) => x !== mySlot))]; // 내 출발 칸(1~6번): 가방에서 뽑아 6판에 한 번씩 골고루, 같은 칸이 연달아 나오지 않게
+        const mySlot = nextStart(NR), slots = [mySlot, ...G.shuffle([...Array(NR).keys()].filter((x) => x !== mySlot))]; // 내 출발 칸(1~선수 수번): 가방에서 뽑아 한 바퀴에 한 번씩 골고루, 같은 칸이 연달아 나오지 않게
         const racers = orderN.map(([ci, cr], i) => mk(ci, cr, i === 0, slots[i]));
         const me = racers[0];
         function mk(ci, cr, isPlayer, slot) {
