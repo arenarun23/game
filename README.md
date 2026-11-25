@@ -46,7 +46,7 @@
 - **시험**: `js/games/cube_core.js`(모델·풀이·`FORMULAS`, 화면 없음)를 노드에서 불러 무작위로 섞은 1000판이 모두 풀리는지 확인했다. 풀이를 고치면 다시 돌릴 것.
 
 ### 🏁 레이싱 (`js/games/race.js`, 데이터 `race_data.js`)
-- **👥 선수 수**: 경기장 고르기(3단계)에서 2·4·6명(나 포함)을 고른다. 모든 경기장 공통, `G.store 'race:nr'`(기본 6). 아이템은 등수 대신 '뒤에서 몇 번째쯤인지'(비율)로 나눈다. 가로 화면은 제목 줄에, 세로 화면은 탭 아래 줄에 둔다.
+- **👥 선수 수**: 경기장 고르기(3단계)에서 2·4·6·8명(나 포함)을 고른다. 모든 경기장 공통, `G.store 'race:nr'`(기본 6). 아이템은 등수 대신 '뒤에서 몇 번째쯤인지'(비율)로 나눈다. 가로 화면은 제목 줄에, 세로 화면은 탭 아래 줄에 둔다.
 - **✨ 새 그래픽(기본, 2026-11-18)**: `js/games/race_gl.js` 가 three.js(WebGL)로 길·연석·벽·비탈·다리 기둥·출발 문·장식(나무·버섯·건물·바위·우주 구조물 등은 입체 모형, 나머지 이모지는 늘 카메라를 보는 그림)·차(둥근 몸통·바퀴·전조등·차마다 장식)·그림자·안개·먼 산·별·행성을 그린다. 규칙·물리·버튼은 `race.js` 그대로, `draw()` 맨 앞에서 `gl.draw(env)` 로 넘긴다.
   - three.js 는 `js/vendor/three.min.js`(r187 + BufferGeometryUtils + RoundedBoxGeometry 를 esbuild 로 한 파일로 묶어 넣음, MIT `three.LICENSE.txt`). CDN 금지(CSP)라 저장소 안에 둔다. `index.html` 에서 `<script type="module">` 로 불러 `window.RaceGL` 을 만든다.
   - **🖼️ 예전 그래픽(보관)**: 경기장 고르기(3단계) 아래 버튼으로 바꾼다(`G.store 'race:gfx'` = `new`/`old`). WebGL 이 없거나 만들다 실패하거나 문맥을 잃으면 저절로 예전 그림(`race.js` 2D·`race3d.js`)으로 그린다. 바꾸기 전 원본은 git 브랜치 `archive/race-classic` 에도 그대로 있다.
